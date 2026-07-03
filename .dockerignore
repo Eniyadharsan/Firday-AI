@@ -1,0 +1,34 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+
+# Dev/test files
+tests/
+*.test.ts
+*.spec.ts
+.kiro/
+.vscode/
+.idea/
+
+# Environment and secrets
+.env
+.env.local
+certs/
+
+# Git
+.git/
+.gitignore
+
+# Docker
+docker-compose.yml
+Dockerfile
+
+# Logs and data
+logs/
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db

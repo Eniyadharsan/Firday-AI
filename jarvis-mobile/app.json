@@ -1,0 +1,23 @@
+{
+  "expo": {
+    "name": "JARVIS",
+    "slug": "jarvis-mobile",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "dark",
+    "splash": {
+      "backgroundColor": "#0f0c29"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.jarvis.personal.ai"
+    },
+    "android": {
+      "package": "com.jarvis.personal.ai"
+    },
+    "web": {
+      "bundler": "metro"
+    },
+    "plugins": []
+  }
+}
