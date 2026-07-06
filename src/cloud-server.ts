@@ -150,7 +150,7 @@ function getTimeAgo(date: Date): string {
   return `${Math.floor(hrs / 24)}d ago`;
 }
 
-// --- Groq LLM ---
+// --- Groq LLM (with smart fallback) ---
 async function generateWithGroq(
   messages: Array<{ role: string; content: string }>,
 ): Promise<string> {
@@ -158,28 +158,61 @@ async function generateWithGroq(
     return "JARVIS is running but needs a GROQ_API_KEY to generate AI responses. Set it as an environment variable.";
   }
 
-  const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${GROQ_API_KEY}`,
-    },
-    body: JSON.stringify({
-      model: 'llama-3.3-70b-versatile',
-      messages,
-      max_tokens: 8192,
-      temperature: 0.6,
-    }),
-  });
+  // Try models in order: 70B (smartest) → 8B (fastest, higher rate limit)
+  const models = [
+    { id: 'llama-3.3-70b-versatile', tokens: 4096 },
+    { id: 'llama-3.1-8b-instant', tokens: 4096 },
+  ];
 
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`LLM error ${response.status}: ${errorText}`);
+  for (const model of models) {
+    try {
+      const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${GROQ_API_KEY}`,
+        },
+        body: JSON.stringify({
+          model: model.id,
+          messages,
+          max_tokens: model.tokens,
+          temperature: 0.6,
+        }),
+      });
+
+      if (response.status === 429) {
+        // Rate limited — try next model
+        console.log(`[LLM] Rate limited on ${model.id}, trying fallback...`);
+        continue;
+      }
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        // If it's a model-specific error, try next
+        if (response.status >= 500) continue;
+        throw new Error(`LLM error ${response.status}: ${errorText}`);
+      }
+
+      const data = await response.json() as {
+        choices?: Array<{ message?: { content?: string } }>;
+      };
+      return data.choices?.[0]?.message?.content ?? 'No response.';
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : '';
+      if (msg.includes('429') || msg.includes('rate_limit')) continue;
+      throw err;
+    }
   }
 
-  const data = await response.json() as {
-    choices?: Array<{ message?: { content?: string } }>;
-  };
+  // All models rate limited — wait and retry with fastest model
+  await new Promise(r => setTimeout(r, 3000));
+  const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${GROQ_API_KEY}` },
+    body: JSON.stringify({ model: 'llama-3.1-8b-instant', messages, max_tokens: 2048, temperature: 0.6 }),
+  });
+  if (!response.ok) throw new Error('All models temporarily unavailable. Try again in a moment.');
+  const data = await response.json() as { choices?: Array<{ message?: { content?: string } }> };
   return data.choices?.[0]?.message?.content ?? 'No response.';
 }
 
