@@ -55,6 +55,31 @@ interface LocalSession {
 }
 const sessions = new Map<string, LocalSession>();
 
+// --- LIVE NEWS CACHE (refreshes every 5 minutes) ---
+let cachedWorldNews: string = '';
+let cachedTechNews: string = '';
+let cachedBusinessNews: string = '';
+let lastNewsUpdate: Date = new Date(0);
+
+async function refreshNewsCache(): Promise<void> {
+  try {
+    const [world, tech, business] = await Promise.all([
+      fetchDetailedNews('world news today'),
+      fetchDetailedNews('technology AI'),
+      fetchDetailedNews('business finance markets'),
+    ]);
+    cachedWorldNews = world;
+    cachedTechNews = tech;
+    cachedBusinessNews = business;
+    lastNewsUpdate = new Date();
+    console.log(`[News Cache] Updated at ${lastNewsUpdate.toISOString()}`);
+  } catch { /* silent fail */ }
+}
+
+// Refresh news on startup and every 5 minutes
+refreshNewsCache();
+setInterval(refreshNewsCache, 5 * 60 * 1000);
+
 // --- Real-time Web Search (DuckDuckGo — no API key needed) ---
 async function webSearch(query: string): Promise<string> {
   try {
@@ -63,39 +88,85 @@ async function webSearch(query: string): Promise<string> {
     const data = await res.json() as {
       AbstractText?: string;
       Abstract?: string;
-      RelatedTopics?: Array<{ Text?: string }>;
+      RelatedTopics?: Array<{ Text?: string; FirstURL?: string }>;
       Answer?: string;
+      Infobox?: { content?: Array<{ label?: string; value?: string }> };
     };
 
-    if (data.Answer) return `Live answer: ${data.Answer}`;
-    if (data.AbstractText) return `From ${data.Abstract ?? 'web'}: ${data.AbstractText}`;
-    if (data.RelatedTopics && data.RelatedTopics.length > 0) {
-      return data.RelatedTopics.slice(0, 3).map(t => t.Text ?? '').filter(Boolean).join('. ');
+    const parts: string[] = [];
+    if (data.Answer) parts.push(data.Answer);
+    if (data.AbstractText) parts.push(data.AbstractText);
+    if (data.Infobox?.content) {
+      const facts = data.Infobox.content.slice(0, 5).map(c => `${c.label}: ${c.value}`).filter(Boolean);
+      if (facts.length > 0) parts.push(facts.join('. '));
     }
-    return '';
+    if (data.RelatedTopics && data.RelatedTopics.length > 0) {
+      const topics = data.RelatedTopics.slice(0, 5).map(t => t.Text ?? '').filter(Boolean);
+      parts.push(...topics);
+    }
+    return parts.join('\n');
   } catch {
     return '';
   }
 }
 
-// --- News Fetcher (using RSS feeds — no API key needed) ---
+// --- Detailed News Fetcher (gets titles + descriptions) ---
+async function fetchDetailedNews(topic: string): Promise<string> {
+  try {
+    const url = `https://news.google.com/rss/search?q=${encodeURIComponent(topic)}&hl=en`;
+    const res = await fetch(url, { signal: AbortSignal.timeout(10000) });
+    const xml = await res.text();
+
+    // Extract titles and descriptions
+    const items: string[] = [];
+    const itemRegex = /<item>([\s\S]*?)<\/item>/g;
+    let itemMatch;
+    while ((itemMatch = itemRegex.exec(xml)) !== null && items.length < 8) {
+      const itemXml = itemMatch[1] ?? '';
+      const titleMatch = itemXml.match(/<title><!\[CDATA\[(.*?)\]\]><\/title>|<title>(.*?)<\/title>/);
+      const descMatch = itemXml.match(/<description><!\[CDATA\[(.*?)\]\]><\/description>|<description>(.*?)<\/description>/);
+      const pubDateMatch = itemXml.match(/<pubDate>(.*?)<\/pubDate>/);
+
+      const title = titleMatch?.[1] ?? titleMatch?.[2] ?? '';
+      const desc = (descMatch?.[1] ?? descMatch?.[2] ?? '').replace(/<[^>]+>/g, '').trim();
+      const pubDate = pubDateMatch?.[1] ?? '';
+
+      if (title && !title.includes('Google News')) {
+        const timeAgo = pubDate ? getTimeAgo(new Date(pubDate)) : '';
+        items.push(`• ${title}${desc ? ' — ' + desc.slice(0, 150) : ''}${timeAgo ? ' (' + timeAgo + ')' : ''}`);
+      }
+    }
+    return items.join('\n');
+  } catch {
+    return '';
+  }
+}
+
+// --- Simple News Fetcher (titles only, for quick queries) ---
 async function fetchNews(topic: string): Promise<string> {
   try {
     const url = `https://news.google.com/rss/search?q=${encodeURIComponent(topic)}&hl=en`;
     const res = await fetch(url, { signal: AbortSignal.timeout(8000) });
     const xml = await res.text();
-    // Extract titles from RSS
     const titles: string[] = [];
     const regex = /<title><!\[CDATA\[(.*?)\]\]><\/title>|<title>(.*?)<\/title>/g;
     let match;
-    while ((match = regex.exec(xml)) !== null && titles.length < 5) {
+    while ((match = regex.exec(xml)) !== null && titles.length < 8) {
       const title = match[1] ?? match[2] ?? '';
       if (title && !title.includes('Google News')) titles.push(title);
     }
-    return titles.length > 0 ? `Latest news:\n${titles.map((t, i) => `${i + 1}. ${t}`).join('\n')}` : '';
+    return titles.length > 0 ? titles.map((t, i) => `${i + 1}. ${t}`).join('\n') : '';
   } catch {
     return '';
   }
+}
+
+function getTimeAgo(date: Date): string {
+  const mins = Math.floor((Date.now() - date.getTime()) / 60000);
+  if (mins < 60) return `${mins}m ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}h ago`;
+  return `${Math.floor(hrs / 24)}d ago`;
 }
 
 // --- Groq LLM ---
@@ -289,27 +360,38 @@ System status: All systems nominal. Operating at full capacity.`
     }
 
     // Aggressive real-time info detection — JARVIS always has current data
+    // NEVER redirects. All data presented directly inside JARVIS.
     let context = '';
-    if (/\b(news|latest|today|current|happening|update|breaking|recent)\b/i.test(lowerMsg)) {
-      context = await fetchNews(message);
+    if (/\b(news|latest|today|current|happening|update|breaking|recent|headlines)\b/i.test(lowerMsg)) {
+      // First try specific topic news, fall back to cached
+      const specificNews = await fetchDetailedNews(message);
+      if (specificNews) {
+        context = `[LIVE NEWS - fetched just now]:\n${specificNews}`;
+      } else if (cachedWorldNews) {
+        context = `[CACHED WORLD NEWS - updated ${getTimeAgo(lastNewsUpdate)}]:\n${cachedWorldNews}`;
+      }
+    } else if (/\b(tech|technology|ai|artificial intelligence|startup|software)\b/i.test(lowerMsg)) {
+      const techNews = await fetchDetailedNews(message);
+      context = techNews ? `[LIVE TECH NEWS]:\n${techNews}` : (cachedTechNews ? `[TECH NEWS]:\n${cachedTechNews}` : '');
     } else if (/\b(weather|temperature|forecast|rain|sunny|climate)\b/i.test(lowerMsg)) {
       context = await webSearch(message + ' weather today');
-    } else if (/\b(stock|price|market|shares|crypto|bitcoin|trading)\b/i.test(lowerMsg)) {
-      context = await webSearch(message + ' current price');
-    } else if (/\b(score|match|game|won|lost|tournament|league)\b/i.test(lowerMsg)) {
-      context = await webSearch(message + ' latest score result');
+    } else if (/\b(stock|price|market|shares|crypto|bitcoin|trading|economy)\b/i.test(lowerMsg)) {
+      const financeNews = await fetchDetailedNews(message);
+      const searchData = await webSearch(message + ' current price');
+      context = [financeNews, searchData].filter(Boolean).join('\n');
+    } else if (/\b(score|match|game|won|lost|tournament|league|sports)\b/i.test(lowerMsg)) {
+      context = await fetchDetailedNews(message);
     } else if (/\b(what is|who is|where is|when did|when was|how many|how much|how does|how do|search|find|look up|tell me about|explain)\b/i.test(lowerMsg)) {
       context = await webSearch(message);
     } else if (/\b(compare|versus|vs|difference between|better|best)\b/i.test(lowerMsg)) {
       context = await webSearch(message);
     } else if (message.endsWith('?')) {
-      // Any question — try to get web context
       context = await webSearch(message);
     }
 
-    // Add context to message if we found relevant info
+    // Add context to message — JARVIS presents data directly, NEVER gives links
     const userMsg = context
-      ? `${message}\n\n[Real-time data from web: ${context}]`
+      ? `${message}\n\n[Real-time data — present this info directly to the user, DO NOT give links or tell them to look elsewhere. You have the data, present it as your own knowledge]:\n${context}`
       : message;
 
     session.history.push({ role: 'user', content: userMsg });
@@ -361,6 +443,17 @@ app.post('/speak', async (req, res) => {
   } catch (error: unknown) {
     res.status(500).json({ error: error instanceof Error ? error.message : 'TTS failed' });
   }
+});
+
+// Live news endpoint — always has fresh data
+app.get('/news', async (_req, res) => {
+  const fresh = await fetchDetailedNews('world news today');
+  res.json({
+    world: fresh || cachedWorldNews,
+    tech: cachedTechNews,
+    business: cachedBusinessNews,
+    lastUpdated: lastNewsUpdate.toISOString(),
+  });
 });
 
 // Memories
