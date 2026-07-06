@@ -142,25 +142,6 @@ async function fetchDetailedNews(topic: string): Promise<string> {
   }
 }
 
-// --- Simple News Fetcher (titles only, for quick queries) ---
-async function fetchNews(topic: string): Promise<string> {
-  try {
-    const url = `https://news.google.com/rss/search?q=${encodeURIComponent(topic)}&hl=en`;
-    const res = await fetch(url, { signal: AbortSignal.timeout(8000) });
-    const xml = await res.text();
-    const titles: string[] = [];
-    const regex = /<title><!\[CDATA\[(.*?)\]\]><\/title>|<title>(.*?)<\/title>/g;
-    let match;
-    while ((match = regex.exec(xml)) !== null && titles.length < 8) {
-      const title = match[1] ?? match[2] ?? '';
-      if (title && !title.includes('Google News')) titles.push(title);
-    }
-    return titles.length > 0 ? titles.map((t, i) => `${i + 1}. ${t}`).join('\n') : '';
-  } catch {
-    return '';
-  }
-}
-
 function getTimeAgo(date: Date): string {
   const mins = Math.floor((Date.now() - date.getTime()) / 60000);
   if (mins < 60) return `${mins}m ago`;
