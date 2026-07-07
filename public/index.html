@@ -148,9 +148,20 @@
 
     inp.addEventListener('keydown',e=>{if(e.key==='Enter')send()});
 
-    // Auth check
-    (async()=>{try{const r=await fetch('/auth/status');const d=await r.json();
-      showLoginScreen()}catch{msg("Connecting...",'a')}})();
+    // Auth check — skip on HF Space (owner access), require on other domains
+    (async()=>{
+      const isHF=window.location.hostname.includes('hf.space')||window.location.hostname.includes('huggingface');
+      if(isHF){
+        // Direct access — no login needed (owner's server)
+        window.jm='chat';window.jt='owner';
+        statusEl.textContent='OPERATIONAL';orbSub.textContent='SAY "HEY JARVIS"';
+        msg("Online. Ready, Sir.",'a');
+        setTimeout(()=>startWakeListening(),1000);
+        return;
+      }
+      try{const r=await fetch('/auth/status');const d=await r.json();
+        showLoginScreen()}catch{msg("Connecting...",'a')}
+    })();
 
     function showLoginScreen(){
       const login=document.createElement('div');login.id='loginOverlay';
@@ -300,7 +311,15 @@
         else{setTimeout(()=>{try{recognition.start()}catch{}},500)}};
     }
 
-    function startWakeListening(){if(recognition&&window.jm==='chat'){try{recognition.start()}catch{}}}
+    function startWakeListening(){
+      if(recognition&&window.jm==='chat'){
+        // Browser requires user gesture for mic — add click handler if needed
+        const startMic=()=>{try{recognition.start();document.getElementById('wakeInd').textContent='● LISTENING';document.getElementById('wakeInd').style.color='rgba(0,255,136,.6)'}
+          catch(e){document.getElementById('wakeInd').textContent='● CLICK ANYWHERE TO ENABLE MIC';document.getElementById('wakeInd').style.color='rgba(255,200,0,.5)';
+            document.addEventListener('click',function once(){startMic();document.removeEventListener('click',once)},{once:true})}};
+        startMic();
+      }
+    }
 
     function toggleMic(){if(!recognition)return;
       if(rec){recognition.stop();orbSub.textContent='SAY "HEY JARVIS"';statusEl.textContent='OPERATIONAL'}
