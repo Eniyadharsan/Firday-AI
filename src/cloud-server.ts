@@ -270,7 +270,7 @@ app.post('/auth/login', (req, res) => {
 });
 
 // --- OAuth: Email Signup/Signin + Google ---
-import { signupWithEmail, signinWithEmail, signinWithGoogle, requestSignup, verifyAndSignup } from './personal/oauth';
+import { signinWithEmail, signinWithGoogle, requestSignup, verifyAndSignup } from './personal/oauth';
 
 // Request OTP for signup
 app.post('/auth/email/request-otp', async (req, res) => {
@@ -290,13 +290,7 @@ app.post('/auth/email/verify-otp', (req, res) => {
   res.json({ success: true, ...result });
 });
 
-app.post('/auth/email/signup', (req, res) => {
-  const { email, password, name } = req.body;
-  if (!email || !password) { res.status(400).json({ error: 'Email and password required.' }); return; }
-  const result = signupWithEmail(email, password, name ?? '');
-  if ('error' in result) { res.status(400).json(result); return; }
-  res.json({ success: true, ...result });
-});
+// Direct signup disabled — must use OTP flow (/auth/email/request-otp → /auth/email/verify-otp)
 
 app.post('/auth/email/signin', (req, res) => {
   const { email, password } = req.body;

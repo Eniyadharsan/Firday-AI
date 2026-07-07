@@ -177,13 +177,42 @@
       const name=document.getElementById('authName').value.trim();
       const err=document.getElementById('authErr');err.textContent='';
       if(!email||!pwd){err.textContent='Email and password required';return}
-      const ep=window.authTab==='signup'?'/auth/email/signup':'/auth/email/signin';
-      const body=window.authTab==='signup'?{email,password:pwd,name}:{email,password:pwd};
-      try{const r=await fetch(ep,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
-        const d=await r.json();
-        if(d.token){window.jt=d.token;window.jm='chat';document.getElementById('loginOverlay').remove();
-          msg('Welcome'+(d.user&&d.user.name?', '+d.user.name:'')+'. Online.','a');speak("Systems online. Ready.");statusEl.textContent='OPERATIONAL'}
-        else{err.textContent=d.error||'Failed'}}catch{err.textContent='Connection error'}};
+
+      if(window.authTab==='signin'){
+        // Sign in — direct
+        try{const r=await fetch('/auth/email/signin',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email,password:pwd})});
+          const d=await r.json();
+          if(d.token){window.jt=d.token;window.jm='chat';document.getElementById('loginOverlay').remove();
+            msg('Welcome'+(d.user&&d.user.name?', '+d.user.name:'')+'. Online.','a');speak("Systems online. Ready.");statusEl.textContent='OPERATIONAL'}
+          else{err.textContent=d.error||'Failed'}}catch{err.textContent='Connection error'}
+      } else {
+        // Sign up — request OTP first
+        if(!window.otpSent){
+          try{const r=await fetch('/auth/email/request-otp',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email,password:pwd,name})});
+            const d=await r.json();
+            if(d.success){
+              window.otpSent=true;window.signupEmail=email;window.signupPwd=pwd;window.signupName=name;
+              // Show OTP input
+              document.getElementById('authPwd').style.display='none';
+              document.getElementById('authName').style.display='none';
+              document.getElementById('authEmail').style.display='none';
+              let otpInp=document.getElementById('otpInput');
+              if(!otpInp){otpInp=document.createElement('input');otpInp.id='otpInput';otpInp.type='text';otpInp.placeholder='Enter 6-digit code';otpInp.style.cssText='padding:9px 12px;border-radius:8px;border:1px solid rgba(0,229,255,.1);background:rgba(0,229,255,.02);color:#00e5ff;font-family:inherit;font-size:16px;outline:none;text-align:center;letter-spacing:4px';
+                document.getElementById('authPwd').parentNode.insertBefore(otpInp,document.getElementById('authPwd'))}
+              err.style.color='#00ff88';err.textContent=d.message&&d.message.startsWith('DEV_OTP')?'Code: '+d.message.split(':')[1]:'Code sent to '+email}
+            else{err.textContent=d.error||'Failed'}}catch{err.textContent='Connection error'}
+        } else {
+          // Verify OTP
+          const otp=document.getElementById('otpInput').value.trim();
+          if(!otp){err.textContent='Enter the verification code';return}
+          try{const r=await fetch('/auth/email/verify-otp',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:window.signupEmail,password:window.signupPwd,name:window.signupName,otp})});
+            const d=await r.json();
+            if(d.token){window.jt=d.token;window.jm='chat';document.getElementById('loginOverlay').remove();
+              msg('Welcome'+(d.user&&d.user.name?', '+d.user.name:'')+'. Account verified.','a');speak("Account verified. Systems online.");statusEl.textContent='OPERATIONAL'}
+            else{err.style.color='#ff4444';err.textContent=d.error||'Invalid code'}}catch{err.textContent='Connection error'}
+        }
+      }
+    };
 
     // Send
     async function send(){const t=inp.value.trim();if(!t)return;inp.value='';
