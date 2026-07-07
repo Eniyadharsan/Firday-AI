@@ -129,6 +129,26 @@
     for(let i=0;i<pts.length;i++)for(let j=i+1;j<pts.length;j++){const dx=pts[i].x-pts[j].x,dy=pts[i].y-pts[j].y,d=Math.sqrt(dx*dx+dy*dy);if(d<100){ctx.beginPath();ctx.moveTo(pts[i].x,pts[i].y);ctx.lineTo(pts[j].x,pts[j].y);ctx.strokeStyle=`rgba(0,212,255,${.03*(1-d/100)})`;ctx.stroke()}}
     requestAnimationFrame(draw)}draw();
 
+    // Watery color ripples on mouse move
+    let ripples=[];
+    document.addEventListener('mousemove',e=>{
+      ripples.push({x:e.clientX,y:e.clientY,r:0,maxR:80+Math.random()*40,a:0.4,hue:Math.random()*60+180});
+      if(ripples.length>15)ripples.shift();
+    });
+    document.addEventListener('click',e=>{
+      for(let i=0;i<3;i++)ripples.push({x:e.clientX,y:e.clientY,r:0,maxR:120+Math.random()*60,a:0.6,hue:Math.random()*120+160});
+    });
+    function drawRipples(){
+      ripples.forEach((r,i)=>{r.r+=2;r.a-=0.008;
+        if(r.a<=0){ripples.splice(i,1);return}
+        ctx.beginPath();ctx.arc(r.x,r.y,r.r,0,Math.PI*2);
+        ctx.strokeStyle=`hsla(${r.hue},80%,60%,${r.a})`;ctx.lineWidth=1.5;ctx.stroke();
+        // Inner glow
+        const grd=ctx.createRadialGradient(r.x,r.y,0,r.x,r.y,r.r);
+        grd.addColorStop(0,`hsla(${r.hue},80%,60%,${r.a*0.1})`);grd.addColorStop(1,'transparent');
+        ctx.fillStyle=grd;ctx.fill()});
+      requestAnimationFrame(drawRipples)}drawRipples();
+
     // State
     const msgs=document.getElementById('msgs'),input=document.getElementById('input'),orb=document.getElementById('orb'),orbLabel=document.getElementById('orbLabel'),statusEl=document.getElementById('status');
     let sessionId=null,currentAudio=null,isRecording=false,recognition=null;

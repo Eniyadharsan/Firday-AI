@@ -41,8 +41,14 @@ app.use((_req, res, next) => {
   next();
 });
 
-// Serve static files (PWA)
-app.use(express.static(join(process.cwd(), 'public')));
+// Serve static files (PWA) — no cache for HTML to ensure updates deploy instantly
+app.use(express.static(join(process.cwd(), 'public'), {
+  setHeaders: (res, path) => {
+    if (path.endsWith('.html')) {
+      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    }
+  }
+}));
 
 const PORT = parseInt(process.env['PORT'] ?? '3000', 10);
 const GROQ_API_KEY = process.env['GROQ_API_KEY'] ?? '';
