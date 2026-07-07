@@ -31,19 +31,27 @@
     .hud-top .right{font-size:10px;color:rgba(0,229,255,.4);letter-spacing:1px}
 
     /* Center orb */
+    /* Center molecular structure */
     .center{position:fixed;top:45%;left:50%;transform:translate(-50%,-50%);text-align:center;z-index:10}
-    .arc-reactor{width:150px;height:150px;border-radius:50%;margin:0 auto;position:relative;cursor:pointer;
-      background:radial-gradient(circle,rgba(0,229,255,.15) 0%,rgba(0,100,200,.05) 50%,transparent 70%);
-      border:2px solid rgba(0,229,255,.2);box-shadow:0 0 30px rgba(0,229,255,.1),inset 0 0 30px rgba(0,229,255,.05);transition:all .3s}
-    .arc-reactor:hover{border-color:rgba(0,229,255,.5);box-shadow:0 0 60px rgba(0,229,255,.2)}
-    .arc-reactor.active{border-color:rgba(0,229,255,.7);box-shadow:0 0 80px rgba(0,229,255,.35),inset 0 0 40px rgba(0,229,255,.1);animation:reactorPulse 1.2s ease-in-out infinite}
-    @keyframes reactorPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.03)}}
-    .arc-reactor .ring{position:absolute;inset:10px;border-radius:50%;border:1px solid rgba(0,229,255,.15);animation:spin 10s linear infinite}
-    .arc-reactor .ring2{position:absolute;inset:20px;border-radius:50%;border:1px dashed rgba(0,229,255,.08);animation:spin 15s linear infinite reverse}
-    @keyframes spin{from{transform:rotate(0)}to{transform:rotate(360deg)}}
-    .arc-reactor .core{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:40px;height:40px;border-radius:50%;background:radial-gradient(circle,rgba(0,229,255,.5),rgba(0,229,255,.1) 70%);box-shadow:0 0 20px rgba(0,229,255,.3)}
-    .label{margin-top:16px;font-size:18px;letter-spacing:6px;color:rgba(0,229,255,.6);font-weight:bold}
+    .molecule{width:180px;height:180px;margin:0 auto;position:relative;cursor:pointer}
+    .nucleus{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:30px;height:30px;border-radius:50%;background:radial-gradient(circle,rgba(0,229,255,.8),rgba(0,100,255,.3) 70%);box-shadow:0 0 25px rgba(0,229,255,.5),0 0 50px rgba(0,229,255,.2);transition:all .3s}
+    .orbit{position:absolute;inset:0;border-radius:50%;border:1px solid rgba(0,229,255,.1);animation:orbit1 8s linear infinite}
+    .orbit:nth-child(2){inset:15px;border-color:rgba(123,47,247,.1);animation:orbit2 6s linear infinite;transform:rotateX(60deg)}
+    .orbit:nth-child(3){inset:30px;border-color:rgba(0,255,136,.08);animation:orbit3 10s linear infinite;transform:rotateY(60deg)}
+    @keyframes orbit1{from{transform:rotateZ(0)}to{transform:rotateZ(360deg)}}
+    @keyframes orbit2{from{transform:rotateX(60deg) rotateZ(0)}to{transform:rotateX(60deg) rotateZ(360deg)}}
+    @keyframes orbit3{from{transform:rotateY(60deg) rotateZ(0)}to{transform:rotateY(60deg) rotateZ(360deg)}}
+    .electron{position:absolute;width:8px;height:8px;border-radius:50%;background:#00e5ff;box-shadow:0 0 8px #00e5ff,0 0 16px rgba(0,229,255,.4);top:-4px;left:50%;margin-left:-4px}
+    .orbit:nth-child(2) .electron{background:#7b2ff7;box-shadow:0 0 8px #7b2ff7,0 0 16px rgba(123,47,247,.4)}
+    .orbit:nth-child(3) .electron{background:#00ff88;box-shadow:0 0 8px #00ff88,0 0 16px rgba(0,255,136,.4)}
+    /* Fast mode when speaking */
+    .molecule.speaking .orbit{animation-duration:2s !important}
+    .molecule.speaking .nucleus{box-shadow:0 0 40px rgba(0,229,255,.7),0 0 80px rgba(0,229,255,.3);width:35px;height:35px}
+    .molecule.listening .orbit{animation-duration:3s !important}
+    .molecule.listening .nucleus{background:radial-gradient(circle,rgba(0,255,136,.8),rgba(0,200,100,.3) 70%);box-shadow:0 0 30px rgba(0,255,136,.5)}
+    .label{margin-top:20px;font-size:18px;letter-spacing:6px;color:rgba(0,229,255,.6);font-weight:bold}
     .sub-label{font-size:10px;color:rgba(0,229,255,.3);letter-spacing:2px;margin-top:4px}
+    .wake-indicator{position:fixed;top:50px;left:50%;transform:translateX(-50%);font-size:9px;color:rgba(0,255,136,.4);letter-spacing:2px;z-index:10}
 
     /* Bottom-left chat */
     .chat{position:fixed;bottom:16px;left:16px;width:380px;max-height:300px;z-index:100;border-radius:12px;background:rgba(10,22,40,.75);backdrop-filter:blur(16px);border:1px solid rgba(0,229,255,.1);display:flex;flex-direction:column;overflow:hidden}
@@ -77,7 +85,7 @@
     /* Watery mouse effect canvas */
     .fx{position:fixed;inset:0;pointer-events:none;z-index:5}
 
-    @media(max-width:500px){.chat{width:calc(100% - 24px);left:12px}.detail{width:calc(100% - 24px);right:12px;left:12px}.arc-reactor{width:110px;height:110px}}
+    @media(max-width:500px){.chat{width:calc(100% - 24px);left:12px}.detail{width:calc(100% - 24px);right:12px;left:12px}.molecule{width:130px;height:130px}}
   </style>
 </head>
 <body>
@@ -88,12 +96,17 @@
     <div class="right" id="status">SYSTEMS NOMINAL</div>
   </div>
 
+  <div class="wake-indicator" id="wakeInd">● ALWAYS LISTENING</div>
+
   <div class="center">
-    <div class="arc-reactor" id="reactor" onclick="handleOrb()">
-      <div class="ring"></div><div class="ring2"></div><div class="core"></div>
+    <div class="molecule" id="reactor" onclick="handleOrb()">
+      <div class="orbit"><div class="electron"></div></div>
+      <div class="orbit"><div class="electron"></div></div>
+      <div class="orbit"><div class="electron"></div></div>
+      <div class="nucleus"></div>
     </div>
     <div class="label">JARVIS</div>
-    <div class="sub-label" id="orbSub">TAP TO ACTIVATE</div>
+    <div class="sub-label" id="orbSub">SAY "HEY JARVIS"</div>
   </div>
 
   <div class="chat">
@@ -221,34 +234,62 @@
         if(d.token){window.jt=d.token;window.jm='chat';msg("Online. Ready, Sir.",'a');speak("Systems online. Ready, Sir.");statusEl.textContent='OPERATIONAL'}
         else msg(d.error||'Failed','a')}catch{msg('Error','a')}return}
 
-      msg(t,'u');statusEl.textContent='PROCESSING';reactor.classList.add('active');orbSub.textContent='ANALYZING';
+      msg(t,'u');statusEl.textContent='PROCESSING';reactor.classList.add('speaking');orbSub.textContent='ANALYZING';
       const tp=msg('...','t');
       try{const r=await fetch('/chat',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+(window.jt||'')},body:JSON.stringify({message:t,sessionId:sid})});
-        const d=await r.json();tp.remove();reactor.classList.remove('active');statusEl.textContent='OPERATIONAL';orbSub.textContent='TAP TO ACTIVATE';
+        const d=await r.json();tp.remove();reactor.classList.remove('speaking');statusEl.textContent='OPERATIONAL';orbSub.textContent='SAY "HEY JARVIS"';
         if(d.error){msg('Error: '+d.error,'a')}
         else{sid=d.sessionId;const reply=d.reply;
           if(reply.length>250){msg(reply.slice(0,180)+'...','a');openDet(reply)}
           else msg(reply,'a');
           if(d.action==='play_music'&&d.musicUrl)window.open(d.musicUrl,'_blank');
           else speak(reply.slice(0,400))}}
-      catch{tp.remove();reactor.classList.remove('active');statusEl.textContent='OPERATIONAL';orbSub.textContent='TAP TO ACTIVATE';msg('Connection error','a')}}
+      catch{tp.remove();reactor.classList.remove('speaking');statusEl.textContent='OPERATIONAL';orbSub.textContent='SAY "HEY JARVIS"';msg('Connection error','a')}}
 
     // TTS
     function speak(t){if(!speechSynthesis)return;speechSynthesis.cancel();
       const u=new SpeechSynthesisUtterance(t);u.rate=1;u.pitch=1.1;
       const v=speechSynthesis.getVoices().find(v=>/zira|female|samantha|karen/i.test(v.name)&&v.lang.startsWith('en'))||speechSynthesis.getVoices().find(v=>v.lang.startsWith('en-'));
-      if(v)u.voice=v;reactor.classList.add('active');orbSub.textContent='SPEAKING';statusEl.textContent='VOCALIZE';document.getElementById('stp').style.display='flex';
-      u.onend=()=>{reactor.classList.remove('active');orbSub.textContent='TAP TO ACTIVATE';statusEl.textContent='OPERATIONAL';document.getElementById('stp').style.display='none';audio=null};
+      if(v)u.voice=v;reactor.classList.add('speaking');orbSub.textContent='SPEAKING';statusEl.textContent='VOCALIZE';document.getElementById('stp').style.display='flex';
+      u.onend=()=>{reactor.classList.remove('speaking');orbSub.textContent='SAY "HEY JARVIS"';statusEl.textContent='OPERATIONAL';document.getElementById('stp').style.display='none';audio=null;startWakeListening()};
       audio=u;speechSynthesis.speak(u)}
     speechSynthesis.getVoices();
-    function stopTTS(){speechSynthesis.cancel();audio=null;reactor.classList.remove('active');orbSub.textContent='TAP TO ACTIVATE';statusEl.textContent='OPERATIONAL';document.getElementById('stp').style.display='none'}
+    function stopTTS(){speechSynthesis.cancel();audio=null;reactor.classList.remove('speaking','listening');orbSub.textContent='SAY "HEY JARVIS"';statusEl.textContent='OPERATIONAL';document.getElementById('stp').style.display='none';startWakeListening()}
 
-    // Voice
+    // Voice recognition
     if('webkitSpeechRecognition' in window||'SpeechRecognition' in window){const S=window.SpeechRecognition||window.webkitSpeechRecognition;recognition=new S();recognition.continuous=false;recognition.interimResults=true;recognition.lang='en-US';
-      recognition.onstart=()=>{rec=true;document.getElementById('mic').classList.add('rec');reactor.classList.add('active');orbSub.textContent='LISTENING';statusEl.textContent='VOICE INPUT'};
+      recognition.onstart=()=>{rec=true;document.getElementById('mic').classList.add('rec');reactor.classList.add('listening');orbSub.textContent='LISTENING';statusEl.textContent='VOICE INPUT'};
       recognition.onresult=e=>{let t='';for(let i=0;i<e.results.length;i++)t+=e.results[i][0].transcript;inp.value=t;if(e.results[e.results.length-1].isFinal)setTimeout(()=>{if(inp.value.trim())send()},300)};
-      recognition.onend=()=>{rec=false;document.getElementById('mic').classList.remove('rec');if(!audio){reactor.classList.remove('active');orbSub.textContent='TAP TO ACTIVATE';statusEl.textContent='OPERATIONAL'}};
-      recognition.onerror=()=>{rec=false;document.getElementById('mic').classList.remove('rec');reactor.classList.remove('active');orbSub.textContent='TAP TO ACTIVATE';statusEl.textContent='OPERATIONAL'}}
+      recognition.onend=()=>{rec=false;document.getElementById('mic').classList.remove('rec');if(!audio){reactor.classList.remove('listening');orbSub.textContent='SAY "HEY JARVIS"';statusEl.textContent='OPERATIONAL'}};
+      recognition.onerror=()=>{rec=false;document.getElementById('mic').classList.remove('rec');reactor.classList.remove('listening');orbSub.textContent='SAY "HEY JARVIS"';statusEl.textContent='OPERATIONAL'}}
+
+    // --- WAKE WORD: "Hey JARVIS" always-listening ---
+    let wakeRecognition=null;
+    if('webkitSpeechRecognition' in window||'SpeechRecognition' in window){
+      const WS=window.SpeechRecognition||window.webkitSpeechRecognition;
+      wakeRecognition=new WS();wakeRecognition.continuous=true;wakeRecognition.interimResults=true;wakeRecognition.lang='en-US';
+      wakeRecognition.onresult=e=>{
+        for(let i=e.resultIndex;i<e.results.length;i++){
+          const t=e.results[i][0].transcript.toLowerCase();
+          if(t.includes('hey jarvis')||t.includes('jarvis')||t.includes('hey travis')){
+            // Wake word detected!
+            wakeRecognition.stop();
+            orbSub.textContent='ACTIVATED';statusEl.textContent='WAKE DETECTED';
+            reactor.classList.add('listening');
+            // Start actual command recognition
+            setTimeout(()=>{if(recognition&&!rec&&window.jm==='chat')recognition.start()},300);
+            break;
+          }
+        }
+      };
+      wakeRecognition.onend=()=>{
+        // Restart wake listening after a brief pause (unless recording a command)
+        if(!rec&&window.jm==='chat')setTimeout(()=>{try{wakeRecognition.start()}catch{}},1000)};
+      wakeRecognition.onerror=()=>{setTimeout(()=>{try{wakeRecognition.start()}catch{}},2000)};
+    }
+
+    // Start wake word listening after login
+    function startWakeListening(){if(wakeRecognition){try{wakeRecognition.start();document.getElementById('wakeInd').style.color='rgba(0,255,136,.5)'}catch{}}}
 
     function toggleMic(){if(!recognition)return;if(rec)recognition.stop();else{stopTTS();recognition.start()}}
     function handleOrb(){if(window.jm!=='chat'){inp.focus();return}toggleMic()}
