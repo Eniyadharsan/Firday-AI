@@ -9,7 +9,7 @@ import { createHash, randomBytes } from 'node:crypto';
 import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 
-const DATA_DIR = join(process.cwd(), '.jarvis-data');
+const DATA_DIR = existsSync('/data') ? '/data/jarvis' : join(process.cwd(), '.jarvis-data');
 const AUTH_FILE = join(DATA_DIR, 'auth.enc');
 const JWT_SECRET = randomBytes(32).toString('hex');
 

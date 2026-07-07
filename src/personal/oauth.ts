@@ -9,8 +9,10 @@ import { createHash, randomBytes } from 'node:crypto';
 import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 
-const DATA_DIR = join(process.cwd(), '.jarvis-data');
+// Use /data for HF Spaces persistent storage, fallback to local
+const DATA_DIR = existsSync('/data') ? '/data/jarvis' : join(process.cwd(), '.jarvis-data');
 const USERS_FILE = join(DATA_DIR, 'users.json');
+const OTP_FILE = join(DATA_DIR, 'otps.json');
 
 interface User {
   id: string;
@@ -36,6 +38,66 @@ function loadUsers(): User[] {
 function saveUsers(users: User[]): void {
   ensureDir();
   writeFileSync(USERS_FILE, JSON.stringify(users, null, 2), 'utf-8');
+}
+
+// --- OTP System ---
+interface OTPEntry { email: string; otp: string; expiresAt: number; }
+
+function loadOTPs(): OTPEntry[] {
+  ensureDir();
+  if (!existsSync(OTP_FILE)) return [];
+  try { return JSON.parse(readFileSync(OTP_FILE, 'utf-8')); } catch { return []; }
+}
+
+function saveOTPs(otps: OTPEntry[]): void {
+  ensureDir();
+  writeFileSync(OTP_FILE, JSON.stringify(otps), 'utf-8');
+}
+
+function generateOTP(): string {
+  return Math.floor(100000 + Math.random() * 900000).toString();
+}
+
+async function sendOTPEmail(email: string, otp: string): Promise<boolean> {
+  // Use Resend API if available, otherwise use a simple SMTP-less approach
+  const resendKey = process.env['RESEND_API_KEY'];
+  if (resendKey) {
+    try {
+      const res = await fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${resendKey}` },
+        body: JSON.stringify({
+          from: 'JARVIS <noreply@resend.dev>',
+          to: [email],
+          subject: 'JARVIS - Verification Code',
+          html: `<h2>Your JARVIS Verification Code</h2><p style="font-size:32px;font-weight:bold;letter-spacing:4px;color:#00e5ff">${otp}</p><p>This code expires in 10 minutes.</p>`,
+        }),
+      });
+      return res.ok;
+    } catch { return false; }
+  }
+  // No email service configured — OTP is stored server-side and returned in response for dev mode
+  console.log(`[OTP] Code for ${email}: ${otp}`);
+  return true;
+}
+
+function createOTP(email: string): string {
+  const otps = loadOTPs().filter(o => o.expiresAt > Date.now()); // clean expired
+  const otp = generateOTP();
+  otps.push({ email, otp, expiresAt: Date.now() + 10 * 60 * 1000 }); // 10 min expiry
+  saveOTPs(otps);
+  return otp;
+}
+
+function verifyOTP(email: string, otp: string): boolean {
+  const otps = loadOTPs();
+  const match = otps.find(o => o.email === email && o.otp === otp && o.expiresAt > Date.now());
+  if (match) {
+    // Remove used OTP
+    saveOTPs(otps.filter(o => o !== match));
+    return true;
+  }
+  return false;
 }
 
 function hashPwd(password: string): string {
@@ -72,6 +134,47 @@ function verifyAuthToken(token: string): { valid: boolean; userId?: string; emai
 }
 
 // --- Email/Password Auth ---
+
+// Step 1: Request signup — sends OTP to email
+async function requestSignup(email: string, password: string, _name: string): Promise<{ success: boolean; message?: string; error?: string }> {
+  const users = loadUsers();
+  if (users.find(u => u.email === email)) return { success: false, error: 'Email already registered. Please sign in.' };
+  if (password.length < 6) return { success: false, error: 'Password must be at least 6 characters.' };
+  if (!email.includes('@')) return { success: false, error: 'Invalid email address.' };
+
+  const otp = createOTP(email);
+  const sent = await sendOTPEmail(email, otp);
+
+  if (!sent && !process.env['RESEND_API_KEY']) {
+    // Dev mode — no email service, auto-verify
+    return { success: true, message: `DEV_OTP:${otp}` };
+  }
+
+  return { success: true, message: 'Verification code sent to your email.' };
+}
+
+// Step 2: Verify OTP and complete signup
+function verifyAndSignup(email: string, password: string, name: string, otp: string): { token: string; user: { id: string; email: string; name: string } } | { error: string } {
+  if (!verifyOTP(email, otp)) return { error: 'Invalid or expired verification code.' };
+
+  const users = loadUsers();
+  if (users.find(u => u.email === email)) return { error: 'Email already registered.' };
+
+  const user: User = {
+    id: randomBytes(16).toString('hex'),
+    email,
+    name: name || email.split('@')[0] || 'User',
+    authMethod: 'email',
+    passwordHash: hashPwd(password),
+    createdAt: new Date().toISOString(),
+    lastLogin: new Date().toISOString(),
+  };
+  users.push(user);
+  saveUsers(users);
+
+  const token = makeToken(user.id, user.email);
+  return { token, user: { id: user.id, email: user.email, name: user.name } };
+}
 
 function signupWithEmail(email: string, password: string, name: string): { token: string; user: { id: string; email: string; name: string } } | { error: string } {
   const users = loadUsers();
@@ -146,4 +249,4 @@ async function signinWithGoogle(googleToken: string): Promise<{ token: string; u
   }
 }
 
-export { signupWithEmail, signinWithEmail, signinWithGoogle, verifyAuthToken, loadUsers };
+export { signupWithEmail, signinWithEmail, signinWithGoogle, verifyAuthToken, loadUsers, requestSignup, verifyAndSignup };

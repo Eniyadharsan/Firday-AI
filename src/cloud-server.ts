@@ -270,7 +270,25 @@ app.post('/auth/login', (req, res) => {
 });
 
 // --- OAuth: Email Signup/Signin + Google ---
-import { signupWithEmail, signinWithEmail, signinWithGoogle } from './personal/oauth';
+import { signupWithEmail, signinWithEmail, signinWithGoogle, requestSignup, verifyAndSignup } from './personal/oauth';
+
+// Request OTP for signup
+app.post('/auth/email/request-otp', async (req, res) => {
+  const { email, password, name } = req.body;
+  if (!email || !password) { res.status(400).json({ error: 'Email and password required.' }); return; }
+  const result = await requestSignup(email, password, name ?? '');
+  if (!result.success) { res.status(400).json({ error: result.error }); return; }
+  res.json({ success: true, message: result.message });
+});
+
+// Verify OTP and complete signup
+app.post('/auth/email/verify-otp', (req, res) => {
+  const { email, password, name, otp } = req.body;
+  if (!email || !password || !otp) { res.status(400).json({ error: 'Email, password, and OTP required.' }); return; }
+  const result = verifyAndSignup(email, password, name ?? '', otp);
+  if ('error' in result) { res.status(400).json(result); return; }
+  res.json({ success: true, ...result });
+});
 
 app.post('/auth/email/signup', (req, res) => {
   const { email, password, name } = req.body;
