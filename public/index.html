@@ -257,7 +257,7 @@
     speechSynthesis.getVoices();
     function stopTTS(){speechSynthesis.cancel();audio=null;reactor.classList.remove('speaking','listening');orbSub.textContent='SAY "HEY JARVIS"';statusEl.textContent='OPERATIONAL';document.getElementById('stp').style.display='none';startWakeListening()}
 
-    // Voice — single continuous recognition with wake word
+    // Voice — continuous recognition with aggressive restart
     let wakeActive=false;
     if('webkitSpeechRecognition' in window||'SpeechRecognition' in window){
       const S=window.SpeechRecognition||window.webkitSpeechRecognition;
@@ -265,76 +265,47 @@
       recognition.continuous=true;
       recognition.interimResults=true;
       recognition.lang='en-US';
+      recognition.maxAlternatives=1;
 
-      recognition.onstart=()=>{rec=true;document.getElementById('wakeInd').style.color='rgba(0,255,136,.6)'};
+      recognition.onstart=()=>{rec=true;document.getElementById('wakeInd').style.color='rgba(0,255,136,.7)';document.getElementById('mic').classList.add('rec')};
       recognition.onresult=e=>{
         let transcript='';
-        for(let i=e.resultIndex;i<e.results.length;i++){
-          transcript+=e.results[i][0].transcript;
-        }
-        const lower=transcript.toLowerCase();
+        for(let i=e.resultIndex;i<e.results.length;i++)transcript+=e.results[i][0].transcript;
+        const lower=transcript.toLowerCase().trim();
 
         if(!wakeActive){
-          // Listening for wake word
-          if(lower.includes('hey jarvis')||lower.includes('jarvis')||lower.includes('hey travis')){
-            wakeActive=true;
-            reactor.classList.add('listening');
-            orbSub.textContent='LISTENING';
-            statusEl.textContent='ACTIVATED';
-            // Extract command after wake word
-            const cmd=lower.split(/hey jarvis|jarvis|hey travis/).pop().trim();
-            if(cmd.length>3&&e.results[e.results.length-1].isFinal){
-              inp.value=cmd;
-              wakeActive=false;
-              reactor.classList.remove('listening');
-              setTimeout(()=>send(),200);
+          if(lower.includes('jarvis')||lower.includes('travis')){
+            wakeActive=true;reactor.classList.add('listening');orbSub.textContent='LISTENING';statusEl.textContent='ACTIVATED';
+            const parts=lower.split(/jarvis|travis/);
+            const cmd=(parts[parts.length-1]||'').trim();
+            if(cmd.length>2&&e.results[e.results.length-1].isFinal){
+              inp.value=cmd;wakeActive=false;reactor.classList.remove('listening');setTimeout(()=>send(),100);
             }
           }
         } else {
-          // Wake word was said — capturing command
-          inp.value=transcript.replace(/hey jarvis|jarvis|hey travis/gi,'').trim();
-          reactor.classList.add('listening');
-          orbSub.textContent='LISTENING';
-          if(e.results[e.results.length-1].isFinal){
-            wakeActive=false;
-            reactor.classList.remove('listening');
-            if(inp.value.trim().length>1){setTimeout(()=>send(),200)}
-            else{orbSub.textContent='SAY "HEY JARVIS"';statusEl.textContent='OPERATIONAL'}
+          inp.value=transcript.replace(/hey jarvis|jarvis|hey travis|travis/gi,'').trim();
+          reactor.classList.add('listening');orbSub.textContent='LISTENING...';
+          if(e.results[e.results.length-1].isFinal&&inp.value.trim().length>1){
+            wakeActive=false;reactor.classList.remove('listening');setTimeout(()=>send(),100);
           }
         }
       };
-      recognition.onend=()=>{
-        rec=false;wakeActive=false;
-        reactor.classList.remove('listening');
-        document.getElementById('mic').classList.remove('rec');
-        // Auto-restart to keep listening (unless speaking)
-        if(window.jm==='chat'&&!audio){
-          setTimeout(()=>{try{recognition.start()}catch{}},500);
-        }
-      };
-      recognition.onerror=(e)=>{
-        rec=false;wakeActive=false;
-        reactor.classList.remove('listening');
-        document.getElementById('mic').classList.remove('rec');
-        // Restart on non-fatal errors
-        if(e.error!=='not-allowed'&&e.error!=='service-not-allowed'){
-          setTimeout(()=>{try{recognition.start()}catch{}},1000);
-        }
-      };
+      recognition.onend=()=>{rec=false;wakeActive=false;reactor.classList.remove('listening');document.getElementById('mic').classList.remove('rec');
+        // AGGRESSIVE RESTART — always keep listening
+        if(window.jm==='chat'&&!audio){setTimeout(()=>{try{recognition.start()}catch(e){document.getElementById('wakeInd').style.color='rgba(255,100,100,.4)'}},200)}
+        else{document.getElementById('wakeInd').style.color='rgba(0,229,255,.2)'}};
+      recognition.onerror=(e)=>{rec=false;wakeActive=false;reactor.classList.remove('listening');document.getElementById('mic').classList.remove('rec');
+        if(e.error==='not-allowed'||e.error==='service-not-allowed'){
+          document.getElementById('wakeInd').textContent='● MIC BLOCKED - CLICK PAGE';document.getElementById('wakeInd').style.color='rgba(255,100,100,.5)'}
+        else{setTimeout(()=>{try{recognition.start()}catch{}},500)}};
     }
 
-    function startWakeListening(){
-      if(recognition&&window.jm==='chat'){
-        try{recognition.start();document.getElementById('wakeInd').style.color='rgba(0,255,136,.6)'}catch{}
-      }
-    }
+    function startWakeListening(){if(recognition&&window.jm==='chat'){try{recognition.start()}catch{}}}
 
-    function toggleMic(){
-      if(!recognition)return;
-      if(rec){recognition.stop();orbSub.textContent='SAY "HEY JARVIS"'}
+    function toggleMic(){if(!recognition)return;
+      if(rec){recognition.stop();orbSub.textContent='SAY "HEY JARVIS"';statusEl.textContent='OPERATIONAL'}
       else{stopTTS();wakeActive=true;reactor.classList.add('listening');orbSub.textContent='LISTENING';statusEl.textContent='VOICE INPUT';
-        try{recognition.start()}catch{}}
-    }
+        try{recognition.start()}catch(e){document.getElementById('wakeInd').textContent='● MIC ERROR'}}}
     function handleOrb(){if(window.jm!=='chat'){inp.focus();return}toggleMic()}
     function msg(t,c){const d=document.createElement('div');d.className='m '+c;d.textContent=t;msgs.appendChild(d);msgs.scrollTop=msgs.scrollHeight;return d}
     function openDet(t){document.getElementById('detBody').innerHTML=t.replace(/\n/g,'<br>').replace(/\*\*(.*?)\*\*/g,'<strong style="color:#00e5ff">$1</strong>');document.getElementById('det').classList.add('open')}
