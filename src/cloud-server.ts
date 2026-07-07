@@ -357,8 +357,9 @@ RULES:
 - End with "Shall I go deeper, Sir?" or propose the next logical step.
 - For truly complex requests, structure your response with clear sections.
 
-Current date: ${new Date().toLocaleDateString()}.
-Current time: ${new Date().toLocaleTimeString()}.
+Current date: ${new Date().toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata' })}.
+Current time: ${new Date().toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour12: true })}.
+Timezone: IST (Indian Standard Time).
 Model: LLaMA 3.3 70B (Advanced Reasoning)
 System status: All systems nominal. Operating at full capacity.`
         }],
