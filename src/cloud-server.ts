@@ -269,6 +269,33 @@ app.post('/auth/login', (req, res) => {
   res.json({ success: true, token });
 });
 
+// --- OAuth: Email Signup/Signin + Google ---
+import { signupWithEmail, signinWithEmail, signinWithGoogle } from './personal/oauth';
+
+app.post('/auth/email/signup', (req, res) => {
+  const { email, password, name } = req.body;
+  if (!email || !password) { res.status(400).json({ error: 'Email and password required.' }); return; }
+  const result = signupWithEmail(email, password, name ?? '');
+  if ('error' in result) { res.status(400).json(result); return; }
+  res.json({ success: true, ...result });
+});
+
+app.post('/auth/email/signin', (req, res) => {
+  const { email, password } = req.body;
+  if (!email || !password) { res.status(400).json({ error: 'Email and password required.' }); return; }
+  const result = signinWithEmail(email, password);
+  if ('error' in result) { res.status(401).json(result); return; }
+  res.json({ success: true, ...result });
+});
+
+app.post('/auth/google', async (req, res) => {
+  const { credential } = req.body;
+  if (!credential) { res.status(400).json({ error: 'Google credential required.' }); return; }
+  const result = await signinWithGoogle(credential);
+  if ('error' in result) { res.status(401).json(result); return; }
+  res.json({ success: true, ...result });
+});
+
 // Chat (main endpoint)
 app.post('/chat', async (req, res) => {
   try {

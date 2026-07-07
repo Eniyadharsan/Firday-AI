@@ -137,8 +137,61 @@
 
     // Auth check
     (async()=>{try{const r=await fetch('/auth/status');const d=await r.json();
-      if(d.needsSetup){window.jm='setup';msg("Set password (min 6):",'a')}
-      else{window.jm='login';msg("Password:",'a')}}catch{msg("Connecting...",'a')}})();
+      showLoginScreen()}catch{msg("Connecting...",'a')}})();
+
+    function showLoginScreen(){
+      const login=document.createElement('div');login.id='loginOverlay';
+      login.style.cssText='position:fixed;inset:0;z-index:9999;background:rgba(10,22,40,.95);backdrop-filter:blur(20px);display:flex;align-items:center;justify-content:center;flex-direction:column;gap:16px';
+      login.innerHTML=`
+        <div style="text-align:center;margin-bottom:20px">
+          <div style="font-size:24px;letter-spacing:6px;color:#00e5ff;font-weight:bold">J.A.R.V.I.S</div>
+          <div style="font-size:10px;color:rgba(0,229,255,.3);margin-top:4px;letter-spacing:2px">PERSONAL AI SYSTEM</div>
+        </div>
+        <div id="loginBox" style="width:320px;padding:24px;border-radius:16px;background:rgba(0,229,255,.03);border:1px solid rgba(0,229,255,.1);display:flex;flex-direction:column;gap:12px">
+          <div id="loginTabs" style="display:flex;gap:8px;margin-bottom:8px">
+            <button onclick="showTab('signin')" class="ltab active" style="flex:1;padding:8px;border-radius:8px;border:1px solid rgba(0,229,255,.15);background:rgba(0,229,255,.08);color:#00e5ff;font-size:11px;cursor:pointer;letter-spacing:1px">SIGN IN</button>
+            <button onclick="showTab('signup')" class="ltab" style="flex:1;padding:8px;border-radius:8px;border:1px solid rgba(0,229,255,.08);background:transparent;color:rgba(0,229,255,.4);font-size:11px;cursor:pointer;letter-spacing:1px">SIGN UP</button>
+          </div>
+          <input id="authEmail" type="email" placeholder="Email" style="padding:10px 14px;border-radius:10px;border:1px solid rgba(0,229,255,.1);background:rgba(0,229,255,.02);color:#00e5ff;font-family:inherit;font-size:12px;outline:none"/>
+          <input id="authPwd" type="password" placeholder="Password" style="padding:10px 14px;border-radius:10px;border:1px solid rgba(0,229,255,.1);background:rgba(0,229,255,.02);color:#00e5ff;font-family:inherit;font-size:12px;outline:none"/>
+          <input id="authName" type="text" placeholder="Your name" style="padding:10px 14px;border-radius:10px;border:1px solid rgba(0,229,255,.1);background:rgba(0,229,255,.02);color:#00e5ff;font-family:inherit;font-size:12px;outline:none;display:none"/>
+          <button onclick="emailAuth()" style="padding:10px;border-radius:10px;border:none;background:rgba(0,229,255,.15);color:#00e5ff;font-size:12px;cursor:pointer;letter-spacing:1px;font-family:inherit">ENTER</button>
+          <div style="text-align:center;font-size:10px;color:rgba(0,229,255,.2);margin:4px 0">— or —</div>
+          <div id="g_id_onload" data-client_id="${getGoogleClientId()}" data-callback="googleCallback" data-auto_prompt="false"></div>
+          <div class="g_id_signin" data-type="standard" data-shape="pill" data-theme="filled_black" data-text="continue_with" data-size="large" data-width="280"></div>
+          <div id="authError" style="font-size:11px;color:#ff4444;text-align:center;min-height:16px"></div>
+        </div>`;
+      document.body.appendChild(login);
+      // Load Google Sign-In script
+      const gs=document.createElement('script');gs.src='https://accounts.google.com/gsi/client';gs.async=true;document.head.appendChild(gs);
+    }
+
+    function getGoogleClientId(){return '${process.env['GOOGLE_CLIENT_ID'] || 'NOT_SET'}';}
+    window.showTab=function(tab){
+      document.getElementById('authName').style.display=tab==='signup'?'block':'none';
+      document.querySelectorAll('.ltab').forEach((b,i)=>{b.style.background=i===(tab==='signin'?0:1)?'rgba(0,229,255,.08)':'transparent';b.style.color=i===(tab==='signin'?0:1)?'#00e5ff':'rgba(0,229,255,.4)';b.style.borderColor=i===(tab==='signin'?0:1)?'rgba(0,229,255,.15)':'rgba(0,229,255,.08)'});
+      window.authTab=tab};
+    window.authTab='signin';
+
+    window.emailAuth=async function(){
+      const email=document.getElementById('authEmail').value.trim();
+      const pwd=document.getElementById('authPwd').value;
+      const name=document.getElementById('authName').value.trim();
+      const errEl=document.getElementById('authError');errEl.textContent='';
+      if(!email||!pwd){errEl.textContent='Email and password required';return}
+      const ep=window.authTab==='signup'?'/auth/email/signup':'/auth/email/signin';
+      const body=window.authTab==='signup'?{email,password:pwd,name}:{email,password:pwd};
+      try{const r=await fetch(ep,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+        const d=await r.json();
+        if(d.token){window.jt=d.token;window.jm='chat';document.getElementById('loginOverlay').remove();msg(`Welcome${d.user?.name?', '+d.user.name:''}. Systems online.`,'a');speak("Welcome. Systems online, Sir.");statusEl.textContent='OPERATIONAL'}
+        else{errEl.textContent=d.error||'Auth failed'}}catch{errEl.textContent='Connection error'}};
+
+    window.googleCallback=async function(response){
+      const errEl=document.getElementById('authError');errEl.textContent='';
+      try{const r=await fetch('/auth/google',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({credential:response.credential})});
+        const d=await r.json();
+        if(d.token){window.jt=d.token;window.jm='chat';document.getElementById('loginOverlay').remove();msg(`Welcome, ${d.user?.name||'Sir'}. Systems online.`,'a');speak(`Welcome, ${d.user?.name||'Sir'}. Systems online.`);statusEl.textContent='OPERATIONAL'}
+        else{errEl.textContent=d.error||'Google auth failed'}}catch{errEl.textContent='Connection error'}};
 
     // Send
     async function send(){const t=inp.value.trim();if(!t)return;inp.value='';
