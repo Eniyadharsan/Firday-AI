@@ -248,6 +248,7 @@
 
     // TTS
     function speak(t){if(!speechSynthesis)return;speechSynthesis.cancel();
+      if(recognition&&rec){try{recognition.stop()}catch{}}
       const u=new SpeechSynthesisUtterance(t);u.rate=1;u.pitch=1.1;
       const v=speechSynthesis.getVoices().find(v=>/zira|female|samantha|karen/i.test(v.name)&&v.lang.startsWith('en'))||speechSynthesis.getVoices().find(v=>v.lang.startsWith('en-'));
       if(v)u.voice=v;reactor.classList.add('speaking');orbSub.textContent='SPEAKING';statusEl.textContent='VOCALIZE';document.getElementById('stp').style.display='flex';
@@ -256,42 +257,84 @@
     speechSynthesis.getVoices();
     function stopTTS(){speechSynthesis.cancel();audio=null;reactor.classList.remove('speaking','listening');orbSub.textContent='SAY "HEY JARVIS"';statusEl.textContent='OPERATIONAL';document.getElementById('stp').style.display='none';startWakeListening()}
 
-    // Voice recognition
-    if('webkitSpeechRecognition' in window||'SpeechRecognition' in window){const S=window.SpeechRecognition||window.webkitSpeechRecognition;recognition=new S();recognition.continuous=false;recognition.interimResults=true;recognition.lang='en-US';
-      recognition.onstart=()=>{rec=true;document.getElementById('mic').classList.add('rec');reactor.classList.add('listening');orbSub.textContent='LISTENING';statusEl.textContent='VOICE INPUT'};
-      recognition.onresult=e=>{let t='';for(let i=0;i<e.results.length;i++)t+=e.results[i][0].transcript;inp.value=t;if(e.results[e.results.length-1].isFinal)setTimeout(()=>{if(inp.value.trim())send()},300)};
-      recognition.onend=()=>{rec=false;document.getElementById('mic').classList.remove('rec');if(!audio){reactor.classList.remove('listening');orbSub.textContent='SAY "HEY JARVIS"';statusEl.textContent='OPERATIONAL'}};
-      recognition.onerror=()=>{rec=false;document.getElementById('mic').classList.remove('rec');reactor.classList.remove('listening');orbSub.textContent='SAY "HEY JARVIS"';statusEl.textContent='OPERATIONAL'}}
-
-    // --- WAKE WORD: "Hey JARVIS" always-listening ---
-    let wakeRecognition=null;
+    // Voice — single continuous recognition with wake word
+    let wakeActive=false;
     if('webkitSpeechRecognition' in window||'SpeechRecognition' in window){
-      const WS=window.SpeechRecognition||window.webkitSpeechRecognition;
-      wakeRecognition=new WS();wakeRecognition.continuous=true;wakeRecognition.interimResults=true;wakeRecognition.lang='en-US';
-      wakeRecognition.onresult=e=>{
+      const S=window.SpeechRecognition||window.webkitSpeechRecognition;
+      recognition=new S();
+      recognition.continuous=true;
+      recognition.interimResults=true;
+      recognition.lang='en-US';
+
+      recognition.onstart=()=>{rec=true;document.getElementById('wakeInd').style.color='rgba(0,255,136,.6)'};
+      recognition.onresult=e=>{
+        let transcript='';
         for(let i=e.resultIndex;i<e.results.length;i++){
-          const t=e.results[i][0].transcript.toLowerCase();
-          if(t.includes('hey jarvis')||t.includes('jarvis')||t.includes('hey travis')){
-            // Wake word detected!
-            wakeRecognition.stop();
-            orbSub.textContent='ACTIVATED';statusEl.textContent='WAKE DETECTED';
+          transcript+=e.results[i][0].transcript;
+        }
+        const lower=transcript.toLowerCase();
+
+        if(!wakeActive){
+          // Listening for wake word
+          if(lower.includes('hey jarvis')||lower.includes('jarvis')||lower.includes('hey travis')){
+            wakeActive=true;
             reactor.classList.add('listening');
-            // Start actual command recognition
-            setTimeout(()=>{if(recognition&&!rec&&window.jm==='chat')recognition.start()},300);
-            break;
+            orbSub.textContent='LISTENING';
+            statusEl.textContent='ACTIVATED';
+            // Extract command after wake word
+            const cmd=lower.split(/hey jarvis|jarvis|hey travis/).pop().trim();
+            if(cmd.length>3&&e.results[e.results.length-1].isFinal){
+              inp.value=cmd;
+              wakeActive=false;
+              reactor.classList.remove('listening');
+              setTimeout(()=>send(),200);
+            }
+          }
+        } else {
+          // Wake word was said — capturing command
+          inp.value=transcript.replace(/hey jarvis|jarvis|hey travis/gi,'').trim();
+          reactor.classList.add('listening');
+          orbSub.textContent='LISTENING';
+          if(e.results[e.results.length-1].isFinal){
+            wakeActive=false;
+            reactor.classList.remove('listening');
+            if(inp.value.trim().length>1){setTimeout(()=>send(),200)}
+            else{orbSub.textContent='SAY "HEY JARVIS"';statusEl.textContent='OPERATIONAL'}
           }
         }
       };
-      wakeRecognition.onend=()=>{
-        // Restart wake listening after a brief pause (unless recording a command)
-        if(!rec&&window.jm==='chat')setTimeout(()=>{try{wakeRecognition.start()}catch{}},1000)};
-      wakeRecognition.onerror=()=>{setTimeout(()=>{try{wakeRecognition.start()}catch{}},2000)};
+      recognition.onend=()=>{
+        rec=false;wakeActive=false;
+        reactor.classList.remove('listening');
+        document.getElementById('mic').classList.remove('rec');
+        // Auto-restart to keep listening (unless speaking)
+        if(window.jm==='chat'&&!audio){
+          setTimeout(()=>{try{recognition.start()}catch{}},500);
+        }
+      };
+      recognition.onerror=(e)=>{
+        rec=false;wakeActive=false;
+        reactor.classList.remove('listening');
+        document.getElementById('mic').classList.remove('rec');
+        // Restart on non-fatal errors
+        if(e.error!=='not-allowed'&&e.error!=='service-not-allowed'){
+          setTimeout(()=>{try{recognition.start()}catch{}},1000);
+        }
+      };
     }
 
-    // Start wake word listening after login
-    function startWakeListening(){if(wakeRecognition){try{wakeRecognition.start();document.getElementById('wakeInd').style.color='rgba(0,255,136,.5)'}catch{}}}
+    function startWakeListening(){
+      if(recognition&&window.jm==='chat'){
+        try{recognition.start();document.getElementById('wakeInd').style.color='rgba(0,255,136,.6)'}catch{}
+      }
+    }
 
-    function toggleMic(){if(!recognition)return;if(rec)recognition.stop();else{stopTTS();recognition.start()}}
+    function toggleMic(){
+      if(!recognition)return;
+      if(rec){recognition.stop();orbSub.textContent='SAY "HEY JARVIS"'}
+      else{stopTTS();wakeActive=true;reactor.classList.add('listening');orbSub.textContent='LISTENING';statusEl.textContent='VOICE INPUT';
+        try{recognition.start()}catch{}}
+    }
     function handleOrb(){if(window.jm!=='chat'){inp.focus();return}toggleMic()}
     function msg(t,c){const d=document.createElement('div');d.className='m '+c;d.textContent=t;msgs.appendChild(d);msgs.scrollTop=msgs.scrollHeight;return d}
     function openDet(t){document.getElementById('detBody').innerHTML=t.replace(/\n/g,'<br>').replace(/\*\*(.*?)\*\*/g,'<strong style="color:#00e5ff">$1</strong>');document.getElementById('det').classList.add('open')}
