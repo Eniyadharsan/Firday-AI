@@ -51,7 +51,7 @@ app.use(express.static(join(process.cwd(), 'public'), {
 }));
 
 const PORT = parseInt(process.env['PORT'] ?? '3000', 10);
-const GROQ_API_KEY = process.env['GROQ_API_KEY'] ?? '';
+const LLM_API_KEY = process.env['CEREBRAS_API_KEY'] ?? process.env['LLM_API_KEY'] ?? '';
 
 // --- In-Memory Session Store ---
 interface LocalSession {
@@ -156,70 +156,47 @@ function getTimeAgo(date: Date): string {
   return `${Math.floor(hrs / 24)}d ago`;
 }
 
-// --- Groq LLM (with smart fallback) ---
+// --- LLM via Cerebras (with Groq fallback) ---
 async function generateWithGroq(
   messages: Array<{ role: string; content: string }>,
 ): Promise<string> {
-  if (!GROQ_API_KEY) {
-    return "JARVIS is running but needs a GROQ_API_KEY to generate AI responses. Set it as an environment variable.";
+  if (!LLM_API_KEY) {
+    return "JARVIS needs an API key. Set CEREBRAS_API_KEY in environment variables.";
   }
 
-  // Try models in order: 70B (smartest) → 8B (fastest, higher rate limit)
-  const models = [
-    { id: 'llama-3.3-70b-versatile', tokens: 4096 },
-    { id: 'llama-3.1-8b-instant', tokens: 4096 },
+  // Try Cerebras first, then Groq as fallback
+  const providers = [
+    { url: 'https://api.cerebras.ai/v1/chat/completions', model: 'llama-3.3-70b', key: LLM_API_KEY },
+    { url: 'https://api.groq.com/openai/v1/chat/completions', model: 'llama-3.1-8b-instant', key: LLM_API_KEY },
   ];
 
-  for (const model of models) {
+  for (const p of providers) {
     try {
-      const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      const response = await fetch(p.url, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${GROQ_API_KEY}`,
-        },
-        body: JSON.stringify({
-          model: model.id,
-          messages,
-          max_tokens: model.tokens,
-          temperature: 0.6,
-        }),
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${p.key}` },
+        body: JSON.stringify({ model: p.model, messages, max_tokens: 4096, temperature: 0.6 }),
       });
 
-      if (response.status === 429) {
-        // Rate limited — try next model
-        console.log(`[LLM] Rate limited on ${model.id}, trying fallback...`);
-        continue;
-      }
+      if (response.status === 429) continue; // rate limited, try next
+      if (response.status === 401) continue; // wrong key for this provider
 
       if (!response.ok) {
-        const errorText = await response.text();
-        // If it's a model-specific error, try next
+        const err = await response.text();
         if (response.status >= 500) continue;
-        throw new Error(`LLM error ${response.status}: ${errorText}`);
+        throw new Error(`LLM error ${response.status}: ${err}`);
       }
 
-      const data = await response.json() as {
-        choices?: Array<{ message?: { content?: string } }>;
-      };
+      const data = await response.json() as { choices?: Array<{ message?: { content?: string } }> };
       return data.choices?.[0]?.message?.content ?? 'No response.';
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : '';
       if (msg.includes('429') || msg.includes('rate_limit')) continue;
+      if (msg.includes('401')) continue;
       throw err;
     }
   }
-
-  // All models rate limited — wait and retry with fastest model
-  await new Promise(r => setTimeout(r, 3000));
-  const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${GROQ_API_KEY}` },
-    body: JSON.stringify({ model: 'llama-3.1-8b-instant', messages, max_tokens: 2048, temperature: 0.6 }),
-  });
-  if (!response.ok) throw new Error('All models temporarily unavailable. Try again in a moment.');
-  const data = await response.json() as { choices?: Array<{ message?: { content?: string } }> };
-  return data.choices?.[0]?.message?.content ?? 'No response.';
+  return "All AI services temporarily unavailable. Try again in a moment.";
 }
 
 // --- Edge TTS (server-side voice generation) ---
@@ -241,7 +218,7 @@ app.get('/health', (_req, res) => {
   res.json({
     status: 'running',
     mode: 'cloud',
-    llm: GROQ_API_KEY ? 'Groq (LLaMA-3.1-8B)' : 'no API key',
+    llm: LLM_API_KEY ? 'Cerebras (LLaMA-3.3-70B)' : 'no API key',
     features: ['voice', 'web-search', 'news', 'music', 'memory', 'encrypted'],
     uptime: process.uptime(),
   });
@@ -546,7 +523,7 @@ app.listen(PORT, '0.0.0.0', () => {
 ║         JARVIS — Cloud Production Server            ║
 ╠══════════════════════════════════════════════════════╣
 ║  URL:      http://0.0.0.0:${PORT}                       ║
-║  LLM:      ${GROQ_API_KEY ? 'Groq (LLaMA-3.1-8B)' : 'Set GROQ_API_KEY'}              ║
+║  LLM:      ${LLM_API_KEY ? 'Groq (LLaMA-3.1-8B)' : 'Set LLM_API_KEY'}              ║
 ║  Search:   DuckDuckGo + Google News RSS             ║
 ║  Voice:    Edge TTS (Aria Neural)                   ║
 ║  Security: AES-256-GCM encrypted storage            ║
