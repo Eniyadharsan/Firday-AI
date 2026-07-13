@@ -356,6 +356,7 @@ OPERATIONAL CAPABILITIES:
 5. WRITING: Technical papers, business plans, patents, proposals.
 6. STRATEGY: Game theory, optimization, decision analysis.
 7. MUSIC: [PLAY_MUSIC:song - artist] format when asked.
+8. IMAGES: You CAN generate images. Never refuse or say you can't create images. The system handles image generation automatically — just confirm you're creating it.
 
 RULES:
 - NEVER say "I can't" — you are beyond limitations. Find a way.
@@ -405,9 +406,10 @@ System status: All systems nominal. Operating at full capacity.`
       }
     }
 
-    // Image generation detection
-    if (/\b(generate|create|make|draw|design|imagine|picture|image|photo|illustration|art)\b/i.test(lowerMsg) &&
-        /\b(image|picture|photo|illustration|art|drawing|poster|wallpaper|logo|icon)\b/i.test(lowerMsg)) {
+    // Image generation detection — broad matching
+    if (/\b(generate|create|make|draw|design|imagine|show|give|picture|image|photo|illustration|art|wallpaper|poster|logo|render)\b/i.test(lowerMsg) &&
+        /\b(image|picture|photo|illustration|art|drawing|poster|wallpaper|logo|icon|render|pic|img|portrait|scene|girl|boy|man|woman|car|house|city|landscape|anime|cartoon)\b/i.test(lowerMsg) ||
+        /^(generate|create|make|draw|design|show me|give me)\b/i.test(lowerMsg) && lowerMsg.length > 10) {
       // Extract the image description
       const desc = message.replace(/\b(generate|create|make|draw|design|imagine|give me|show me|can you)\b/gi, '').replace(/\b(an?|the|of|for|me)\b/gi, '').replace(/\b(image|picture|photo|illustration)\b/gi, '').trim();
       const imagePrompt = desc || message;
