@@ -252,6 +252,11 @@
           if(reply.length>250){msg(reply.slice(0,180)+'...','a');openDet(reply)}
           else msg(reply,'a');
           if(d.action==='play_music'&&d.musicUrl)window.open(d.musicUrl,'_blank');
+          else if(d.action==='show_image'&&d.imageUrl){
+            // Show image in detail panel
+            openDet('<img src="'+d.imageUrl+'" style="width:100%;border-radius:8px;margin-bottom:10px"/><p style="color:rgba(0,229,255,.5);font-size:11px">'+d.imagePrompt+'</p>');
+            speak("Here's your image, Sir.");
+          }
           else speak(reply.slice(0,400))}}
       catch{tp.remove();reactor.classList.remove('speaking');statusEl.textContent='OPERATIONAL';orbSub.textContent='SAY "HEY JARVIS"';msg('Connection error','a')}}
 

@@ -405,6 +405,28 @@ System status: All systems nominal. Operating at full capacity.`
       }
     }
 
+    // Image generation detection
+    if (/\b(generate|create|make|draw|design|imagine|picture|image|photo|illustration|art)\b/i.test(lowerMsg) &&
+        /\b(image|picture|photo|illustration|art|drawing|poster|wallpaper|logo|icon)\b/i.test(lowerMsg)) {
+      // Extract the image description
+      const desc = message.replace(/\b(generate|create|make|draw|design|imagine|give me|show me|can you)\b/gi, '').replace(/\b(an?|the|of|for|me)\b/gi, '').replace(/\b(image|picture|photo|illustration)\b/gi, '').trim();
+      const imagePrompt = desc || message;
+      const imageUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(imagePrompt)}?width=1024&height=1024&nologo=true`;
+
+      session.history.push({ role: 'user', content: message });
+      session.history.push({ role: 'assistant', content: `Generated image: ${imagePrompt}` });
+
+      res.json({
+        reply: `Here's your image, Sir.`,
+        sessionId: sid,
+        action: 'show_image',
+        imageUrl,
+        imagePrompt,
+        timestamp: new Date().toISOString(),
+      });
+      return;
+    }
+
     // Aggressive real-time info detection — JARVIS always has current data
     // NEVER redirects. All data presented directly inside JARVIS.
     let context = '';
