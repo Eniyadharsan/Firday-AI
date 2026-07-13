@@ -166,8 +166,8 @@ async function generateWithGroq(
 
   // Try Cerebras first, then Groq as fallback
   const providers = [
-    { url: 'https://api.cerebras.ai/v1/chat/completions', model: 'llama3.1-70b', key: LLM_API_KEY },
-    { url: 'https://api.cerebras.ai/v1/chat/completions', model: 'llama3.1-8b', key: LLM_API_KEY },
+    { url: 'https://api.cerebras.ai/v1/chat/completions', model: 'gpt-oss-120b', key: LLM_API_KEY },
+    { url: 'https://api.cerebras.ai/v1/chat/completions', model: 'gemma-4-31b', key: LLM_API_KEY },
   ];
 
   for (const p of providers) {
