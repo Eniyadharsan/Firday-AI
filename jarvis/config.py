@@ -16,8 +16,11 @@ LLM_MODELS: list[str] = ["gemma-4-31b", "gpt-oss-120b"]
 LLM_MAX_TOKENS: int = int(os.getenv("LLM_MAX_TOKENS", "2048"))
 LLM_TEMPERATURE: float = float(os.getenv("LLM_TEMPERATURE", "0.6"))
 
-# --- Storage ---
-# Use /tmp on serverless (Vercel), /data on Docker (HF), local otherwise
+# --- Database (Turso) ---
+TURSO_DATABASE_URL: str = os.getenv("TURSO_DATABASE_URL", "")
+TURSO_AUTH_TOKEN: str = os.getenv("TURSO_AUTH_TOKEN", "")
+
+# --- Storage (local fallback) ---
 DATA_DIR: Path = Path("/tmp/jarvis-data")
 try:
     DATA_DIR.mkdir(parents=True, exist_ok=True)
