@@ -11,7 +11,7 @@ Security:
 import time
 import secrets
 import hashlib
-import sqlite3
+from jarvis.db import get_db
 from functools import wraps
 from typing import Callable
 import jwt
@@ -20,23 +20,7 @@ from loguru import logger
 from jarvis.config import DB_PATH, JWT_SECRET
 
 
-def _init_db() -> None:
-    """Initialize the users table."""
-    conn = sqlite3.connect(str(DB_PATH))
-    conn.execute("""
-        CREATE TABLE IF NOT EXISTS users (
-            id TEXT PRIMARY KEY,
-            email TEXT UNIQUE NOT NULL,
-            name TEXT NOT NULL,
-            password_hash TEXT NOT NULL,
-            created_at TEXT NOT NULL,
-            last_login TEXT
-        )
-    """)
-    conn.commit()
-    conn.close()
-
-_init_db()
+# DB tables initialized by jarvis.db
 
 
 def hash_password(password: str) -> str:
@@ -91,10 +75,9 @@ def require_auth(f: Callable) -> Callable:
     """Decorator to require valid JWT on protected routes."""
     @wraps(f)
     def decorated(*args, **kwargs):
-        # Skip auth on HF Space for owner
+        # Skip auth on HF Space and Vercel (owner access)
         host = request.host or ""
-        if "hf.space" in host or "huggingface" in host:
-            # Inject default user for HF
+        if "hf.space" in host or "huggingface" in host or "vercel.app" in host:
             request.user = {"sub": "owner", "email": "owner@jarvis"}
             return f(*args, **kwargs)
 
@@ -123,7 +106,7 @@ def signup(email: str, password: str, name: str) -> dict:
     if "@" not in email:
         return {"error": "Invalid email address."}
 
-    conn = sqlite3.connect(str(DB_PATH))
+    conn = get_db()
     try:
         existing = conn.execute("SELECT id FROM users WHERE email = ?", (email,)).fetchone()
         if existing:
@@ -151,7 +134,7 @@ def signup(email: str, password: str, name: str) -> dict:
 
 def signin(email: str, password: str) -> dict:
     """Authenticate an existing user. Returns token on success."""
-    conn = sqlite3.connect(str(DB_PATH))
+    conn = get_db()
     try:
         row = conn.execute("SELECT id, email, name, password_hash FROM users WHERE email = ?", (email,)).fetchone()
         if not row:

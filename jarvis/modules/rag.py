@@ -8,7 +8,7 @@ Uses simple chunking + cosine similarity (no external vector DB needed).
 import os
 import re
 import hashlib
-import sqlite3
+from jarvis.db import get_db
 from pathlib import Path
 from loguru import logger
 from jarvis.config import DB_PATH, DATA_DIR
@@ -17,33 +17,7 @@ UPLOAD_DIR = DATA_DIR / "uploads"
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
 
-def _init_db() -> None:
-    """Initialize RAG tables."""
-    conn = sqlite3.connect(str(DB_PATH))
-    conn.execute("""
-        CREATE TABLE IF NOT EXISTS documents (
-            id TEXT PRIMARY KEY,
-            user_id TEXT NOT NULL,
-            filename TEXT NOT NULL,
-            content TEXT NOT NULL,
-            chunks_count INTEGER DEFAULT 0,
-            uploaded_at TEXT NOT NULL
-        )
-    """)
-    conn.execute("""
-        CREATE TABLE IF NOT EXISTS chunks (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            doc_id TEXT NOT NULL,
-            user_id TEXT NOT NULL,
-            chunk_index INTEGER NOT NULL,
-            content TEXT NOT NULL,
-            FOREIGN KEY (doc_id) REFERENCES documents(id)
-        )
-    """)
-    conn.commit()
-    conn.close()
-
-_init_db()
+# DB tables initialized by jarvis.db
 
 
 def extract_text_from_pdf(file_bytes: bytes) -> str:
@@ -108,7 +82,7 @@ def upload_document(user_id: str, filename: str, file_bytes: bytes) -> dict:
     doc_id = hashlib.sha256(f"{user_id}:{filename}:{len(file_bytes)}".encode()).hexdigest()[:16]
     chunks = chunk_text(text)
 
-    conn = sqlite3.connect(str(DB_PATH))
+    conn = get_db()
     try:
         # Delete existing doc if re-uploading
         conn.execute("DELETE FROM chunks WHERE doc_id = ?", (doc_id,))
@@ -141,7 +115,7 @@ def search_documents(user_id: str, query: str, top_k: int = 5) -> list[dict]:
     if not query_words:
         return []
 
-    conn = sqlite3.connect(str(DB_PATH))
+    conn = get_db()
     try:
         rows = conn.execute(
             "SELECT doc_id, chunk_index, content FROM chunks WHERE user_id = ?",
@@ -176,7 +150,7 @@ def get_rag_context(user_id: str, query: str) -> str:
 
 def list_documents(user_id: str) -> list[dict]:
     """List all uploaded documents for a user."""
-    conn = sqlite3.connect(str(DB_PATH))
+    conn = get_db()
     try:
         rows = conn.execute(
             "SELECT id, filename, chunks_count, uploaded_at FROM documents WHERE user_id = ? ORDER BY uploaded_at DESC",
@@ -191,7 +165,7 @@ def list_documents(user_id: str) -> list[dict]:
 
 def delete_document(user_id: str, doc_id: str) -> bool:
     """Delete a document and its chunks."""
-    conn = sqlite3.connect(str(DB_PATH))
+    conn = get_db()
     try:
         conn.execute("DELETE FROM chunks WHERE doc_id = ? AND user_id = ?", (doc_id, user_id))
         conn.execute("DELETE FROM documents WHERE id = ? AND user_id = ?", (doc_id, user_id))

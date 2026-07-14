@@ -10,28 +10,12 @@ Automatically injected into every conversation for personalization.
 """
 
 import re
-import sqlite3
+from jarvis.db import get_db
 from loguru import logger
 from jarvis.config import DB_PATH
 
 
-def _init_db() -> None:
-    """Initialize long-term memory table."""
-    conn = sqlite3.connect(str(DB_PATH))
-    conn.execute("""
-        CREATE TABLE IF NOT EXISTS long_memory (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_id TEXT NOT NULL,
-            fact TEXT NOT NULL,
-            category TEXT DEFAULT 'general',
-            source TEXT DEFAULT 'auto',
-            created_at TEXT NOT NULL
-        )
-    """)
-    conn.commit()
-    conn.close()
-
-_init_db()
+# DB tables initialized by jarvis.db
 
 
 # Patterns that indicate user is sharing personal info
@@ -71,7 +55,7 @@ def auto_extract(user_id: str, message: str) -> list[str]:
 def store_fact(user_id: str, fact: str, category: str = "general") -> None:
     """Store a long-term fact."""
     import time
-    conn = sqlite3.connect(str(DB_PATH))
+    conn = get_db()
     try:
         conn.execute(
             "INSERT INTO long_memory (user_id, fact, category, source, created_at) VALUES (?, ?, ?, 'auto', ?)",
@@ -86,7 +70,7 @@ def store_fact(user_id: str, fact: str, category: str = "general") -> None:
 
 def is_duplicate(user_id: str, fact: str) -> bool:
     """Check if a similar fact already exists."""
-    conn = sqlite3.connect(str(DB_PATH))
+    conn = get_db()
     try:
         rows = conn.execute(
             "SELECT fact FROM long_memory WHERE user_id = ?", (user_id,)
@@ -103,7 +87,7 @@ def is_duplicate(user_id: str, fact: str) -> bool:
 
 def get_user_context(user_id: str) -> str:
     """Get all known facts about a user as context string."""
-    conn = sqlite3.connect(str(DB_PATH))
+    conn = get_db()
     try:
         rows = conn.execute(
             "SELECT fact, category FROM long_memory WHERE user_id = ? ORDER BY id DESC LIMIT 20",
@@ -121,7 +105,7 @@ def get_user_context(user_id: str) -> str:
 
 def get_all_facts(user_id: str) -> list[dict]:
     """Get all stored facts for a user."""
-    conn = sqlite3.connect(str(DB_PATH))
+    conn = get_db()
     try:
         rows = conn.execute(
             "SELECT id, fact, category, created_at FROM long_memory WHERE user_id = ? ORDER BY id DESC",
@@ -136,7 +120,7 @@ def get_all_facts(user_id: str) -> list[dict]:
 
 def delete_fact(user_id: str, fact_id: int) -> bool:
     """Delete a stored fact."""
-    conn = sqlite3.connect(str(DB_PATH))
+    conn = get_db()
     try:
         conn.execute("DELETE FROM long_memory WHERE id = ? AND user_id = ?", (fact_id, user_id))
         conn.commit()

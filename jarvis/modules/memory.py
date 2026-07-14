@@ -2,42 +2,17 @@
 
 import time
 import json
-import sqlite3
+from jarvis.db import get_db
 from loguru import logger
 from jarvis.config import DB_PATH
 
 
-def _init_db() -> None:
-    """Initialize memory tables."""
-    conn = sqlite3.connect(str(DB_PATH))
-    conn.execute("""
-        CREATE TABLE IF NOT EXISTS conversations (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_id TEXT NOT NULL,
-            session_id TEXT NOT NULL,
-            role TEXT NOT NULL,
-            content TEXT NOT NULL,
-            timestamp TEXT NOT NULL
-        )
-    """)
-    conn.execute("""
-        CREATE TABLE IF NOT EXISTS memories (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_id TEXT NOT NULL,
-            content TEXT NOT NULL,
-            category TEXT DEFAULT 'general',
-            created_at TEXT NOT NULL
-        )
-    """)
-    conn.commit()
-    conn.close()
-
-_init_db()
+# DB tables initialized by jarvis.db
 
 
 def save_message(user_id: str, session_id: str, role: str, content: str) -> None:
     """Save a message to conversation history."""
-    conn = sqlite3.connect(str(DB_PATH))
+    conn = get_db()
     try:
         conn.execute(
             "INSERT INTO conversations (user_id, session_id, role, content, timestamp) VALUES (?, ?, ?, ?, ?)",
@@ -52,7 +27,7 @@ def save_message(user_id: str, session_id: str, role: str, content: str) -> None
 
 def get_history(user_id: str, session_id: str, limit: int = 50) -> list[dict[str, str]]:
     """Get conversation history for a session."""
-    conn = sqlite3.connect(str(DB_PATH))
+    conn = get_db()
     try:
         rows = conn.execute(
             "SELECT role, content FROM conversations WHERE user_id = ? AND session_id = ? ORDER BY id DESC LIMIT ?",
@@ -68,7 +43,7 @@ def get_history(user_id: str, session_id: str, limit: int = 50) -> list[dict[str
 
 def get_all_sessions(user_id: str) -> list[dict]:
     """Get all conversation sessions for a user."""
-    conn = sqlite3.connect(str(DB_PATH))
+    conn = get_db()
     try:
         rows = conn.execute(
             "SELECT DISTINCT session_id, MIN(timestamp) as started FROM conversations WHERE user_id = ? GROUP BY session_id ORDER BY started DESC LIMIT 20",
@@ -83,7 +58,7 @@ def get_all_sessions(user_id: str) -> list[dict]:
 
 def add_memory(user_id: str, content: str, category: str = "general") -> dict:
     """Store a personal memory."""
-    conn = sqlite3.connect(str(DB_PATH))
+    conn = get_db()
     try:
         conn.execute(
             "INSERT INTO memories (user_id, content, category, created_at) VALUES (?, ?, ?, ?)",
@@ -100,7 +75,7 @@ def add_memory(user_id: str, content: str, category: str = "general") -> dict:
 
 def get_memories(user_id: str) -> list[dict]:
     """Get all memories for a user."""
-    conn = sqlite3.connect(str(DB_PATH))
+    conn = get_db()
     try:
         rows = conn.execute(
             "SELECT id, content, category, created_at FROM memories WHERE user_id = ? ORDER BY id DESC",
@@ -115,7 +90,7 @@ def get_memories(user_id: str) -> list[dict]:
 
 def delete_memory(user_id: str, memory_id: int) -> bool:
     """Delete a memory."""
-    conn = sqlite3.connect(str(DB_PATH))
+    conn = get_db()
     try:
         conn.execute("DELETE FROM memories WHERE id = ? AND user_id = ?", (memory_id, user_id))
         conn.commit()

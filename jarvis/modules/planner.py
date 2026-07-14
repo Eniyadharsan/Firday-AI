@@ -6,29 +6,13 @@ Generates structured plans with milestones, tracks progress per user.
 
 import time
 import json
-import sqlite3
+from jarvis.db import get_db
 from loguru import logger
 from jarvis.config import DB_PATH
 from jarvis.modules import llm
 
 
-def _init_db() -> None:
-    """Initialize planning tables."""
-    conn = sqlite3.connect(str(DB_PATH))
-    conn.execute("""
-        CREATE TABLE IF NOT EXISTS plans (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_id TEXT NOT NULL,
-            title TEXT NOT NULL,
-            tasks TEXT NOT NULL,
-            progress INTEGER DEFAULT 0,
-            created_at TEXT NOT NULL
-        )
-    """)
-    conn.commit()
-    conn.close()
-
-_init_db()
+# DB tables initialized by jarvis.db
 
 
 def is_planning_request(message: str) -> bool:
@@ -71,7 +55,7 @@ Keep it to 5-10 tasks max. Be specific and actionable."""},
         return {"title": message, "response": response, "type": "text"}
 
     # Save plan to DB
-    conn = sqlite3.connect(str(DB_PATH))
+    conn = get_db()
     try:
         conn.execute(
             "INSERT INTO plans (user_id, title, tasks, progress, created_at) VALUES (?, ?, ?, ?, ?)",
@@ -88,7 +72,7 @@ Keep it to 5-10 tasks max. Be specific and actionable."""},
 
 def get_plans(user_id: str) -> list[dict]:
     """Get all plans for a user."""
-    conn = sqlite3.connect(str(DB_PATH))
+    conn = get_db()
     try:
         rows = conn.execute(
             "SELECT id, title, tasks, progress, created_at FROM plans WHERE user_id = ? ORDER BY id DESC",
@@ -107,7 +91,7 @@ def get_plans(user_id: str) -> list[dict]:
 
 def update_progress(user_id: str, plan_id: int, progress: int) -> bool:
     """Update plan progress percentage."""
-    conn = sqlite3.connect(str(DB_PATH))
+    conn = get_db()
     try:
         conn.execute("UPDATE plans SET progress = ? WHERE id = ? AND user_id = ?", (progress, plan_id, user_id))
         conn.commit()
