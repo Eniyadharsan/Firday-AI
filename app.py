@@ -10,7 +10,7 @@ from loguru import logger
 
 from jarvis.config import PORT
 from jarvis.system_prompt import get_system_prompt
-from jarvis.modules import llm, search, news, auth, music, memory, image, rag, mcp, video, agents, planner, long_memory
+from jarvis.modules import llm, search, news, auth, music, memory, image, rag, mcp, video, agents, planner, long_memory, research
 
 app = Flask(__name__, static_folder="public", static_url_path="")
 
@@ -89,6 +89,13 @@ def chat():
             memory.save_message(user_id, session_id, "user", message)
             memory.save_message(user_id, session_id, "assistant", f"Playing {song}")
             return jsonify({"reply": f'Playing "{song}"...', "sessionId": session_id, "action": "play_music", "musicUrl": music.get_youtube_url(song)})
+
+    # --- Research mode ---
+    if research.is_research_request(message):
+        result = research.generate_research_report(message)
+        memory.save_message(user_id, session_id, "user", message)
+        memory.save_message(user_id, session_id, "assistant", f"Research report: {message}")
+        return jsonify({"reply": f"Research complete. {result['sources_count']} sources analyzed in {result['time_taken']}.", "sessionId": session_id, "action": "show_report", "report": result["report"], "topic": result["topic"], "meta": {"sources": result["sources_count"], "news": result["news_count"], "time": result["time_taken"]}})
 
     # --- Video ---
     if video.is_video_request(message):
@@ -342,6 +349,19 @@ def delete_profile_fact(fact_id: int):
     """Delete a stored fact."""
     user_id = request.args.get("userId", "default")
     return jsonify({"success": long_memory.delete_fact(user_id, fact_id)})
+
+
+# ============== Research ==============
+
+@app.route("/research", methods=["POST"])
+def research_endpoint():
+    """Generate a deep research report on a topic."""
+    data = request.json or {}
+    topic = data.get("topic", "")
+    if not topic:
+        return jsonify({"error": "topic required"}), 400
+    result = research.generate_research_report(topic)
+    return jsonify(result)
 
 
 # ============== Start ==============

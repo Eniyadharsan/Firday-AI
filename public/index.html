@@ -262,6 +262,11 @@
             openDet('<video src="'+d.videoUrl+'" controls autoplay style="width:100%;border-radius:8px;margin-bottom:10px"></video><p style="color:rgba(0,229,255,.5);font-size:11px">'+(d.videoPrompt||'')+'</p>');
             speak("Here's your video, Sir.");
           }
+          else if(d.action==='show_report'&&d.report){
+            const formatted=d.report.replace(/\n/g,'<br>').replace(/## (.*?)(<br>|$)/g,'<h3 style="color:#00e5ff;margin:12px 0 6px;font-size:13px;letter-spacing:1px">$1</h3>').replace(/\*\*(.*?)\*\*/g,'<strong style="color:#00e5ff">$1</strong>').replace(/^- (.*?)(<br>|$)/gm,'• $1<br>');
+            openDet('<div style="font-size:11px;color:rgba(0,229,255,.4);margin-bottom:8px">📊 '+d.meta.sources+' sources · '+d.meta.news+' news articles · '+d.meta.time+'</div>'+formatted);
+            speak("Research complete, Sir. Report is in the panel.");
+          }
           else speak(reply.slice(0,400))}}
       catch{tp.remove();reactor.classList.remove('speaking');statusEl.textContent='OPERATIONAL';orbSub.textContent='SAY "HEY JARVIS"';msg('Connection error','a')}}
 
