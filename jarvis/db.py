@@ -2,24 +2,28 @@
 Database module — Turso (libSQL) via HTTP API.
 No special packages needed — uses standard requests.
 Falls back to local SQLite if Turso is unavailable.
+
+Performance optimizations:
+- Persistent HTTP session (reuses TCP + TLS connections)
+- SQLite connection pooling (thread-local, kept open)
+- Reduced timeout for faster fallback
+- Pre-built headers (no per-request allocation)
 """
 
 import os
-import json
 import sqlite3
+import threading
 import requests
 from pathlib import Path
 from typing import Any
 from loguru import logger
 
-# --- Configuration (Task 1) ---
+# --- Configuration ---
 _raw_url = os.getenv("TURSO_DATABASE_URL", "")
 _raw_token = os.getenv("TURSO_AUTH_TOKEN", "")
 
-# USE_TURSO = True only when both are non-empty AND non-whitespace
 USE_TURSO: bool = bool(_raw_url.strip() and _raw_token.strip())
 
-# URL normalization: replace libsql:// with https://, leave https:// unchanged
 TURSO_URL: str = _raw_url.replace("libsql://", "https://") if _raw_url else ""
 TURSO_TOKEN: str = _raw_token
 
@@ -27,13 +31,46 @@ TURSO_TOKEN: str = _raw_token
 LOCAL_DB = Path("/tmp/jarvis-data/jarvis.db")
 LOCAL_DB.parent.mkdir(parents=True, exist_ok=True)
 
+# --- Persistent HTTP Session (reuses TCP/TLS connections) ---
+_session: requests.Session | None = None
+_pipeline_url: str = ""
 
-# --- Parameter Serialization (Task 2) ---
+if USE_TURSO:
+    _session = requests.Session()
+    _session.headers.update({
+        "Authorization": f"Bearer {TURSO_TOKEN}",
+        "Content-Type": "application/json",
+    })
+    # Enable connection pooling with keep-alive
+    adapter = requests.adapters.HTTPAdapter(
+        pool_connections=5,
+        pool_maxsize=10,
+        max_retries=0,  # We handle retries via fallback
+    )
+    _session.mount("https://", adapter)
+    _pipeline_url = f"{TURSO_URL}/v2/pipeline"
+
+# --- SQLite Connection Pool (thread-local) ---
+_local_storage = threading.local()
+
+
+def _get_local_conn() -> sqlite3.Connection:
+    """Get or create a thread-local SQLite connection."""
+    conn = getattr(_local_storage, "conn", None)
+    if conn is None:
+        conn = sqlite3.connect(str(LOCAL_DB), check_same_thread=False)
+        conn.row_factory = sqlite3.Row
+        # Performance pragmas for local SQLite
+        conn.execute("PRAGMA journal_mode=WAL")
+        conn.execute("PRAGMA synchronous=NORMAL")
+        conn.execute("PRAGMA cache_size=-8000")  # 8MB cache
+        _local_storage.conn = conn
+    return conn
+
+
+# --- Parameter Serialization ---
 def _serialize_param(value: Any) -> dict:
-    """Convert a Python value to Turso typed parameter format.
-    
-    IMPORTANT: bool check must come before int since bool is a subclass of int.
-    """
+    """Convert a Python value to Turso typed parameter format."""
     if value is None:
         return {"type": "null"}
     if isinstance(value, bool):
@@ -44,111 +81,102 @@ def _serialize_param(value: Any) -> dict:
         return {"type": "float", "value": value}
     if isinstance(value, str):
         return {"type": "text", "value": value}
-    # Unsupported types -> text with str(val)
     return {"type": "text", "value": str(value)}
 
 
-# --- Turso HTTP Execution (Task 3) ---
+# --- Turso HTTP Execution (optimized) ---
 def _turso_execute(sql: str, params: list) -> list[dict]:
-    """Execute via Turso HTTP Pipeline API (/v2/pipeline)."""
+    """Execute via Turso HTTP Pipeline API with persistent session."""
     try:
-        url = f"{TURSO_URL}/v2/pipeline"
-        headers = {
-            "Authorization": f"Bearer {TURSO_TOKEN}",
-            "Content-Type": "application/json",
-        }
-
-        # Build pipeline request with typed args and close request
-        typed_args = [_serialize_param(p) for p in params]
+        typed_args = [_serialize_param(p) for p in params] if params else []
         body = {
             "requests": [
                 {
                     "type": "execute",
-                    "stmt": {
-                        "sql": sql,
-                        "args": typed_args,
-                    },
+                    "stmt": {"sql": sql, "args": typed_args},
                 },
                 {"type": "close"},
             ]
         }
 
-        r = requests.post(url, headers=headers, json=body, timeout=10)
+        # Use persistent session — skips TCP/TLS handshake on subsequent calls
+        r = _session.post(_pipeline_url, json=body, timeout=5)
 
         if r.status_code != 200:
-            # Log with truncated body (≤200 chars), never log the token
-            truncated_body = r.text[:200]
-            logger.error(f"Turso error {r.status_code}: {truncated_body}")
+            logger.error(f"Turso error {r.status_code}: {r.text[:200]}")
             return _local_execute(sql, params)
 
-        # Parse response for SELECT/PRAGMA into list of dicts
         data = r.json()
-        results = data.get("results", [])
+        results = data.get("results")
         if not results:
             return []
 
-        result = results[0].get("response", {}).get("result", {})
-        
-        # For write operations, return empty list
-        upper_sql = sql.strip().upper()
-        if not upper_sql.startswith(("SELECT", "PRAGMA")):
+        first = results[0]
+        if first.get("type") != "ok":
             return []
 
-        cols = [c.get("name", "") for c in result.get("cols", [])]
+        result = first.get("response", {}).get("result", {})
+
+        # Write operations — return immediately
+        if not sql.lstrip()[:7].upper().startswith(("SELECT", "PRAGMA")):
+            return []
+
+        # Parse rows into dicts
+        cols = result.get("cols", [])
+        rows_data = result.get("rows", [])
+        
+        if not cols or not rows_data:
+            return []
+
+        col_names = [c["name"] for c in cols]
+        num_cols = len(col_names)
+
+        # Fast path: pre-allocate and iterate
         rows = []
-        for row in result.get("rows", []):
+        for row in rows_data:
             row_dict = {}
-            for i, col in enumerate(cols):
+            for i in range(num_cols):
                 val = row[i]
-                row_dict[col] = val.get("value") if isinstance(val, dict) else val
+                row_dict[col_names[i]] = val.get("value") if isinstance(val, dict) else val
             rows.append(row_dict)
         return rows
 
     except (requests.exceptions.Timeout, requests.exceptions.ConnectionError) as e:
-        # Log without exposing the token
-        logger.error(f"Turso connection failed: {type(e).__name__}: {e}")
+        logger.error(f"Turso connection failed: {type(e).__name__}")
         return _local_execute(sql, params)
     except Exception as e:
         logger.error(f"Turso request failed: {type(e).__name__}: {e}")
         return _local_execute(sql, params)
 
 
-# --- Local SQLite Execution (Task 4) ---
+# --- Local SQLite Execution (optimized with pooled connection) ---
 def _local_execute(sql: str, params: list) -> list[dict]:
-    """Execute via local SQLite (fallback). Uses parameterized queries."""
+    """Execute via local SQLite with pooled connection."""
     try:
-        conn = sqlite3.connect(str(LOCAL_DB))
-        conn.row_factory = sqlite3.Row
-        cursor = conn.execute(sql, params)
+        conn = _get_local_conn()
+        cursor = conn.execute(sql, params or [])
 
-        upper_sql = sql.strip().upper()
-        if upper_sql.startswith(("SELECT", "PRAGMA")):
-            rows = [dict(r) for r in cursor.fetchall()]
+        if sql.lstrip()[:7].upper().startswith(("SELECT", "PRAGMA")):
+            return [dict(r) for r in cursor.fetchall()]
         else:
             conn.commit()
-            rows = []
-
-        conn.close()
-        return rows
+            return []
     except Exception as e:
         logger.error(f"Local DB error: {e}")
+        # Reset connection on error
+        _local_storage.conn = None
         return []
 
 
 # --- Legacy Compatibility ---
 def get_db():
-    """Get a direct SQLite connection for modules that use legacy pattern.
-    
-    Returns a sqlite3 connection to the local database. This exists for
-    backward compatibility with modules (rag, planner, long_memory) that
-    use conn.execute() / conn.commit() / conn.close() directly.
-    """
+    """Get a direct SQLite connection for legacy modules."""
     conn = sqlite3.connect(str(LOCAL_DB))
     conn.row_factory = sqlite3.Row
     return conn
 
 
-# --- Public API (Tasks 4-5) ---
+# --- Public API ---
 def execute(sql: str, params: list = None) -> list[dict]:
     """Execute a read query (SELECT/PRAGMA). Returns list of row dicts."""
     if USE_TURSO:
@@ -160,8 +188,7 @@ def execute_insert(sql: str, params: list = None) -> list[dict]:
     """Execute a write query (INSERT/UPDATE/DELETE/CREATE). Returns empty list."""
     if USE_TURSO:
         try:
-            result = _turso_execute(sql, params or [])
-            return result
+            return _turso_execute(sql, params or [])
         except Exception as turso_err:
             logger.error(f"Turso insert failed: {turso_err}")
             try:
@@ -169,11 +196,10 @@ def execute_insert(sql: str, params: list = None) -> list[dict]:
             except Exception as local_err:
                 logger.error(f"Local insert also failed: {local_err}")
                 return []
-    # Local-only path
     return _local_execute(sql, params or [])
 
 
-# --- Schema Initialization (Task 5) ---
+# --- Schema Initialization ---
 def init_tables() -> None:
     """Initialize all required tables using CREATE TABLE IF NOT EXISTS."""
     tables = [

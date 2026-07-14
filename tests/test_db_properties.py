@@ -191,18 +191,22 @@ def test_property_4_response_parsing(col_names, num_rows):
         ]
     }
 
-    # Mock the requests.post to return this response
+    # Mock the session.post to return this response
     mock_response = MagicMock()
     mock_response.status_code = 200
     mock_response.json.return_value = turso_response
+
+    mock_session = MagicMock()
+    mock_session.post.return_value = mock_response
 
     with patch.dict(os.environ, {"TURSO_DATABASE_URL": "https://test.turso.io", "TURSO_AUTH_TOKEN": "test-token"}):
         with patch("jarvis.db.USE_TURSO", True):
             with patch("jarvis.db.TURSO_URL", "https://test.turso.io"):
                 with patch("jarvis.db.TURSO_TOKEN", "test-token"):
-                    with patch("requests.post", return_value=mock_response):
-                        from jarvis.db import _turso_execute
-                        result = _turso_execute("SELECT * FROM test", [])
+                    with patch("jarvis.db._session", mock_session):
+                        with patch("jarvis.db._pipeline_url", "https://test.turso.io/v2/pipeline"):
+                            from jarvis.db import _turso_execute
+                            result = _turso_execute("SELECT * FROM test", [])
 
     # Verify structure
     assert len(result) == num_rows
@@ -243,14 +247,17 @@ def test_property_5_auth_token_never_logged(token):
         with patch("jarvis.db.USE_TURSO", True):
             with patch("jarvis.db.TURSO_URL", "https://test.turso.io"):
                 with patch("jarvis.db.TURSO_TOKEN", token):
-                    with patch("requests.post", return_value=mock_response):
-                        # Capture loguru output
-                        handler_id = logger.add(capture_log, format="{message}")
-                        try:
-                            from jarvis.db import _turso_execute
-                            _turso_execute("SELECT 1", [])
-                        finally:
-                            logger.remove(handler_id)
+                    mock_session = MagicMock()
+                    mock_session.post.return_value = mock_response
+                    with patch("jarvis.db._session", mock_session):
+                        with patch("jarvis.db._pipeline_url", "https://test.turso.io/v2/pipeline"):
+                            # Capture loguru output
+                            handler_id = logger.add(capture_log, format="{message}")
+                            try:
+                                from jarvis.db import _turso_execute
+                                _turso_execute("SELECT 1", [])
+                            finally:
+                                logger.remove(handler_id)
 
     # Verify token never appears in any log message
     for msg in log_messages:
@@ -288,13 +295,16 @@ def test_property_6_error_response_log_truncation(response_body):
     with patch("jarvis.db.USE_TURSO", True):
         with patch("jarvis.db.TURSO_URL", "https://test.turso.io"):
             with patch("jarvis.db.TURSO_TOKEN", "safe-token"):
-                with patch("requests.post", return_value=mock_response):
-                    handler_id = logger.add(capture_log, format="{message}")
-                    try:
-                        from jarvis.db import _turso_execute
-                        _turso_execute("SELECT 1", [])
-                    finally:
-                        logger.remove(handler_id)
+                mock_session = MagicMock()
+                mock_session.post.return_value = mock_response
+                with patch("jarvis.db._session", mock_session):
+                    with patch("jarvis.db._pipeline_url", "https://test.turso.io/v2/pipeline"):
+                        handler_id = logger.add(capture_log, format="{message}")
+                        try:
+                            from jarvis.db import _turso_execute
+                            _turso_execute("SELECT 1", [])
+                        finally:
+                            logger.remove(handler_id)
 
     # Verify that if the response body appears in the log, it's truncated to ≤200 chars
     for msg in log_messages:
