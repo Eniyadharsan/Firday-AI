@@ -5,6 +5,7 @@ Main application with proper security, rate limiting, and observability.
 
 import re
 import time
+import threading
 from flask import Flask, request, jsonify, send_from_directory, Response
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
@@ -32,6 +33,16 @@ _RE_NEWS = re.compile(r"\b(news|latest|today|current|happening|headlines)\b")
 _RE_WEATHER = re.compile(r"\b(weather|temperature|forecast)\b")
 _RE_STOCK = re.compile(r"\b(stock|price|market|crypto)\b")
 _RE_FACTUAL = re.compile(r"\b(who is|where is|when did)\b")
+
+
+def _background_save(user_id: str, session_id: str, message: str, reply: str):
+    """Save messages and extract memories in background thread."""
+    try:
+        memory.save_message(user_id, session_id, "user", message)
+        memory.save_message(user_id, session_id, "assistant", reply)
+        long_memory.auto_extract(user_id, message)
+    except Exception as e:
+        logger.error(f"Background save error: {e}")
 
 # Request logging
 @app.before_request
@@ -193,10 +204,12 @@ def chat():
     if len(history) > 60:
         history[:] = [history[0]] + history[-58:]
 
-    # Persist
-    memory.save_message(user_id, session_id, "user", message)
-    memory.save_message(user_id, session_id, "assistant", reply)
-    long_memory.auto_extract(user_id, message)
+    # Persist in background (don't block the response)
+    threading.Thread(
+        target=_background_save,
+        args=(user_id, session_id, message, reply),
+        daemon=True,
+    ).start()
 
     return jsonify({"reply": reply, "sessionId": session_id, "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ")})
 

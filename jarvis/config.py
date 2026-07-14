@@ -12,8 +12,8 @@ DEBUG: bool = os.getenv("DEBUG", "false").lower() == "true"
 
 # --- AI ---
 CEREBRAS_API_KEY: str = os.getenv("CEREBRAS_API_KEY", "")
-LLM_MODELS: list[str] = ["gemma-4-31b", "gpt-oss-120b"]
-LLM_MAX_TOKENS: int = int(os.getenv("LLM_MAX_TOKENS", "2048"))
+LLM_MODELS: list[str] = os.getenv("LLM_MODELS", "gemma-4-31b,gpt-oss-120b").split(",")
+LLM_MAX_TOKENS: int = int(os.getenv("LLM_MAX_TOKENS", "1024"))
 LLM_TEMPERATURE: float = float(os.getenv("LLM_TEMPERATURE", "0.6"))
 
 # --- Database (Turso) ---
