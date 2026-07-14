@@ -1,21 +1,12 @@
 """
 Long-Term Memory — Auto-extracts and stores user preferences/facts.
-
-Stores:
-- User preferences (likes, dislikes, style)
-- Personal facts (name, location, work, interests)
-- Ongoing context (current projects, goals)
-
-Automatically injected into every conversation for personalization.
+Optimized: uses pooled execute/execute_insert instead of get_db() per call.
 """
 
 import re
-from jarvis.db import get_db
+import time
 from loguru import logger
-from jarvis.config import DB_PATH
-
-
-# DB tables initialized by jarvis.db
+from jarvis.db import execute, execute_insert
 
 
 # Patterns that indicate user is sharing personal info
@@ -33,99 +24,66 @@ EXTRACTION_PATTERNS: list[tuple[str, str]] = [
     (r"\bremember (?:that |this: ?)(.+?)(?:\.|$)", "explicit"),
 ]
 
+# Pre-compile patterns for speed
+_COMPILED_PATTERNS = [(re.compile(p, re.IGNORECASE), cat) for p, cat in EXTRACTION_PATTERNS]
+
 
 def auto_extract(user_id: str, message: str) -> list[str]:
     """Auto-extract facts from a message and store them."""
-    import time
     extracted: list[str] = []
-    lower = message.lower()
 
-    for pattern, category in EXTRACTION_PATTERNS:
-        matches = re.findall(pattern, lower)
+    for pattern, category in _COMPILED_PATTERNS:
+        matches = pattern.findall(message)
         for match in matches:
             fact = match.strip()
-            if len(fact) > 2 and not is_duplicate(user_id, fact):
-                store_fact(user_id, fact, category)
+            if len(fact) > 2 and not _is_duplicate(user_id, fact):
+                _store_fact(user_id, fact, category)
                 extracted.append(fact)
-                logger.info(f"Auto-extracted [{category}]: {fact}")
 
     return extracted
 
 
-def store_fact(user_id: str, fact: str, category: str = "general") -> None:
-    """Store a long-term fact."""
-    import time
-    conn = get_db()
-    try:
-        conn.execute(
-            "INSERT INTO long_memory (user_id, fact, category, source, created_at) VALUES (?, ?, ?, 'auto', ?)",
-            (user_id, fact, category, time.strftime("%Y-%m-%dT%H:%M:%SZ")),
-        )
-        conn.commit()
-    except Exception as e:
-        logger.error(f"Store fact error: {e}")
-    finally:
-        conn.close()
+def _store_fact(user_id: str, fact: str, category: str = "general") -> None:
+    """Store a long-term fact using pooled connection."""
+    execute_insert(
+        "INSERT INTO long_memory (user_id, fact, category, source, created_at) VALUES (?, ?, ?, 'auto', ?)",
+        [user_id, fact, category, time.strftime("%Y-%m-%dT%H:%M:%SZ")],
+    )
 
 
-def is_duplicate(user_id: str, fact: str) -> bool:
+def _is_duplicate(user_id: str, fact: str) -> bool:
     """Check if a similar fact already exists."""
-    conn = get_db()
-    try:
-        rows = conn.execute(
-            "SELECT fact FROM long_memory WHERE user_id = ?", (user_id,)
-        ).fetchall()
-        for row in rows:
-            if fact.lower() in row[0].lower() or row[0].lower() in fact.lower():
-                return True
-        return False
-    except Exception:
-        return False
-    finally:
-        conn.close()
+    rows = execute("SELECT fact FROM long_memory WHERE user_id = ?", [user_id])
+    fact_lower = fact.lower()
+    for row in rows:
+        existing = row["fact"].lower()
+        if fact_lower in existing or existing in fact_lower:
+            return True
+    return False
 
 
 def get_user_context(user_id: str) -> str:
     """Get all known facts about a user as context string."""
-    conn = get_db()
-    try:
-        rows = conn.execute(
-            "SELECT fact, category FROM long_memory WHERE user_id = ? ORDER BY id DESC LIMIT 20",
-            (user_id,),
-        ).fetchall()
-        if not rows:
-            return ""
-        facts = [f"- {r[0]} ({r[1]})" for r in rows]
-        return "[User Profile — things I know about this user]:\n" + "\n".join(facts)
-    except Exception:
+    rows = execute(
+        "SELECT fact, category FROM long_memory WHERE user_id = ? ORDER BY id DESC LIMIT 20",
+        [user_id],
+    )
+    if not rows:
         return ""
-    finally:
-        conn.close()
+    facts = [f"- {r['fact']} ({r['category']})" for r in rows]
+    return "[User Profile — things I know about this user]:\n" + "\n".join(facts)
 
 
 def get_all_facts(user_id: str) -> list[dict]:
     """Get all stored facts for a user."""
-    conn = get_db()
-    try:
-        rows = conn.execute(
-            "SELECT id, fact, category, created_at FROM long_memory WHERE user_id = ? ORDER BY id DESC",
-            (user_id,),
-        ).fetchall()
-        return [{"id": r[0], "fact": r[1], "category": r[2], "created_at": r[3]} for r in rows]
-    except Exception:
-        return []
-    finally:
-        conn.close()
+    rows = execute(
+        "SELECT id, fact, category, created_at FROM long_memory WHERE user_id = ? ORDER BY id DESC",
+        [user_id],
+    )
+    return [{"id": r["id"], "fact": r["fact"], "category": r["category"], "created_at": r["created_at"]} for r in rows]
 
 
 def delete_fact(user_id: str, fact_id: int) -> bool:
     """Delete a stored fact."""
-    conn = get_db()
-    try:
-        conn.execute("DELETE FROM long_memory WHERE id = ? AND user_id = ?", (fact_id, user_id))
-        conn.commit()
-        return True
-    except Exception:
-        return False
-    finally:
-        conn.close()
+    execute_insert("DELETE FROM long_memory WHERE id = ? AND user_id = ?", [fact_id, user_id])
+    return True

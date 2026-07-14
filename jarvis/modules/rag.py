@@ -1,27 +1,22 @@
 """
 RAG Module — Retrieval Augmented Generation
-
-Allows JARVIS to answer questions about uploaded PDFs and documents.
-Uses simple chunking + cosine similarity (no external vector DB needed).
+Optimized: uses pooled execute/execute_insert instead of get_db() per call.
 """
 
-import os
 import re
+import time
 import hashlib
-from jarvis.db import get_db
 from pathlib import Path
 from loguru import logger
-from jarvis.config import DB_PATH, DATA_DIR
+from jarvis.db import execute, execute_insert
+from jarvis.config import DATA_DIR
 
 UPLOAD_DIR = DATA_DIR / "uploads"
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
 
-# DB tables initialized by jarvis.db
-
-
 def extract_text_from_pdf(file_bytes: bytes) -> str:
-    """Extract text from PDF bytes. Uses PyPDF2 if available, else basic extraction."""
+    """Extract text from PDF bytes."""
     try:
         import PyPDF2
         import io
@@ -31,7 +26,6 @@ def extract_text_from_pdf(file_bytes: bytes) -> str:
             text += page.extract_text() or ""
         return text.strip()
     except ImportError:
-        # Fallback: extract readable text between parentheses (basic PDF text)
         text = file_bytes.decode("latin-1", errors="ignore")
         segments = re.findall(r"\(([^)]+)\)", text)
         return " ".join(s for s in segments if len(s) > 2)
@@ -82,61 +76,50 @@ def upload_document(user_id: str, filename: str, file_bytes: bytes) -> dict:
     doc_id = hashlib.sha256(f"{user_id}:{filename}:{len(file_bytes)}".encode()).hexdigest()[:16]
     chunks = chunk_text(text)
 
-    conn = get_db()
     try:
         # Delete existing doc if re-uploading
-        conn.execute("DELETE FROM chunks WHERE doc_id = ?", (doc_id,))
-        conn.execute("DELETE FROM documents WHERE id = ?", (doc_id,))
+        execute_insert("DELETE FROM chunks WHERE doc_id = ?", [doc_id])
+        execute_insert("DELETE FROM documents WHERE id = ?", [doc_id])
 
-        import time
-        conn.execute(
+        execute_insert(
             "INSERT INTO documents (id, user_id, filename, content, chunks_count, uploaded_at) VALUES (?, ?, ?, ?, ?, ?)",
-            (doc_id, user_id, filename, text[:5000], len(chunks), time.strftime("%Y-%m-%dT%H:%M:%SZ")),
+            [doc_id, user_id, filename, text[:5000], len(chunks), time.strftime("%Y-%m-%dT%H:%M:%SZ")],
         )
 
         for i, chunk in enumerate(chunks):
-            conn.execute(
+            execute_insert(
                 "INSERT INTO chunks (doc_id, user_id, chunk_index, content) VALUES (?, ?, ?, ?)",
-                (doc_id, user_id, i, chunk),
+                [doc_id, user_id, i, chunk],
             )
-        conn.commit()
+
         logger.info(f"Indexed document '{filename}' with {len(chunks)} chunks")
         return {"success": True, "doc_id": doc_id, "filename": filename, "chunks": len(chunks)}
     except Exception as e:
         logger.error(f"Upload error: {e}")
         return {"error": str(e)}
-    finally:
-        conn.close()
 
 
 def search_documents(user_id: str, query: str, top_k: int = 5) -> list[dict]:
-    """Search indexed documents using keyword matching (simple TF approach)."""
+    """Search indexed documents using keyword matching."""
     query_words = set(query.lower().split())
     if not query_words:
         return []
 
-    conn = get_db()
-    try:
-        rows = conn.execute(
-            "SELECT doc_id, chunk_index, content FROM chunks WHERE user_id = ?",
-            (user_id,),
-        ).fetchall()
+    rows = execute(
+        "SELECT doc_id, chunk_index, content FROM chunks WHERE user_id = ?",
+        [user_id],
+    )
 
-        scored: list[tuple[float, dict]] = []
-        for doc_id, chunk_idx, content in rows:
-            content_words = set(content.lower().split())
-            overlap = len(query_words & content_words)
-            if overlap > 0:
-                score = overlap / len(query_words)
-                scored.append((score, {"doc_id": doc_id, "chunk_index": chunk_idx, "content": content, "score": score}))
+    scored: list[tuple[float, dict]] = []
+    for row in rows:
+        content_words = set(row["content"].lower().split())
+        overlap = len(query_words & content_words)
+        if overlap > 0:
+            score = overlap / len(query_words)
+            scored.append((score, {"doc_id": row["doc_id"], "chunk_index": row["chunk_index"], "content": row["content"], "score": score}))
 
-        scored.sort(key=lambda x: x[0], reverse=True)
-        return [item for _, item in scored[:top_k]]
-    except Exception as e:
-        logger.error(f"Search error: {e}")
-        return []
-    finally:
-        conn.close()
+    scored.sort(key=lambda x: x[0], reverse=True)
+    return [item for _, item in scored[:top_k]]
 
 
 def get_rag_context(user_id: str, query: str) -> str:
@@ -150,28 +133,15 @@ def get_rag_context(user_id: str, query: str) -> str:
 
 def list_documents(user_id: str) -> list[dict]:
     """List all uploaded documents for a user."""
-    conn = get_db()
-    try:
-        rows = conn.execute(
-            "SELECT id, filename, chunks_count, uploaded_at FROM documents WHERE user_id = ? ORDER BY uploaded_at DESC",
-            (user_id,),
-        ).fetchall()
-        return [{"id": r[0], "filename": r[1], "chunks": r[2], "uploaded_at": r[3]} for r in rows]
-    except Exception:
-        return []
-    finally:
-        conn.close()
+    rows = execute(
+        "SELECT id, filename, chunks_count, uploaded_at FROM documents WHERE user_id = ? ORDER BY uploaded_at DESC",
+        [user_id],
+    )
+    return [{"id": r["id"], "filename": r["filename"], "chunks": r["chunks_count"], "uploaded_at": r["uploaded_at"]} for r in rows]
 
 
 def delete_document(user_id: str, doc_id: str) -> bool:
     """Delete a document and its chunks."""
-    conn = get_db()
-    try:
-        conn.execute("DELETE FROM chunks WHERE doc_id = ? AND user_id = ?", (doc_id, user_id))
-        conn.execute("DELETE FROM documents WHERE id = ? AND user_id = ?", (doc_id, user_id))
-        conn.commit()
-        return True
-    except Exception:
-        return False
-    finally:
-        conn.close()
+    execute_insert("DELETE FROM chunks WHERE doc_id = ? AND user_id = ?", [doc_id, user_id])
+    execute_insert("DELETE FROM documents WHERE id = ? AND user_id = ?", [doc_id, user_id])
+    return True

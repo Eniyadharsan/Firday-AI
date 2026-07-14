@@ -27,6 +27,12 @@ try:
 except ImportError:
     pass
 
+# Pre-compiled regex patterns for chat routing (avoids recompilation per request)
+_RE_NEWS = re.compile(r"\b(news|latest|today|current|happening|headlines)\b")
+_RE_WEATHER = re.compile(r"\b(weather|temperature|forecast)\b")
+_RE_STOCK = re.compile(r"\b(stock|price|market|crypto)\b")
+_RE_FACTUAL = re.compile(r"\b(who is|where is|when did)\b")
+
 # Request logging
 @app.before_request
 def log_request():
@@ -151,14 +157,14 @@ def chat():
 
     # --- Context enrichment ---
     context = ""
-    if re.search(r"\b(news|latest|today|current|happening|headlines)\b", lower):
+    if _RE_NEWS.search(lower):
         news.refresh_cache()
         context = news.fetch_news(message) or news.get_cached_news("world")
-    elif re.search(r"\b(weather|temperature|forecast)\b", lower):
+    elif _RE_WEATHER.search(lower):
         context = search.web_search(message + " weather today")
-    elif re.search(r"\b(stock|price|market|crypto)\b", lower):
+    elif _RE_STOCK.search(lower):
         context = search.web_search(message + " current price")
-    elif re.search(r"\b(who is|where is|when did)\b", lower) and len(message) < 80:
+    elif _RE_FACTUAL.search(lower) and len(message) < 80:
         context = search.web_search(message)
 
     # RAG context
