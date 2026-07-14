@@ -154,11 +154,25 @@ def chat():
         history.append({"role": "user", "content": message})
         reply = llm.generate(history)
         history.append({"role": "assistant", "content": reply})
-        song = music.extract_song_from_reply(reply)
-        if song:
+        song = music.extract_song_from_reply(reply) or message.lower().replace("play ", "").replace("put on ", "").replace("queue ", "").strip()
+
+        results = music.search_tracks(song, max_results=10)
+        if results:
+            track = results[0]
             memory.save_message(user_id, session_id, "user", message)
-            memory.save_message(user_id, session_id, "assistant", f"Playing {song}")
-            return jsonify({"reply": f'Playing "{song}"...', "sessionId": session_id, "action": "play_music", "musicUrl": music.get_youtube_url(song)})
+            memory.save_message(user_id, session_id, "assistant", f'Playing {track["title"]} by {track["artist"]}')
+            return jsonify({
+                "reply": f'Playing "{track["title"]}" by {track["artist"]}...',
+                "sessionId": session_id,
+                "action": "play_music_embed",
+                "track": track
+            })
+        else:
+            memory.save_message(user_id, session_id, "user", message)
+            return jsonify({
+                "reply": "Sorry, I couldn't find that song. Try a different search.",
+                "sessionId": session_id
+            })
 
     # --- Image ---
     if image.is_image_request(message):
@@ -268,6 +282,15 @@ def image_endpoint():
 def music_endpoint():
     data = request.json or {}
     return jsonify({"musicUrl": music.get_youtube_url(data.get("song", "")), "song": data.get("song", "")})
+
+@app.route("/music/search", methods=["GET"])
+@require_auth
+def music_search():
+    query = request.args.get("q", "").strip()
+    if not query:
+        return jsonify({"error": "Query parameter 'q' is required"}), 400
+    results = music.search_tracks(query, max_results=10)
+    return jsonify({"results": results, "query": query})
 
 @app.route("/memory", methods=["GET"])
 @require_auth
