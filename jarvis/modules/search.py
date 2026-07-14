@@ -10,7 +10,7 @@ def web_search(query: str) -> str:
         r = requests.get(
             "https://api.duckduckgo.com/",
             params={"q": query, "format": "json", "no_html": "1", "skip_disambig": "1"},
-            timeout=8,
+            timeout=4,
         )
         r.raise_for_status()
         data = r.json()

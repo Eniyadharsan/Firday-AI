@@ -16,7 +16,7 @@ def generate(messages: list[dict[str, str]]) -> str:
                 "https://api.cerebras.ai/v1/chat/completions",
                 headers={"Authorization": f"Bearer {CEREBRAS_API_KEY}", "Content-Type": "application/json"},
                 json={"model": model, "messages": messages, "max_tokens": LLM_MAX_TOKENS, "temperature": LLM_TEMPERATURE},
-                timeout=30,
+                timeout=20,
             )
             if response.status_code == 429:
                 logger.warning(f"Rate limited on {model}, trying fallback...")

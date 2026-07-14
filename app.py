@@ -97,18 +97,16 @@ def chat():
         memory.save_message(user_id, session_id, "assistant", f"Generated image: {message}")
         return jsonify({"reply": "Here's your image, Sir.", "sessionId": session_id, "action": "show_image", "imageUrl": url, "imagePrompt": message})
 
-    # --- Context enrichment (web search / news) ---
+    # --- Context enrichment (only for clear real-time needs) ---
     context = ""
-    news.refresh_cache()
-    if re.search(r"\b(news|latest|today|current|happening|headlines)\b", lower):
+    if re.search(r"\b(news|latest|today|current|happening|headlines|breaking)\b", lower):
+        news.refresh_cache()
         context = news.fetch_news(message) or news.get_cached_news("world")
     elif re.search(r"\b(weather|temperature|forecast)\b", lower):
         context = search.web_search(message + " weather today")
     elif re.search(r"\b(stock|price|market|crypto|bitcoin)\b", lower):
         context = search.web_search(message + " current price")
-    elif re.search(r"\b(what is|who is|where is|when|how|search|find|explain|tell me)\b", lower):
-        context = search.web_search(message)
-    elif message.endswith("?"):
+    elif re.search(r"\b(who is|where is|when did|when was)\b", lower) and len(message) < 80:
         context = search.web_search(message)
 
     user_msg = f"{message}\n\n[Real-time data — present directly, NO links]:\n{context}" if context else message
