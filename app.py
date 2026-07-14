@@ -1,51 +1,61 @@
 """
-J.A.R.V.I.S — Personal AI Assistant
-Main application entry point.
-
-Optimizations:
-- Connection pooling for HTTP requests
-- In-memory caching with TTL
-- Async-ready session management
-- Minimal DB writes (batched)
-- Response compression
+J.A.R.V.I.S - Personal AI Assistant
+Main application with proper security, rate limiting, and observability.
 """
 
 import re
 import time
-from functools import lru_cache
 from flask import Flask, request, jsonify, send_from_directory, Response
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 from loguru import logger
 
 from jarvis.config import PORT
 from jarvis.system_prompt import get_system_prompt
 from jarvis.modules import llm, search, news, auth, music, memory, image, rag, mcp, video, agents, planner, long_memory, research
+from jarvis.modules.auth import require_auth, get_current_user_id
 
 app = Flask(__name__, static_folder="public", static_url_path="")
 
-# Enable response compression
+# Rate limiting
+limiter = Limiter(get_remote_address, app=app, default_limits=["60 per minute"], storage_uri="memory://")
+
+# Compression
 try:
     from flask_compress import Compress
     Compress(app)
 except ImportError:
     pass
 
-# --- In-memory session store (for quick access; persisted to SQLite) ---
+# Request logging
+@app.before_request
+def log_request():
+    request.start_time = time.time()
+
+@app.after_request
+def log_response(response):
+    duration = round((time.time() - getattr(request, "start_time", time.time())) * 1000, 1)
+    if request.path not in ("/", "/health"):
+        logger.info(f"{request.method} {request.path} -> {response.status_code} ({duration}ms)")
+    return response
+
+# Session cache (backed by SQLite via memory module)
 sessions: dict[str, list[dict[str, str]]] = {}
 
-# --- Cache system prompt (regenerate every 60s for time update) ---
-_prompt_cache: dict[str, tuple[str, float]] = {}
+# Prompt cache
+_prompt_cache: tuple[str, float] = ("", 0)
 
 def get_cached_prompt() -> str:
-    """Get system prompt with 60s cache."""
+    global _prompt_cache
     now = time.time()
-    if "prompt" in _prompt_cache and now - _prompt_cache["prompt"][1] < 60:
-        return _prompt_cache["prompt"][0]
-    prompt = get_system_prompt()
-    _prompt_cache["prompt"] = (prompt, now)
-    return prompt
+    if now - _prompt_cache[1] < 60:
+        return _prompt_cache[0]
+    p = get_system_prompt()
+    _prompt_cache = (p, now)
+    return p
 
 
-# ============== Static / Health ==============
+# ===== Static =====
 
 @app.route("/")
 def index():
@@ -57,10 +67,10 @@ def static_files(path: str):
 
 @app.route("/health")
 def health():
-    return jsonify({"status": "running", "version": "2.0", "llm": "Cerebras 120B"})
+    return jsonify({"status": "running", "version": "2.1", "auth": "JWT", "rateLimit": "30/min on chat"})
 
 
-# ============== Auth Routes ==============
+# ===== Auth =====
 
 @app.route("/auth/status")
 def auth_status():
@@ -84,18 +94,19 @@ def signin():
 
 @app.route("/login", methods=["POST"])
 def login_alias():
-    """Alias for signin."""
     return signin()
 
 
-# ============== Chat ==============
+# ===== Chat (rate limited) =====
 
 @app.route("/chat", methods=["POST"])
+@limiter.limit("30 per minute")
+@require_auth
 def chat():
     data = request.json or {}
     message: str = data.get("message", "")
     session_id: str = data.get("sessionId", f"s-{int(time.time()*1000)}")
-    user_id: str = data.get("userId", "default")
+    user_id: str = get_current_user_id()
 
     if not message:
         return jsonify({"error": "message required"}), 400
@@ -105,6 +116,20 @@ def chat():
         sessions[session_id] = [{"role": "system", "content": get_cached_prompt()}]
     history = sessions[session_id]
     lower = message.lower()
+
+    # --- Research mode ---
+    if research.is_research_request(message):
+        result = research.generate_research_report(message)
+        memory.save_message(user_id, session_id, "user", message)
+        memory.save_message(user_id, session_id, "assistant", f"Research: {message}")
+        return jsonify({"reply": f"Research complete. {result['sources_count']} sources in {result['time_taken']}.", "sessionId": session_id, "action": "show_report", "report": result["report"], "topic": result["topic"], "meta": {"sources": result["sources_count"], "news": result["news_count"], "time": result["time_taken"]}})
+
+    # --- Video ---
+    if video.is_video_request(message):
+        resp = video.get_video_response(message)
+        resp["sessionId"] = session_id
+        memory.save_message(user_id, session_id, "user", message)
+        return jsonify(resp)
 
     # --- Music ---
     if music.is_music_request(message):
@@ -117,84 +142,64 @@ def chat():
             memory.save_message(user_id, session_id, "assistant", f"Playing {song}")
             return jsonify({"reply": f'Playing "{song}"...', "sessionId": session_id, "action": "play_music", "musicUrl": music.get_youtube_url(song)})
 
-    # --- Research mode ---
-    if research.is_research_request(message):
-        result = research.generate_research_report(message)
-        memory.save_message(user_id, session_id, "user", message)
-        memory.save_message(user_id, session_id, "assistant", f"Research report: {message}")
-        return jsonify({"reply": f"Research complete. {result['sources_count']} sources analyzed in {result['time_taken']}.", "sessionId": session_id, "action": "show_report", "report": result["report"], "topic": result["topic"], "meta": {"sources": result["sources_count"], "news": result["news_count"], "time": result["time_taken"]}})
-
-    # --- Video ---
-    if video.is_video_request(message):
-        resp = video.get_video_response(message)
-        resp["sessionId"] = session_id
-        memory.save_message(user_id, session_id, "user", message)
-        memory.save_message(user_id, session_id, "assistant", f"Generated video: {message}")
-        return jsonify(resp)
-
     # --- Image ---
     if image.is_image_request(message):
         url = image.generate_image_url(message)
         memory.save_message(user_id, session_id, "user", message)
-        memory.save_message(user_id, session_id, "assistant", f"Generated image: {message}")
         return jsonify({"reply": "Here's your image, Sir.", "sessionId": session_id, "action": "show_image", "imageUrl": url, "imagePrompt": message})
 
-    # --- Context enrichment (only for clear real-time needs) ---
+    # --- Context enrichment ---
     context = ""
-    if re.search(r"\b(news|latest|today|current|happening|headlines|breaking)\b", lower):
+    if re.search(r"\b(news|latest|today|current|happening|headlines)\b", lower):
         news.refresh_cache()
         context = news.fetch_news(message) or news.get_cached_news("world")
     elif re.search(r"\b(weather|temperature|forecast)\b", lower):
         context = search.web_search(message + " weather today")
-    elif re.search(r"\b(stock|price|market|crypto|bitcoin)\b", lower):
+    elif re.search(r"\b(stock|price|market|crypto)\b", lower):
         context = search.web_search(message + " current price")
-    elif re.search(r"\b(who is|where is|when did|when was)\b", lower) and len(message) < 80:
+    elif re.search(r"\b(who is|where is|when did)\b", lower) and len(message) < 80:
         context = search.web_search(message)
 
-    # --- RAG: check uploaded documents ---
+    # RAG context
     rag_context = rag.get_rag_context(user_id, message)
     if rag_context:
         context = f"{context}\n\n{rag_context}" if context else rag_context
 
-    user_msg = f"{message}\n\n[Real-time data — present directly, NO links]:\n{context}" if context else message
+    user_msg = f"{message}\n\n[Data — present directly, NO links]:\n{context}" if context else message
     history.append({"role": "user", "content": user_msg})
 
-    # --- Long-term memory: inject user context ---
+    # Long-term memory injection
     user_context = long_memory.get_user_context(user_id)
-    if user_context and len(history) > 1:
-        # Inject user profile into system prompt
-        history[0]["content"] = history[0]["content"].split("[User Profile")[0] + "\n\n" + user_context
+    if user_context:
+        history[0]["content"] = get_cached_prompt() + "\n\n" + user_context
 
-    # --- Multi-agent routing ---
+    # Multi-agent routing
     agent_id = agents.detect_agent(message)
     if agent_id and len(message) > 20:
-        # Use specialized agent
-        logger.info(f"Routing to agent: {agent_id}")
         reply = agents.orchestrate(message, history)
     else:
         reply = llm.generate(history)
 
     history.append({"role": "assistant", "content": reply})
 
-    # --- Auto-extract user facts ---
-    long_memory.auto_extract(user_id, message)
-
     # Trim history
     if len(history) > 60:
         history[:] = [history[0]] + history[-58:]
 
-    # Persist to SQLite
+    # Persist
     memory.save_message(user_id, session_id, "user", message)
     memory.save_message(user_id, session_id, "assistant", reply)
+    long_memory.auto_extract(user_id, message)
 
     return jsonify({"reply": reply, "sessionId": session_id, "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ")})
 
 
-# ============== Streaming Chat ==============
+# ===== Streaming Chat =====
 
 @app.route("/chat/stream", methods=["POST"])
+@limiter.limit("30 per minute")
+@require_auth
 def chat_stream():
-    """Stream LLM response token by token."""
     data = request.json or {}
     message: str = data.get("message", "")
     session_id: str = data.get("sessionId", f"s-{int(time.time()*1000)}")
@@ -208,220 +213,138 @@ def chat_stream():
     history.append({"role": "user", "content": message})
 
     def generate():
-        full_reply = ""
+        full = ""
         for token in llm.stream_generate(history):
-            full_reply += token
+            full += token
             yield f"data: {token}\n\n"
-        history.append({"role": "assistant", "content": full_reply})
+        history.append({"role": "assistant", "content": full})
         yield "data: [DONE]\n\n"
 
     return Response(generate(), mimetype="text/event-stream")
 
 
-# ============== Search ==============
+# ===== Search / News / Image / Music / Memory =====
 
 @app.route("/search", methods=["POST"])
+@require_auth
 def search_endpoint():
     data = request.json or {}
-    query: str = data.get("query", "")
-    if not query:
-        return jsonify({"error": "query required"}), 400
-    result = search.web_search(query)
-    return jsonify({"result": result, "query": query})
-
-
-# ============== News ==============
+    return jsonify({"result": search.web_search(data.get("query", "")), "query": data.get("query", "")})
 
 @app.route("/news")
 def news_endpoint():
     news.refresh_cache()
     return jsonify({"world": news.get_cached_news("world"), "tech": news.get_cached_news("tech"), "business": news.get_cached_news("business")})
 
-
-# ============== Image ==============
-
 @app.route("/image", methods=["POST"])
+@require_auth
 def image_endpoint():
     data = request.json or {}
-    prompt: str = data.get("prompt", "")
-    if not prompt:
-        return jsonify({"error": "prompt required"}), 400
-    url = image.generate_image_url(prompt)
-    return jsonify({"imageUrl": url, "prompt": prompt})
-
-
-# ============== Music ==============
+    prompt = data.get("prompt", "")
+    return jsonify({"imageUrl": image.generate_image_url(prompt), "prompt": prompt})
 
 @app.route("/music", methods=["POST"])
+@require_auth
 def music_endpoint():
     data = request.json or {}
-    song: str = data.get("song", "")
-    if not song:
-        return jsonify({"error": "song required"}), 400
-    return jsonify({"musicUrl": music.get_youtube_url(song), "song": song})
-
-
-# ============== Memory ==============
+    return jsonify({"musicUrl": music.get_youtube_url(data.get("song", "")), "song": data.get("song", "")})
 
 @app.route("/memory", methods=["GET"])
+@require_auth
 def get_memories():
-    user_id = request.args.get("userId", "default")
-    return jsonify({"memories": memory.get_memories(user_id)})
+    return jsonify({"memories": memory.get_memories(get_current_user_id())})
 
 @app.route("/memory", methods=["POST"])
+@require_auth
 def add_mem():
     data = request.json or {}
-    return jsonify(memory.add_memory(data.get("userId", "default"), data.get("content", ""), data.get("category", "general")))
+    return jsonify(memory.add_memory(get_current_user_id(), data.get("content", ""), data.get("category", "general")))
 
 
-# ============== RAG (Document Q&A) ==============
+# ===== RAG =====
 
 @app.route("/rag/upload", methods=["POST"])
+@require_auth
 def rag_upload():
-    """Upload a document (PDF, TXT, HTML) for RAG."""
-    user_id = request.form.get("userId", "default")
+    user_id = get_current_user_id()
     if "file" not in request.files:
         return jsonify({"error": "No file uploaded"}), 400
     file = request.files["file"]
     if not file.filename:
         return jsonify({"error": "No filename"}), 400
-    file_bytes = file.read()
-    result = rag.upload_document(user_id, file.filename, file_bytes)
+    result = rag.upload_document(user_id, file.filename, file.read())
     if "error" in result:
         return jsonify(result), 400
     return jsonify(result)
 
 @app.route("/rag/documents", methods=["GET"])
+@require_auth
 def rag_list():
-    """List uploaded documents."""
-    user_id = request.args.get("userId", "default")
-    return jsonify({"documents": rag.list_documents(user_id)})
+    return jsonify({"documents": rag.list_documents(get_current_user_id())})
 
 @app.route("/rag/documents/<doc_id>", methods=["DELETE"])
+@require_auth
 def rag_delete(doc_id: str):
-    user_id = request.args.get("userId", "default")
-    return jsonify({"success": rag.delete_document(user_id, doc_id)})
-
-@app.route("/rag/search", methods=["POST"])
-def rag_search():
-    """Search uploaded documents."""
-    data = request.json or {}
-    user_id = data.get("userId", "default")
-    query = data.get("query", "")
-    results = rag.search_documents(user_id, query)
-    return jsonify({"results": results})
+    return jsonify({"success": rag.delete_document(get_current_user_id(), doc_id)})
 
 
-# ============== MCP (Model Context Protocol) ==============
+# ===== MCP =====
 
 @app.route("/mcp", methods=["POST"])
 def mcp_endpoint():
-    """MCP JSON-RPC endpoint — allows external AI agents to use JARVIS tools."""
-    body = request.json or {}
-    result = mcp.handle_mcp_request(body)
-    return jsonify(result)
+    return jsonify(mcp.handle_mcp_request(request.json or {}))
 
 @app.route("/mcp/tools", methods=["GET"])
 def mcp_tools():
-    """List available MCP tools."""
     return jsonify({"tools": mcp.list_tools()})
 
 
-# ============== Agents ==============
+# ===== Agents / Planner / History / Profile =====
 
 @app.route("/agents", methods=["GET"])
 def list_agents():
-    """List all specialized agents."""
     return jsonify({"agents": agents.list_agents()})
 
-
-# ============== Planner ==============
-
 @app.route("/plans", methods=["GET"])
+@require_auth
 def get_plans():
-    """Get all plans for a user."""
-    user_id = request.args.get("userId", "default")
-    return jsonify({"plans": planner.get_plans(user_id)})
+    return jsonify({"plans": planner.get_plans(get_current_user_id())})
 
 @app.route("/plans", methods=["POST"])
+@require_auth
 def create_plan():
-    """Create a new structured plan."""
     data = request.json or {}
-    user_id = data.get("userId", "default")
-    message = data.get("goal", "")
-    if not message:
-        return jsonify({"error": "goal required"}), 400
-    result = planner.generate_plan(user_id, message)
-    return jsonify(result)
-
-@app.route("/plans/<int:plan_id>/progress", methods=["PUT"])
-def update_plan_progress(plan_id: int):
-    """Update plan progress."""
-    data = request.json or {}
-    user_id = data.get("userId", "default")
-    progress = data.get("progress", 0)
-    return jsonify({"success": planner.update_progress(user_id, plan_id, progress)})
-
-
-# ============== Long-Term Memory ==============
-
-@app.route("/profile", methods=["GET"])
-def get_profile():
-    """Get user's stored long-term memory/facts."""
-    user_id = request.args.get("userId", "default")
-    return jsonify({"facts": long_memory.get_all_facts(user_id)})
-
-@app.route("/profile/<int:fact_id>", methods=["DELETE"])
-def delete_profile_fact(fact_id: int):
-    """Delete a stored fact."""
-    user_id = request.args.get("userId", "default")
-    return jsonify({"success": long_memory.delete_fact(user_id, fact_id)})
-
-
-# ============== Research ==============
-
-@app.route("/research", methods=["POST"])
-def research_endpoint():
-    """Generate a deep research report on a topic."""
-    data = request.json or {}
-    topic = data.get("topic", "")
-    if not topic:
-        return jsonify({"error": "topic required"}), 400
-    result = research.generate_research_report(topic)
-    return jsonify(result)
-
-
-# ============== Chat History ==============
+    return jsonify(planner.generate_plan(get_current_user_id(), data.get("goal", "")))
 
 @app.route("/history", methods=["GET"])
+@require_auth
 def get_chat_history():
-    """Get all conversation sessions for a user."""
-    user_id = request.args.get("userId", "default")
-    return jsonify({"sessions": memory.get_all_sessions(user_id)})
+    return jsonify({"sessions": memory.get_all_sessions(get_current_user_id())})
 
 @app.route("/history/<session_id>", methods=["GET"])
+@require_auth
 def get_session_history(session_id: str):
-    """Get messages for a specific session."""
-    user_id = request.args.get("userId", "default")
-    messages = memory.get_history(user_id, session_id, limit=100)
-    return jsonify({"messages": messages, "sessionId": session_id})
+    return jsonify({"messages": memory.get_history(get_current_user_id(), session_id, limit=100), "sessionId": session_id})
+
+@app.route("/profile", methods=["GET"])
+@require_auth
+def get_profile():
+    return jsonify({"facts": long_memory.get_all_facts(get_current_user_id())})
+
+@app.route("/profile/<int:fact_id>", methods=["DELETE"])
+@require_auth
+def delete_profile_fact(fact_id: int):
+    return jsonify({"success": long_memory.delete_fact(get_current_user_id(), fact_id)})
+
+@app.route("/research", methods=["POST"])
+@require_auth
+def research_endpoint():
+    data = request.json or {}
+    return jsonify(research.generate_research_report(data.get("topic", "")))
 
 
-# ============== Session Cleanup ==============
-
-def cleanup_old_sessions():
-    """Remove sessions older than 1 hour to prevent memory leaks."""
-    max_sessions = 100
-    if len(sessions) > max_sessions:
-        # Keep only most recent 50
-        keys = list(sessions.keys())
-        for key in keys[:-50]:
-            del sessions[key]
-        logger.info(f"Cleaned up {len(keys) - 50} old sessions")
-
-
-# ============== Start ==============
+# ===== Start =====
 
 if __name__ == "__main__":
-    logger.info(f"JARVIS starting on port {PORT}")
+    logger.info(f"JARVIS v2.1 starting on port {PORT}")
     app.run(host="0.0.0.0", port=PORT, debug=False)
