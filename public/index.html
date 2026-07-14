@@ -337,11 +337,10 @@
       try{localStorage.setItem('jarvis_sessions',JSON.stringify(Object.keys(sessions).map(k=>({id:k,count:sessions[k]?.length||0}))))}catch{}
     }
     function newChat(){
-      saveToLocal();
       sid='s-'+Date.now();
-      delete sessions[sid];
       msgs.innerHTML='';
-      msg("New conversation started, Sir.",'a');
+      msg("New conversation. How can I help, Sir?",'a');
+      speak("New conversation started.");
     }
     function toggleHistory(){
       const p=document.getElementById('histPanel');
