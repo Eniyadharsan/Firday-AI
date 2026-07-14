@@ -10,7 +10,7 @@ from loguru import logger
 
 from jarvis.config import PORT
 from jarvis.system_prompt import get_system_prompt
-from jarvis.modules import llm, search, news, auth, music, memory, image, rag, mcp
+from jarvis.modules import llm, search, news, auth, music, memory, image, rag, mcp, video
 
 app = Flask(__name__, static_folder="public", static_url_path="")
 
@@ -89,6 +89,14 @@ def chat():
             memory.save_message(user_id, session_id, "user", message)
             memory.save_message(user_id, session_id, "assistant", f"Playing {song}")
             return jsonify({"reply": f'Playing "{song}"...', "sessionId": session_id, "action": "play_music", "musicUrl": music.get_youtube_url(song)})
+
+    # --- Video ---
+    if video.is_video_request(message):
+        resp = video.get_video_response(message)
+        resp["sessionId"] = session_id
+        memory.save_message(user_id, session_id, "user", message)
+        memory.save_message(user_id, session_id, "assistant", f"Generated video: {message}")
+        return jsonify(resp)
 
     # --- Image ---
     if image.is_image_request(message):

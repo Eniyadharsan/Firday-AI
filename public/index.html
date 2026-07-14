@@ -255,9 +255,12 @@
           else msg(reply,'a');
           if(d.action==='play_music'&&d.musicUrl)window.open(d.musicUrl,'_blank');
           else if(d.action==='show_image'&&d.imageUrl){
-            // Show image in detail panel
             openDet('<img src="'+d.imageUrl+'" style="width:100%;border-radius:8px;margin-bottom:10px"/><p style="color:rgba(0,229,255,.5);font-size:11px">'+d.imagePrompt+'</p>');
             speak("Here's your image, Sir.");
+          }
+          else if(d.action==='show_video'&&d.videoUrl){
+            openDet('<video src="'+d.videoUrl+'" controls autoplay style="width:100%;border-radius:8px;margin-bottom:10px"></video><p style="color:rgba(0,229,255,.5);font-size:11px">'+(d.videoPrompt||'')+'</p>');
+            speak("Here's your video, Sir.");
           }
           else speak(reply.slice(0,400))}}
       catch{tp.remove();reactor.classList.remove('speaking');statusEl.textContent='OPERATIONAL';orbSub.textContent='SAY "HEY JARVIS"';msg('Connection error','a')}}
