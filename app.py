@@ -10,7 +10,7 @@ from loguru import logger
 
 from jarvis.config import PORT
 from jarvis.system_prompt import get_system_prompt
-from jarvis.modules import llm, search, news, auth, music, memory, image, rag, mcp, video
+from jarvis.modules import llm, search, news, auth, music, memory, image, rag, mcp, video, agents, planner, long_memory
 
 app = Flask(__name__, static_folder="public", static_url_path="")
 
@@ -125,9 +125,25 @@ def chat():
     user_msg = f"{message}\n\n[Real-time data — present directly, NO links]:\n{context}" if context else message
     history.append({"role": "user", "content": user_msg})
 
-    # --- Generate ---
-    reply = llm.generate(history)
+    # --- Long-term memory: inject user context ---
+    user_context = long_memory.get_user_context(user_id)
+    if user_context and len(history) > 1:
+        # Inject user profile into system prompt
+        history[0]["content"] = history[0]["content"].split("[User Profile")[0] + "\n\n" + user_context
+
+    # --- Multi-agent routing ---
+    agent_id = agents.detect_agent(message)
+    if agent_id and len(message) > 20:
+        # Use specialized agent
+        logger.info(f"Routing to agent: {agent_id}")
+        reply = agents.orchestrate(message, history)
+    else:
+        reply = llm.generate(history)
+
     history.append({"role": "assistant", "content": reply})
+
+    # --- Auto-extract user facts ---
+    long_memory.auto_extract(user_id, message)
 
     # Trim history
     if len(history) > 60:
@@ -275,6 +291,57 @@ def mcp_endpoint():
 def mcp_tools():
     """List available MCP tools."""
     return jsonify({"tools": mcp.list_tools()})
+
+
+# ============== Agents ==============
+
+@app.route("/agents", methods=["GET"])
+def list_agents():
+    """List all specialized agents."""
+    return jsonify({"agents": agents.list_agents()})
+
+
+# ============== Planner ==============
+
+@app.route("/plans", methods=["GET"])
+def get_plans():
+    """Get all plans for a user."""
+    user_id = request.args.get("userId", "default")
+    return jsonify({"plans": planner.get_plans(user_id)})
+
+@app.route("/plans", methods=["POST"])
+def create_plan():
+    """Create a new structured plan."""
+    data = request.json or {}
+    user_id = data.get("userId", "default")
+    message = data.get("goal", "")
+    if not message:
+        return jsonify({"error": "goal required"}), 400
+    result = planner.generate_plan(user_id, message)
+    return jsonify(result)
+
+@app.route("/plans/<int:plan_id>/progress", methods=["PUT"])
+def update_plan_progress(plan_id: int):
+    """Update plan progress."""
+    data = request.json or {}
+    user_id = data.get("userId", "default")
+    progress = data.get("progress", 0)
+    return jsonify({"success": planner.update_progress(user_id, plan_id, progress)})
+
+
+# ============== Long-Term Memory ==============
+
+@app.route("/profile", methods=["GET"])
+def get_profile():
+    """Get user's stored long-term memory/facts."""
+    user_id = request.args.get("userId", "default")
+    return jsonify({"facts": long_memory.get_all_facts(user_id)})
+
+@app.route("/profile/<int:fact_id>", methods=["DELETE"])
+def delete_profile_fact(fact_id: int):
+    """Delete a stored fact."""
+    user_id = request.args.get("userId", "default")
+    return jsonify({"success": long_memory.delete_fact(user_id, fact_id)})
 
 
 # ============== Start ==============
