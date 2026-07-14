@@ -67,7 +67,8 @@ def static_files(path: str):
 
 @app.route("/health")
 def health():
-    return jsonify({"status": "running", "version": "2.1", "auth": "JWT", "rateLimit": "30/min on chat"})
+    from jarvis.db import USE_TURSO
+    return jsonify({"status": "running", "version": "2.1", "auth": "JWT", "rateLimit": "30/min on chat", "database": "turso" if USE_TURSO else "local_sqlite"})
 
 
 # ===== Auth =====
