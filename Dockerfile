@@ -1,21 +1,14 @@
-FROM node:20-alpine
+FROM python:3.11-slim
 
 WORKDIR /app
 
-# Install dependencies
-COPY package.json package-lock.json ./
-RUN npm ci --ignore-scripts
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy source
-COPY tsconfig.json ./
-COPY src/ ./src/
+COPY app.py .
 COPY public/ ./public/
 
-# Build TypeScript
-RUN npm run build
-
-# Hugging Face Spaces uses port 7860
 ENV PORT=7860
 EXPOSE 7860
 
-CMD ["node", "dist/cloud-server.js"]
+CMD ["python", "app.py"]
