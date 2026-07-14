@@ -10,7 +10,7 @@ from loguru import logger
 
 from jarvis.config import PORT
 from jarvis.system_prompt import get_system_prompt
-from jarvis.modules import llm, search, news, auth, music, memory, image
+from jarvis.modules import llm, search, news, auth, music, memory, image, rag, mcp
 
 app = Flask(__name__, static_folder="public", static_url_path="")
 
@@ -108,6 +108,11 @@ def chat():
         context = search.web_search(message + " current price")
     elif re.search(r"\b(who is|where is|when did|when was)\b", lower) and len(message) < 80:
         context = search.web_search(message)
+
+    # --- RAG: check uploaded documents ---
+    rag_context = rag.get_rag_context(user_id, message)
+    if rag_context:
+        context = f"{context}\n\n{rag_context}" if context else rag_context
 
     user_msg = f"{message}\n\n[Real-time data — present directly, NO links]:\n{context}" if context else message
     history.append({"role": "user", "content": user_msg})
@@ -209,6 +214,59 @@ def get_memories():
 def add_mem():
     data = request.json or {}
     return jsonify(memory.add_memory(data.get("userId", "default"), data.get("content", ""), data.get("category", "general")))
+
+
+# ============== RAG (Document Q&A) ==============
+
+@app.route("/rag/upload", methods=["POST"])
+def rag_upload():
+    """Upload a document (PDF, TXT, HTML) for RAG."""
+    user_id = request.form.get("userId", "default")
+    if "file" not in request.files:
+        return jsonify({"error": "No file uploaded"}), 400
+    file = request.files["file"]
+    if not file.filename:
+        return jsonify({"error": "No filename"}), 400
+    file_bytes = file.read()
+    result = rag.upload_document(user_id, file.filename, file_bytes)
+    if "error" in result:
+        return jsonify(result), 400
+    return jsonify(result)
+
+@app.route("/rag/documents", methods=["GET"])
+def rag_list():
+    """List uploaded documents."""
+    user_id = request.args.get("userId", "default")
+    return jsonify({"documents": rag.list_documents(user_id)})
+
+@app.route("/rag/documents/<doc_id>", methods=["DELETE"])
+def rag_delete(doc_id: str):
+    user_id = request.args.get("userId", "default")
+    return jsonify({"success": rag.delete_document(user_id, doc_id)})
+
+@app.route("/rag/search", methods=["POST"])
+def rag_search():
+    """Search uploaded documents."""
+    data = request.json or {}
+    user_id = data.get("userId", "default")
+    query = data.get("query", "")
+    results = rag.search_documents(user_id, query)
+    return jsonify({"results": results})
+
+
+# ============== MCP (Model Context Protocol) ==============
+
+@app.route("/mcp", methods=["POST"])
+def mcp_endpoint():
+    """MCP JSON-RPC endpoint — allows external AI agents to use JARVIS tools."""
+    body = request.json or {}
+    result = mcp.handle_mcp_request(body)
+    return jsonify(result)
+
+@app.route("/mcp/tools", methods=["GET"])
+def mcp_tools():
+    """List available MCP tools."""
+    return jsonify({"tools": mcp.list_tools()})
 
 
 # ============== Start ==============
