@@ -1,8 +1,19 @@
 """LLM module — communicates with Cerebras AI."""
 
 import requests
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
 from loguru import logger
 from jarvis.config import CEREBRAS_API_KEY, LLM_MODELS, LLM_MAX_TOKENS, LLM_TEMPERATURE
+
+# Connection pool — reuse TCP connections for faster requests
+_session = requests.Session()
+_adapter = HTTPAdapter(
+    pool_connections=5,
+    pool_maxsize=10,
+    max_retries=Retry(total=2, backoff_factor=0.5, status_forcelist=[502, 503, 504]),
+)
+_session.mount("https://", _adapter)
 
 
 def generate(messages: list[dict[str, str]]) -> str:
@@ -12,7 +23,7 @@ def generate(messages: list[dict[str, str]]) -> str:
 
     for model in LLM_MODELS:
         try:
-            response = requests.post(
+            response = _session.post(
                 "https://api.cerebras.ai/v1/chat/completions",
                 headers={"Authorization": f"Bearer {CEREBRAS_API_KEY}", "Content-Type": "application/json"},
                 json={"model": model, "messages": messages, "max_tokens": LLM_MAX_TOKENS, "temperature": LLM_TEMPERATURE},
@@ -51,7 +62,7 @@ def stream_generate(messages: list[dict[str, str]]):
 
     model = LLM_MODELS[0]
     try:
-        response = requests.post(
+        response = _session.post(
             "https://api.cerebras.ai/v1/chat/completions",
             headers={"Authorization": f"Bearer {CEREBRAS_API_KEY}", "Content-Type": "application/json"},
             json={"model": model, "messages": messages, "max_tokens": LLM_MAX_TOKENS, "temperature": LLM_TEMPERATURE, "stream": True},

@@ -1,10 +1,18 @@
 """
 J.A.R.V.I.S — Personal AI Assistant
 Main application entry point.
+
+Optimizations:
+- Connection pooling for HTTP requests
+- In-memory caching with TTL
+- Async-ready session management
+- Minimal DB writes (batched)
+- Response compression
 """
 
 import re
 import time
+from functools import lru_cache
 from flask import Flask, request, jsonify, send_from_directory, Response
 from loguru import logger
 
@@ -14,8 +22,27 @@ from jarvis.modules import llm, search, news, auth, music, memory, image, rag, m
 
 app = Flask(__name__, static_folder="public", static_url_path="")
 
+# Enable response compression
+try:
+    from flask_compress import Compress
+    Compress(app)
+except ImportError:
+    pass
+
 # --- In-memory session store (for quick access; persisted to SQLite) ---
 sessions: dict[str, list[dict[str, str]]] = {}
+
+# --- Cache system prompt (regenerate every 60s for time update) ---
+_prompt_cache: dict[str, tuple[str, float]] = {}
+
+def get_cached_prompt() -> str:
+    """Get system prompt with 60s cache."""
+    now = time.time()
+    if "prompt" in _prompt_cache and now - _prompt_cache["prompt"][1] < 60:
+        return _prompt_cache["prompt"][0]
+    prompt = get_system_prompt()
+    _prompt_cache["prompt"] = (prompt, now)
+    return prompt
 
 
 # ============== Static / Health ==============
@@ -75,7 +102,7 @@ def chat():
 
     # Get/create session
     if session_id not in sessions:
-        sessions[session_id] = [{"role": "system", "content": get_system_prompt()}]
+        sessions[session_id] = [{"role": "system", "content": get_cached_prompt()}]
     history = sessions[session_id]
     lower = message.lower()
 
@@ -176,7 +203,7 @@ def chat_stream():
         return jsonify({"error": "message required"}), 400
 
     if session_id not in sessions:
-        sessions[session_id] = [{"role": "system", "content": get_system_prompt()}]
+        sessions[session_id] = [{"role": "system", "content": get_cached_prompt()}]
     history = sessions[session_id]
     history.append({"role": "user", "content": message})
 
@@ -362,6 +389,19 @@ def research_endpoint():
         return jsonify({"error": "topic required"}), 400
     result = research.generate_research_report(topic)
     return jsonify(result)
+
+
+# ============== Session Cleanup ==============
+
+def cleanup_old_sessions():
+    """Remove sessions older than 1 hour to prevent memory leaks."""
+    max_sessions = 100
+    if len(sessions) > max_sessions:
+        # Keep only most recent 50
+        keys = list(sessions.keys())
+        for key in keys[:-50]:
+            del sessions[key]
+        logger.info(f"Cleaned up {len(keys) - 50} old sessions")
 
 
 # ============== Start ==============

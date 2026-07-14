@@ -1,13 +1,18 @@
 """Web search module — DuckDuckGo instant answers."""
 
 import requests
+from requests.adapters import HTTPAdapter
 from loguru import logger
+
+# Reuse connections
+_session = requests.Session()
+_session.mount("https://", HTTPAdapter(pool_connections=3, pool_maxsize=5))
 
 
 def web_search(query: str) -> str:
     """Search DuckDuckGo for instant answers and related topics."""
     try:
-        r = requests.get(
+        r = _session.get(
             "https://api.duckduckgo.com/",
             params={"q": query, "format": "json", "no_html": "1", "skip_disambig": "1"},
             timeout=4,
