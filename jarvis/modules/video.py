@@ -20,7 +20,7 @@ def generate_video_url(prompt: str) -> str:
         "", prompt, flags=re.IGNORECASE
     ).strip() or prompt
     # Pollinations video endpoint
-    return f"https://video.pollinations.ai/prompt/{quote(clean)}?duration=5"
+    return f"https://video.pollinations.ai/prompt/{quote(clean)}?duration=3"
 
 
 def get_video_response(prompt: str) -> dict:
