@@ -332,9 +332,16 @@
     function closeDet(){document.getElementById('det').classList.remove('open')}
 
     // --- History & New Chat ---
+    // Also store in localStorage as backup (HF ephemeral storage)
+    function saveToLocal(){
+      try{localStorage.setItem('jarvis_sessions',JSON.stringify(Object.keys(sessions).map(k=>({id:k,count:sessions[k]?.length||0}))))}catch{}
+    }
     function newChat(){
-      sid=null;sessions={};msgs.innerHTML='';
-      msg("New conversation started, Sir.",'a');speak("New conversation.");
+      saveToLocal();
+      sid='s-'+Date.now();
+      delete sessions[sid];
+      msgs.innerHTML='';
+      msg("New conversation started, Sir.",'a');
     }
     function toggleHistory(){
       const p=document.getElementById('histPanel');
@@ -345,14 +352,20 @@
       const list=document.getElementById('histList');list.innerHTML='<div style="color:rgba(0,229,255,.3);font-size:11px">Loading...</div>';
       try{const r=await fetch('/history?userId=default');const d=await r.json();
         if(!d.sessions||d.sessions.length===0){list.innerHTML='<div style="color:rgba(0,229,255,.3);font-size:11px">No history yet</div>';return}
-        list.innerHTML=d.sessions.map(s=>`<div onclick="loadSession('${s.session_id}')" style="padding:8px;margin:4px 0;border-radius:6px;background:rgba(0,229,255,.03);border:1px solid rgba(0,229,255,.06);cursor:pointer;font-size:11px;color:rgba(0,229,255,.6)">${s.session_id.slice(0,12)}... <span style="color:rgba(0,229,255,.3);font-size:9px">${s.started||''}</span></div>`).join('')}
-      catch{list.innerHTML='<div style="color:#ff4444;font-size:11px">Error loading</div>'}
+        list.innerHTML=d.sessions.map(s=>{
+          const label=s.session_id.replace('s-','').slice(0,10);
+          const date=s.started?new Date(s.started).toLocaleDateString():'';
+          return `<div onclick="loadSession('${s.session_id}')" style="padding:8px 10px;margin:4px 0;border-radius:6px;background:rgba(0,229,255,.03);border:1px solid rgba(0,229,255,.06);cursor:pointer;font-size:11px;color:rgba(0,229,255,.6)">Chat ${date}<br><span style="color:rgba(0,229,255,.25);font-size:9px">${s.session_id}</span></div>`}).join('')}
+      catch(e){list.innerHTML='<div style="color:#ff4444;font-size:11px">Error: '+e.message+'</div>'}
     }
     async function loadSession(sessionId){
       try{const r=await fetch('/history/'+sessionId+'?userId=default');const d=await r.json();
         sid=sessionId;msgs.innerHTML='';
-        (d.messages||[]).forEach(m=>msg(m.content,m.role==='user'?'u':'a'));
-        document.getElementById('histPanel').style.display='none'}catch{}
+        if(d.messages&&d.messages.length>0){
+          d.messages.forEach(m=>msg(m.content,m.role==='user'?'u':'a'));
+        }else{msg("No messages found for this session.",'a')}
+        document.getElementById('histPanel').style.display='none'}
+      catch(e){msg('Error loading: '+e.message,'a')}
     }
 
     if('serviceWorker' in navigator)navigator.serviceWorker.register('/sw.js').catch(()=>{});

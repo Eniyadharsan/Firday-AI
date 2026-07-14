@@ -17,7 +17,13 @@ LLM_MAX_TOKENS: int = int(os.getenv("LLM_MAX_TOKENS", "2048"))
 LLM_TEMPERATURE: float = float(os.getenv("LLM_TEMPERATURE", "0.6"))
 
 # --- Storage ---
-DATA_DIR: Path = Path("/data/jarvis") if Path("/data").exists() else Path(".jarvis-data")
+# Storage — use /data if available (HF persistent), else /tmp (always writable in Docker), else local
+if Path("/data").exists():
+    DATA_DIR: Path = Path("/data/jarvis")
+elif Path("/tmp").exists():
+    DATA_DIR: Path = Path("/tmp/jarvis-data")
+else:
+    DATA_DIR: Path = Path(".jarvis-data")
 DATA_DIR.mkdir(parents=True, exist_ok=True)
 DB_PATH: Path = DATA_DIR / "jarvis.db"
 
