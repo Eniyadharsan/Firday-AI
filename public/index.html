@@ -85,7 +85,68 @@
     /* Watery mouse effect canvas */
     .fx{position:fixed;inset:0;pointer-events:none;z-index:5}
 
-    @media(max-width:500px){.chat{width:calc(100% - 24px);left:12px}.detail{width:calc(100% - 24px);right:12px;left:12px}.molecule{width:130px;height:130px}}
+    /* Music Player - Now Playing Panel */
+    .music-player{position:fixed;bottom:0;left:0;right:0;z-index:150;background:rgba(10,22,40,.92);backdrop-filter:blur(20px);border-top-left-radius:16px;border-top-right-radius:16px;border-top:1px solid rgba(0,229,255,.1);box-shadow:0 -4px 30px rgba(0,0,0,.5);transition:transform .35s cubic-bezier(.4,0,.2,1),opacity .3s ease;overflow:hidden}
+    .music-player.hidden{transform:translateY(100%);opacity:0;pointer-events:none}
+    .mp-bg{position:absolute;inset:0;background-size:cover;background-position:center;filter:blur(40px) brightness(.3);opacity:.4;z-index:0;transition:background-image .5s ease}
+    .mp-content{position:relative;z-index:1;padding:16px 20px 14px;display:flex;flex-wrap:wrap;align-items:center;gap:12px}
+    .mp-close{position:absolute;top:10px;right:14px;background:none;border:1px solid rgba(0,229,255,.12);color:rgba(0,229,255,.5);width:24px;height:24px;border-radius:50%;cursor:pointer;font-size:12px;display:flex;align-items:center;justify-content:center;transition:all .2s;z-index:2}
+    .mp-close:hover{background:rgba(0,229,255,.08);color:#00e5ff;border-color:rgba(0,229,255,.3)}
+    .mp-art{width:56px;height:56px;border-radius:8px;object-fit:cover;background:rgba(0,229,255,.05);border:1px solid rgba(0,229,255,.08);flex-shrink:0}
+    .mp-info{flex:1;min-width:120px;overflow:hidden}
+    .mp-title{font-size:13px;color:#e0f7ff;font-weight:bold;letter-spacing:.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .mp-artist{font-size:11px;color:rgba(0,229,255,.5);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .mp-progress{width:100%;display:flex;align-items:center;gap:8px;order:10}
+    .mp-progress-track{flex:1;height:3px;background:rgba(0,229,255,.1);border-radius:2px;overflow:hidden;cursor:pointer;position:relative}
+    .mp-progress-bar{height:100%;width:0%;background:linear-gradient(90deg,#00e5ff,#7b2ff7);border-radius:2px;transition:width .3s linear}
+    .mp-time-current,.mp-time-total{font-size:9px;color:rgba(0,229,255,.35);min-width:32px;letter-spacing:.5px}
+    .mp-time-current{text-align:right}
+    .mp-time-total{text-align:left}
+    .mp-controls{display:flex;align-items:center;gap:10px}
+    .mp-controls button{background:none;border:1px solid rgba(0,229,255,.1);color:rgba(0,229,255,.7);width:32px;height:32px;border-radius:50%;cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;transition:all .2s}
+    .mp-controls button:hover{background:rgba(0,229,255,.08);color:#00e5ff;border-color:rgba(0,229,255,.3)}
+    .mp-controls button.mp-play{width:38px;height:38px;font-size:16px;border-color:rgba(0,229,255,.2);color:#00e5ff}
+    .mp-controls button.mp-play:hover{background:rgba(0,229,255,.12);border-color:rgba(0,229,255,.4)}
+    .mp-search{width:100%;order:11;margin-top:6px}
+    .mp-search-input{width:100%;padding:8px 12px;border-radius:20px;border:1px solid rgba(0,229,255,.1);background:rgba(0,229,255,.03);color:#00e5ff;font-family:inherit;font-size:11px;outline:none;transition:border-color .2s}
+    .mp-search-input:focus{border-color:rgba(0,229,255,.3)}
+    .mp-search-input::placeholder{color:rgba(0,229,255,.2)}
+    .mp-results{max-height:150px;overflow-y:auto;margin-top:6px;display:none}
+    .mp-results.has-results{display:block}
+    .mp-results::-webkit-scrollbar{width:3px}
+    .mp-results::-webkit-scrollbar-thumb{background:rgba(0,229,255,.15);border-radius:2px}
+    .mp-result-item{display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:6px;cursor:pointer;transition:background .15s}
+    .mp-result-item:hover{background:rgba(0,229,255,.06)}
+    .mp-result-item img{width:36px;height:36px;border-radius:4px;object-fit:cover}
+    .mp-result-item .mp-result-title{font-size:11px;color:#b0e0e6;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .mp-result-item .mp-result-artist{font-size:9px;color:rgba(0,229,255,.35);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+    /* Mini indicator for background playback */
+    .mp-mini{position:fixed;bottom:16px;right:16px;padding:6px 12px;border-radius:20px;background:rgba(10,22,40,.85);backdrop-filter:blur(10px);border:1px solid rgba(0,229,255,.15);color:rgba(0,229,255,.7);font-size:11px;cursor:pointer;z-index:120;display:flex;align-items:center;gap:6px;transition:all .2s}
+    .mp-mini.hidden{display:none}
+    .mp-mini:hover{background:rgba(0,229,255,.1);border-color:rgba(0,229,255,.3)}
+
+    @media(max-width:500px){
+      .chat{width:calc(100% - 24px);left:12px}
+      .detail{width:calc(100% - 24px);right:12px;left:12px}
+      .molecule{width:130px;height:130px}
+      /* Music player responsive layout */
+      .music-player{max-height:60vh;overflow-y:auto;border-top-left-radius:12px;border-top-right-radius:12px}
+      .mp-content{padding:12px 14px 10px;gap:8px}
+      .mp-art{width:44px;height:44px;border-radius:6px}
+      .mp-controls button{width:28px;height:28px;font-size:12px}
+      .mp-controls button.mp-play{width:34px;height:34px;font-size:14px}
+      .mp-controls{gap:8px}
+      .mp-search-input{padding:6px 10px;font-size:10px}
+      .mp-results{max-height:100px}
+      .mp-result-item img{width:30px;height:30px}
+      .mp-result-item{padding:5px 6px;gap:6px}
+      .mp-info{min-width:80px}
+      .mp-title{font-size:12px}
+      .mp-artist{font-size:10px}
+      /* Ensure chat remains accessible above the music player */
+      .chat{bottom:16px;z-index:160}
+    }
   </style>
 </head>
 <body>
@@ -134,6 +195,39 @@
   <div class="detail" id="det">
     <div class="detail-head"><h4>ANALYSIS</h4><div class="detail-close" onclick="closeDet()">✕</div></div>
     <div class="detail-body" id="detBody"></div>
+  </div>
+
+  <!-- Music Player Mini Indicator (shown when player is hidden but still playing) -->
+  <div id="mp-mini-indicator" class="mp-mini hidden">🎵 <span class="mp-mini-title"></span></div>
+
+  <!-- Music Player - Now Playing Panel -->
+  <div id="music-player" class="music-player hidden">
+    <div class="mp-bg"></div>
+    <div class="mp-content">
+      <button class="mp-close" aria-label="Close player">✕</button>
+      <img class="mp-art" alt="Album art" src="" />
+      <div class="mp-info">
+        <div class="mp-title"></div>
+        <div class="mp-artist"></div>
+      </div>
+      <div class="mp-controls">
+        <button class="mp-prev" aria-label="Previous track">⏮</button>
+        <button class="mp-play" aria-label="Play/Pause">⏯</button>
+        <button class="mp-next" aria-label="Next track">⏭</button>
+      </div>
+      <div class="mp-progress">
+        <span class="mp-time-current">0:00</span>
+        <div class="mp-progress-track">
+          <div class="mp-progress-bar"></div>
+        </div>
+        <span class="mp-time-total">0:00</span>
+      </div>
+      <div class="mp-search">
+        <input class="mp-search-input" placeholder="Search songs..." autocomplete="off" />
+        <div class="mp-results"></div>
+      </div>
+    </div>
+    <div id="yt-player-container" style="display:none"></div>
   </div>
 
   <script>
@@ -263,7 +357,18 @@
         else{sid=d.sessionId;const reply=d.reply;
           if(reply.length>250){msg(reply.slice(0,180)+'...','a');openDet(reply)}
           else msg(reply,'a');
-          if(d.action==='play_music'&&d.musicUrl)window.open(d.musicUrl,'_blank');
+          if(d.action==='play_music_embed'&&d.track){
+            if(window.musicPlayer && window.musicPlayer.ytApiLoaded !== false){
+              window.musicPlayer.loadTrack(d.track);
+              speak('Now playing '+d.track.title+' by '+d.track.artist);
+            } else {
+              // Fallback: open YouTube in new tab when API unavailable
+              window.musicPlayer._showToast('Player unavailable — opening in browser');
+              window.open('https://www.youtube.com/watch?v=' + d.track.video_id, '_blank');
+              speak('Opening '+d.track.title+' in YouTube');
+            }
+          }
+          else if(d.action==='play_music'&&d.musicUrl)window.open(d.musicUrl,'_blank');
           else if(d.action==='show_image'&&d.imageUrl){
             openDet('<img src="'+d.imageUrl+'" style="width:100%;border-radius:8px;margin-bottom:10px"/><p style="color:rgba(0,229,255,.5);font-size:11px">'+d.imagePrompt+'</p>');
             speak("Here's your image, Sir.");
@@ -369,5 +474,504 @@
 
     if('serviceWorker' in navigator)navigator.serviceWorker.register('/sw.js').catch(()=>{});
   </script>
+
+  <script>
+    // --- MusicPlayer Class ---
+    class MusicPlayer {
+      constructor() {
+        this.queue = [];
+        this.currentIndex = -1;
+        this.ytPlayer = null;
+        this.isPlaying = false;
+        this.visible = false;
+        this._currentVideoId = null;
+        this.progressInterval = null;
+      }
+
+      // Load a single track into the player
+      loadTrack(track) {
+        this.queue = [track];
+        this.currentIndex = 0;
+        this._currentVideoId = null;
+        this.updateNowPlaying(track);
+        if (this.ytPlayer) {
+          this.play();
+        }
+        this.updateControlsUI();
+      }
+
+      // Load multiple tracks, play from startIndex
+      loadQueue(tracks, startIndex) {
+        this.queue = [...tracks];
+        this.currentIndex = startIndex;
+        this._currentVideoId = null;
+        this.updateNowPlaying(this.getCurrentTrack());
+        if (this.ytPlayer) {
+          this.play();
+        }
+        this.updateControlsUI();
+      }
+
+      // Start playback
+      play() {
+        if (this.ytPlayer && this.getCurrentTrack()) {
+          const track = this.getCurrentTrack();
+          // If the video is different from what's currently loaded, load the new one
+          if (this._currentVideoId !== track.video_id) {
+            this.ytPlayer.loadVideoById(track.video_id);
+            this._currentVideoId = track.video_id;
+          } else {
+            this.ytPlayer.playVideo();
+          }
+          this.updateNowPlaying(track);
+        }
+        this.isPlaying = true;
+        this.startProgressInterval();
+        this.updateControlsUI();
+        // Show mini indicator if panel is hidden
+        this._updateMiniIndicator();
+      }
+
+      // Pause playback
+      pause() {
+        if (this.ytPlayer) {
+          this.ytPlayer.pauseVideo();
+        }
+        this.isPlaying = false;
+        this.stopProgressInterval();
+        this.updateControlsUI();
+        // Hide mini indicator when paused
+        this._updateMiniIndicator();
+      }
+
+      // Toggle between play and pause
+      togglePlayPause() {
+        if (this.isPlaying) {
+          this.pause();
+        } else {
+          this.play();
+        }
+      }
+
+      // Advance to the next track in queue
+      next() {
+        if (this.currentIndex < this.queue.length - 1) {
+          this.currentIndex++;
+          this._currentVideoId = null;
+          if (this.ytPlayer) {
+            this.play();
+          }
+          this.updateNowPlaying(this.getCurrentTrack());
+        }
+        this.updateControlsUI();
+      }
+
+      // Go back to the previous track in queue
+      previous() {
+        if (this.currentIndex > 0) {
+          this.currentIndex--;
+          this._currentVideoId = null;
+          if (this.ytPlayer) {
+            this.play();
+          }
+          this.updateNowPlaying(this.getCurrentTrack());
+        }
+        this.updateControlsUI();
+      }
+
+      // Clear the queue and reset index
+      clearQueue() {
+        this.queue = [];
+        this.currentIndex = -1;
+        this.stopProgressInterval();
+      }
+
+      // Append tracks to the end of the queue
+      addToQueue(tracks) {
+        this.queue.push(...tracks);
+      }
+
+      // Get the current track or null if none
+      getCurrentTrack() {
+        if (this.currentIndex >= 0 && this.currentIndex < this.queue.length) {
+          return this.queue[this.currentIndex];
+        }
+        return null;
+      }
+
+      // Format seconds into "m:ss" display string
+      formatTime(seconds) {
+        if (!seconds || seconds < 0 || !isFinite(seconds)) return '0:00';
+        const totalSeconds = Math.floor(seconds);
+        const mins = Math.floor(totalSeconds / 60);
+        const secs = totalSeconds % 60;
+        return mins + ':' + (secs < 10 ? '0' : '') + secs;
+      }
+
+      // Start polling the YouTube player for progress updates
+      startProgressInterval() {
+        this.stopProgressInterval();
+        this.progressInterval = setInterval(() => {
+          if (!this.ytPlayer || typeof this.ytPlayer.getCurrentTime !== 'function' || typeof this.ytPlayer.getDuration !== 'function') {
+            return;
+          }
+          const currentTime = this.ytPlayer.getCurrentTime();
+          const duration = this.ytPlayer.getDuration();
+
+          // Guard against division by zero
+          let progress = 0;
+          if (duration > 0) {
+            progress = currentTime / duration;
+          }
+
+          // Update progress bar width (safely check for element existence)
+          const progressBar = document.querySelector('.mp-progress-bar');
+          if (progressBar) {
+            progressBar.style.width = (progress * 100) + '%';
+          }
+
+          // Update current time display
+          const timeCurrent = document.querySelector('.mp-time-current');
+          if (timeCurrent) {
+            timeCurrent.textContent = this.formatTime(currentTime);
+          }
+
+          // Update total duration display
+          const timeTotal = document.querySelector('.mp-time-total');
+          if (timeTotal) {
+            timeTotal.textContent = this.formatTime(duration);
+          }
+        }, 1000);
+      }
+
+      // Stop the progress polling interval
+      stopProgressInterval() {
+        if (this.progressInterval) {
+          clearInterval(this.progressInterval);
+          this.progressInterval = null;
+        }
+      }
+
+      // UI methods
+      show() {
+        this.visible = true;
+        const panel = document.getElementById('music-player');
+        if (panel) panel.classList.remove('hidden');
+        // Hide the mini indicator when panel is open
+        const mini = document.getElementById('mp-mini-indicator');
+        if (mini) mini.classList.add('hidden');
+      }
+
+      hide() {
+        this.visible = false;
+        const panel = document.getElementById('music-player');
+        if (panel) panel.classList.add('hidden');
+        // Show mini indicator if music is still playing
+        this._updateMiniIndicator();
+      }
+
+      updateNowPlaying(track) {
+        if (!track) return;
+
+        // Update album art
+        const art = document.querySelector('.mp-art');
+        if (art) art.src = track.thumbnail_url;
+
+        // Update title and artist
+        const title = document.querySelector('.mp-title');
+        if (title) title.textContent = track.title;
+
+        const artist = document.querySelector('.mp-artist');
+        if (artist) artist.textContent = track.artist;
+
+        // Update blurred background
+        const bg = document.querySelector('.mp-bg');
+        if (bg) bg.style.backgroundImage = 'url(' + track.thumbnail_url + ')';
+
+        // Show the panel when track is loaded
+        this.show();
+      }
+
+      updateProgress() {}
+      render() {}
+
+      // Update mini indicator visibility based on play state and panel visibility
+      _updateMiniIndicator() {
+        const mini = document.getElementById('mp-mini-indicator');
+        if (!mini) return;
+        if (!this.visible && this.isPlaying) {
+          // Show mini indicator with current track title
+          const track = this.getCurrentTrack();
+          const titleEl = mini.querySelector('.mp-mini-title');
+          if (titleEl) {
+            titleEl.textContent = track ? track.title : 'Playing';
+          }
+          mini.classList.remove('hidden');
+        } else {
+          mini.classList.add('hidden');
+        }
+      }
+
+      // --- Search Interface ---
+
+      // Initialize search input and event listeners
+      initSearch() {
+        const searchInput = document.querySelector('.mp-search-input');
+        if (!searchInput) return;
+
+        // Submit on Enter key
+        searchInput.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter') {
+            const query = searchInput.value.trim();
+            if (query) {
+              this.search(query);
+            }
+          }
+        });
+      }
+
+      // Perform search against backend
+      async search(query) {
+        const resultsEl = document.querySelector('.mp-results');
+        if (!resultsEl) return;
+
+        // Show loading state
+        resultsEl.innerHTML = '<div style="padding:8px;font-size:11px;color:rgba(0,229,255,.4)">Searching...</div>';
+        resultsEl.classList.add('has-results');
+
+        try {
+          const response = await fetch('/music/search?q=' + encodeURIComponent(query), {
+            headers: { 'Authorization': 'Bearer ' + (window.jt || '') }
+          });
+
+          if (!response.ok) {
+            throw new Error('Search request failed');
+          }
+
+          const data = await response.json();
+
+          if (data.results && data.results.length > 0) {
+            this.displayResults(data.results);
+          } else {
+            resultsEl.innerHTML = '<div style="padding:8px;font-size:11px;color:rgba(0,229,255,.4)">No songs found</div>';
+            resultsEl.classList.add('has-results');
+          }
+        } catch (err) {
+          resultsEl.innerHTML = '<div style="padding:8px;font-size:11px;color:#ff4444">Search failed</div>';
+          resultsEl.classList.add('has-results');
+        }
+      }
+
+      // Render search results in the results container
+      displayResults(results) {
+        const resultsEl = document.querySelector('.mp-results');
+        if (!resultsEl) return;
+
+        // Clear existing content
+        resultsEl.innerHTML = '';
+        resultsEl.classList.add('has-results');
+
+        results.forEach((track, index) => {
+          const item = document.createElement('div');
+          item.className = 'mp-result-item';
+
+          const img = document.createElement('img');
+          img.src = track.thumbnail_url || '';
+          img.alt = track.title || '';
+
+          const infoDiv = document.createElement('div');
+          infoDiv.style.cssText = 'overflow:hidden;flex:1;min-width:0';
+
+          const titleDiv = document.createElement('div');
+          titleDiv.className = 'mp-result-title';
+          titleDiv.textContent = track.title || '';
+
+          const artistDiv = document.createElement('div');
+          artistDiv.className = 'mp-result-artist';
+          artistDiv.textContent = track.artist || '';
+
+          infoDiv.appendChild(titleDiv);
+          infoDiv.appendChild(artistDiv);
+          item.appendChild(img);
+          item.appendChild(infoDiv);
+
+          // On click, load all results into queue starting at this track's index
+          item.addEventListener('click', () => {
+            this.loadQueue(results, index);
+            this.updateNowPlaying(results[index]);
+          });
+
+          resultsEl.appendChild(item);
+        });
+      }
+
+      // Initialize the YouTube IFrame Player
+      initYTPlayer() {
+        this.ytApiLoaded = true; // Mark as successfully loaded
+        this.ytPlayer = new YT.Player('yt-player-container', {
+          height: '0',
+          width: '0',
+          playerVars: {
+            autoplay: 0,
+            controls: 0,
+            showinfo: 0,
+            modestbranding: 1,
+            rel: 0
+          },
+          events: {
+            onStateChange: (event) => this._onStateChange(event),
+            onError: (event) => this._onError(event)
+          }
+        });
+      }
+
+      // Handle YouTube player state changes
+      _onStateChange(event) {
+        switch (event.data) {
+          case YT.PlayerState.ENDED:
+            this.stopProgressInterval();
+            // Auto-advance to the next track
+            if (this.currentIndex < this.queue.length - 1) {
+              this.next();
+            } else {
+              // No more tracks in queue
+              this.isPlaying = false;
+              this._currentVideoId = null;
+              this.updateNowPlaying();
+              this._updateMiniIndicator();
+            }
+            break;
+          case YT.PlayerState.PLAYING:
+            this.isPlaying = true;
+            this.startProgressInterval();
+            this._updateMiniIndicator();
+            break;
+          case YT.PlayerState.PAUSED:
+            this.isPlaying = false;
+            this.stopProgressInterval();
+            this._updateMiniIndicator();
+            break;
+        }
+        this.updateControlsUI();
+      }
+
+      // Handle YouTube player errors (skip unavailable tracks)
+      _onError(event) {
+        console.error('YouTube Player Error:', event.data);
+        this.stopProgressInterval();
+        this._showToast('Track unavailable, skipping...');
+        // Skip to next track if available
+        if (this.currentIndex < this.queue.length - 1) {
+          this.next();
+        } else {
+          this.isPlaying = false;
+          this._currentVideoId = null;
+        }
+      }
+
+      // Show a brief toast notification
+      _showToast(message) {
+        const toast = document.createElement('div');
+        toast.textContent = message;
+        toast.style.cssText = 'position:fixed;bottom:80px;left:50%;transform:translateX(-50%);padding:8px 16px;border-radius:8px;background:rgba(255,60,60,.85);color:#fff;font-size:12px;font-family:inherit;z-index:10000;pointer-events:none;opacity:1;transition:opacity .5s';
+        document.body.appendChild(toast);
+        setTimeout(() => { toast.style.opacity = '0'; }, 2500);
+        setTimeout(() => { toast.remove(); }, 3000);
+      }
+
+      // Initialize playback control button event listeners
+      initControls() {
+        const playBtn = document.querySelector('.mp-play');
+        const nextBtn = document.querySelector('.mp-next');
+        const prevBtn = document.querySelector('.mp-prev');
+        const closeBtn = document.querySelector('.mp-close');
+        const miniIndicator = document.getElementById('mp-mini-indicator');
+
+        if (playBtn) {
+          playBtn.addEventListener('click', () => this.togglePlayPause());
+        }
+        if (nextBtn) {
+          nextBtn.addEventListener('click', () => this.next());
+        }
+        if (prevBtn) {
+          prevBtn.addEventListener('click', () => this.previous());
+        }
+        if (closeBtn) {
+          closeBtn.addEventListener('click', () => this.hide());
+        }
+        if (miniIndicator) {
+          miniIndicator.addEventListener('click', () => this.show());
+        }
+
+        // Set initial button states
+        this.updateControlsUI();
+      }
+
+      // Update control button icons and enabled/disabled states
+      updateControlsUI() {
+        const playBtn = document.querySelector('.mp-play');
+        const nextBtn = document.querySelector('.mp-next');
+        const prevBtn = document.querySelector('.mp-prev');
+
+        // Update play/pause icon based on playing state
+        if (playBtn) {
+          playBtn.textContent = this.isPlaying ? '⏸' : '▶';
+          playBtn.setAttribute('aria-label', this.isPlaying ? 'Pause' : 'Play');
+        }
+
+        // Disable/enable next button at queue boundary
+        if (nextBtn) {
+          const atEnd = this.currentIndex >= this.queue.length - 1;
+          nextBtn.disabled = atEnd;
+          nextBtn.style.opacity = atEnd ? '0.3' : '1';
+          nextBtn.style.pointerEvents = atEnd ? 'none' : 'auto';
+        }
+
+        // Disable/enable previous button at queue boundary
+        if (prevBtn) {
+          const atStart = this.currentIndex <= 0;
+          prevBtn.disabled = atStart;
+          prevBtn.style.opacity = atStart ? '0.3' : '1';
+          prevBtn.style.pointerEvents = atStart ? 'none' : 'auto';
+        }
+      }
+    }
+
+    // Instantiate global music player
+    window.musicPlayer = new MusicPlayer();
+    window.musicPlayer.initControls();
+
+    // Initialize search interface
+    window.musicPlayer.initSearch();
+
+    // --- YouTube IFrame API Integration ---
+
+    // Dynamically load the YouTube IFrame API script
+    function loadYouTubeAPI() {
+      const tag = document.createElement('script');
+      tag.src = 'https://www.youtube.com/iframe_api';
+      document.head.appendChild(tag);
+    }
+
+    // Global callback required by YouTube IFrame API
+    function onYouTubeIframeAPIReady() {
+      window.musicPlayer.initYTPlayer();
+    }
+
+    // Load the YouTube API after MusicPlayer is instantiated
+    window.musicPlayer.ytApiLoaded = null; // pending
+    loadYouTubeAPI();
+
+    // Timeout: if YouTube IFrame API hasn't loaded within 10 seconds, mark as failed
+    setTimeout(() => {
+      if (window.musicPlayer.ytApiLoaded === null) {
+        window.musicPlayer.ytApiLoaded = false;
+        console.warn('YouTube IFrame API failed to load within timeout');
+      }
+    }, 10000);
+  </script>
+
+  <!-- Hidden container for YouTube IFrame Player -->
+  <div id="yt-player-container" style="display:none"></div>
 </body>
 </html>
