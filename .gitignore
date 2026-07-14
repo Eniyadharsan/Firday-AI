@@ -8,3 +8,7 @@ jarvis-mobile/node_modules/
 desktop-app/node_modules/
 desktop-app/dist/
 cloudflared.exe
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
