@@ -7,19 +7,33 @@ from urllib.parse import quote
 def is_image_request(message: str) -> bool:
     """Detect if user wants to generate an image."""
     lower = message.lower()
-    # Direct image request patterns
-    action = re.search(r"\b(generate|create|make|draw|design|imagine|show|give|picture|image|photo|illustration|render)\b", lower)
-    subject = re.search(r"\b(image|picture|photo|illustration|art|drawing|poster|wallpaper|logo|portrait|scene|girl|boy|man|woman|car|city|anime|cartoon|map|diagram|chart)\b", lower)
-    # "give me X" pattern
-    give_pattern = re.search(r"\b(give me|show me|get me)\b.*\b(map|image|picture|photo|diagram|chart|poster|logo)\b", lower)
-    return bool((action and subject) or give_pattern)
+
+    # Pattern 1: "give/show/get me [something]"
+    if re.search(r"\b(give|show|get)\s+me\b", lower):
+        return True
+
+    # Pattern 2: "map of [place]" or "[place] map"
+    if re.search(r"\bmap\b", lower):
+        return True
+
+    # Pattern 3: action + visual subject
+    action = re.search(r"\b(generate|create|make|draw|design|imagine|render|picture|image|photo)\b", lower)
+    subject = re.search(r"\b(image|picture|photo|illustration|art|drawing|poster|wallpaper|logo|portrait|scene|diagram|chart|map)\b", lower)
+    if action and subject:
+        return True
+
+    # Pattern 4: "create/generate/draw [anything visual]"
+    if re.search(r"\b(generate|create|draw|design)\b.*\b(image|picture|photo|poster|logo|art|map|diagram)\b", lower):
+        return True
+
+    return False
 
 
 def generate_image_url(prompt: str, width: int = 1024, height: int = 1024) -> str:
-    """Generate image URL from Pollinations.ai."""
-    # Keep meaningful words, only remove filler
-    clean_prompt = re.sub(
-        r"\b(generate|create|make|draw|design|imagine|give me|show me|get me|can you|please|an?|the)\b",
-        "", prompt, flags=re.IGNORECASE
-    ).strip() or prompt
-    return f"https://image.pollinations.ai/prompt/{quote(clean_prompt)}?width={width}&height={height}&nologo=true"
+    """Generate image URL from Pollinations.ai. Keeps the full meaning of the prompt."""
+    # Only remove command words, keep everything descriptive
+    clean = re.sub(r"^\s*(give me|show me|get me|create|generate|make|draw|can you|please)\s*", "", prompt, flags=re.IGNORECASE).strip()
+    # If it's a map request, enhance the prompt
+    if "map" in clean.lower():
+        clean = f"detailed geographic map of {clean.replace('map of', '').replace('map', '').strip()}, cartographic style, clear labels, high resolution"
+    return f"https://image.pollinations.ai/prompt/{quote(clean or prompt)}?width={width}&height={height}&nologo=true"
