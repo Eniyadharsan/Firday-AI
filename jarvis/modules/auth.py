@@ -8,18 +8,8 @@ import sqlite3
 from loguru import logger
 from jarvis.config import DB_PATH, JWT_SECRET, BCRYPT_ROUNDS
 
-# Use bcrypt if available, fallback to argon2, then SHA-256
-try:
-    import bcrypt
-    HASH_METHOD = "bcrypt"
-except ImportError:
-    try:
-        from argon2 import PasswordHasher
-        _ph = PasswordHasher()
-        HASH_METHOD = "argon2"
-    except ImportError:
-        HASH_METHOD = "sha256"
-        logger.warning("Neither bcrypt nor argon2 available, using SHA-256 (install bcrypt for production)")
+# Use SHA-256 for speed (bcrypt removed to speed up Docker build)
+HASH_METHOD = "sha256"
 
 
 def _init_db() -> None:
@@ -42,31 +32,18 @@ _init_db()
 
 
 def hash_password(password: str) -> str:
-    """Hash a password using the best available method."""
-    if HASH_METHOD == "bcrypt":
-        return bcrypt.hashpw(password.encode(), bcrypt.gensalt(BCRYPT_ROUNDS)).decode()
-    elif HASH_METHOD == "argon2":
-        return _ph.hash(password)
-    else:
-        salt = secrets.token_hex(16)
-        h = hashlib.sha256((salt + password).encode()).hexdigest()
-        return f"sha256:{salt}:{h}"
+    """Hash a password with SHA-256 + salt."""
+    salt = secrets.token_hex(16)
+    h = hashlib.sha256((salt + password).encode()).hexdigest()
+    return f"sha256:{salt}:{h}"
 
 
 def verify_password(password: str, stored_hash: str) -> bool:
     """Verify a password against its hash."""
-    if HASH_METHOD == "bcrypt":
-        return bcrypt.checkpw(password.encode(), stored_hash.encode())
-    elif HASH_METHOD == "argon2":
-        try:
-            return _ph.verify(stored_hash, password)
-        except Exception:
-            return False
-    else:
-        parts = stored_hash.split(":")
-        if len(parts) == 3 and parts[0] == "sha256":
-            return hashlib.sha256((parts[1] + password).encode()).hexdigest() == parts[2]
-        return False
+    parts = stored_hash.split(":")
+    if len(parts) == 3 and parts[0] == "sha256":
+        return hashlib.sha256((parts[1] + password).encode()).hexdigest() == parts[2]
+    return False
 
 
 def make_token(user_id: str, email: str) -> str:
