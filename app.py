@@ -391,6 +391,22 @@ def research_endpoint():
     return jsonify(result)
 
 
+# ============== Chat History ==============
+
+@app.route("/history", methods=["GET"])
+def get_chat_history():
+    """Get all conversation sessions for a user."""
+    user_id = request.args.get("userId", "default")
+    return jsonify({"sessions": memory.get_all_sessions(user_id)})
+
+@app.route("/history/<session_id>", methods=["GET"])
+def get_session_history(session_id: str):
+    """Get messages for a specific session."""
+    user_id = request.args.get("userId", "default")
+    messages = memory.get_history(user_id, session_id, limit=100)
+    return jsonify({"messages": messages, "sessionId": session_id})
+
+
 # ============== Session Cleanup ==============
 
 def cleanup_old_sessions():
