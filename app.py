@@ -18,6 +18,33 @@ from jarvis.modules.auth import require_auth, get_current_user_id
 
 app = Flask(__name__, static_folder="public", static_url_path="")
 
+# --- Music Search Engine (lazy singleton) ---
+_search_engine = None
+
+
+def _get_search_engine():
+    """Lazy-initialize and return the SearchEngine singleton."""
+    global _search_engine
+    if _search_engine is None:
+        from jarvis.modules.music_language import LanguageProcessor
+        from jarvis.modules.music_fuzzy import FuzzyMatcher
+        from jarvis.modules.music_catalog import CatalogCache
+        from jarvis.modules.music_aggregator import MusicAggregator
+        from jarvis.modules.music_autocomplete import AutocompleteService
+        from jarvis.modules.music_search_engine import SearchEngine
+        from jarvis.modules.music_youtube_adapter import YouTubeAdapter
+        from jarvis.modules.music_jiosaavn_adapter import JioSaavnAdapter
+        from jarvis.modules.music_gaana_adapter import GaanaAdapter
+
+        catalog_cache = CatalogCache()
+        language_processor = LanguageProcessor()
+        fuzzy_matcher = FuzzyMatcher(catalog_cache)
+        adapters = [YouTubeAdapter(), JioSaavnAdapter(), GaanaAdapter()]
+        aggregator = MusicAggregator(adapters)
+        autocomplete_service = AutocompleteService(aggregator)
+        _search_engine = SearchEngine(language_processor, fuzzy_matcher, aggregator, autocomplete_service)
+    return _search_engine
+
 # Rate limiting
 limiter = Limiter(get_remote_address, app=app, default_limits=["60 per minute"], storage_uri="memory://")
 
@@ -283,14 +310,65 @@ def music_endpoint():
     data = request.json or {}
     return jsonify({"musicUrl": music.get_youtube_url(data.get("song", "")), "song": data.get("song", "")})
 
+@app.route("/music/autocomplete", methods=["GET"])
+@require_auth
+def music_autocomplete():
+    query = request.args.get("q", "")
+    engine = _get_search_engine()
+    suggestions = engine.autocomplete(query)
+    return jsonify({
+        "suggestions": [
+            {"title": s.title, "artist": s.artist, "thumbnail_url": s.thumbnail_url, "video_id": s.video_id, "source": s.source}
+            for s in suggestions
+        ]
+    })
+
 @app.route("/music/search", methods=["GET"])
 @require_auth
 def music_search():
     query = request.args.get("q", "").strip()
-    if not query:
-        return jsonify({"error": "Query parameter 'q' is required"}), 400
-    results = music.search_tracks(query, max_results=10)
-    return jsonify({"results": results, "query": query})
+    engine = _get_search_engine()
+
+    error = engine.validate_query(query)
+    if error:
+        return jsonify({"error": error}), 400
+
+    try:
+        result = engine.search(query)
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 400
+
+    # If all sources failed and no results, return 503
+    if not result.results and result.sources_failed and len(result.sources_failed) == len(result.sources_queried):
+        return jsonify({"error": "All music sources are temporarily unavailable. Please try again."}), 503
+
+    # Convert to backward-compatible format (list of dicts with video_id, title, artist, thumbnail_url) + new fields
+    results_list = [
+        {
+            "video_id": t.id,
+            "title": t.title,
+            "artist": t.artist,
+            "thumbnail_url": t.thumbnail_url,
+            "source": t.source,
+            "source_url": t.source_url,
+            "duration_seconds": t.duration_seconds,
+            "is_devotional": t.is_devotional,
+            "tradition": t.tradition,
+            "match_score": t.match_score,
+        }
+        for t in result.results
+    ]
+
+    response = {
+        "results": results_list,
+        "query": query,
+    }
+    if result.correction:
+        response["correction"] = result.correction
+    if result.devotional_context:
+        response["devotional_context"] = result.devotional_context
+
+    return jsonify(response)
 
 @app.route("/memory", methods=["GET"])
 @require_auth

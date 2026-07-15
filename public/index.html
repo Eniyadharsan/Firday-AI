@@ -107,7 +107,7 @@
     .mp-controls button:hover{background:rgba(0,229,255,.08);color:#00e5ff;border-color:rgba(0,229,255,.3)}
     .mp-controls button.mp-play{width:38px;height:38px;font-size:16px;border-color:rgba(0,229,255,.2);color:#00e5ff}
     .mp-controls button.mp-play:hover{background:rgba(0,229,255,.12);border-color:rgba(0,229,255,.4)}
-    .mp-search{width:100%;order:11;margin-top:6px}
+    .mp-search{width:100%;order:11;margin-top:6px;position:relative}
     .mp-search-input{width:100%;padding:8px 12px;border-radius:20px;border:1px solid rgba(0,229,255,.1);background:rgba(0,229,255,.03);color:#00e5ff;font-family:inherit;font-size:11px;outline:none;transition:border-color .2s}
     .mp-search-input:focus{border-color:rgba(0,229,255,.3)}
     .mp-search-input::placeholder{color:rgba(0,229,255,.2)}
@@ -125,6 +125,27 @@
     .mp-mini{position:fixed;bottom:16px;right:16px;padding:6px 12px;border-radius:20px;background:rgba(10,22,40,.85);backdrop-filter:blur(10px);border:1px solid rgba(0,229,255,.15);color:rgba(0,229,255,.7);font-size:11px;cursor:pointer;z-index:120;display:flex;align-items:center;gap:6px;transition:all .2s}
     .mp-mini.hidden{display:none}
     .mp-mini:hover{background:rgba(0,229,255,.1);border-color:rgba(0,229,255,.3)}
+
+    .mp-correction{padding:8px 12px;margin:6px 0;border-radius:6px;background:rgba(123,47,247,.06);border:1px solid rgba(123,47,247,.15);font-size:11px;color:rgba(123,47,247,.7);display:none}
+    .mp-correction.visible{display:block}
+    .mp-correction a{color:#7b2ff7;text-decoration:underline;cursor:pointer}
+    .mp-source-badge{display:inline-block;padding:2px 6px;border-radius:3px;font-size:8px;letter-spacing:0.5px;text-transform:uppercase;margin-left:auto;flex-shrink:0}
+    .mp-source-badge.youtube{background:rgba(255,0,0,.08);color:rgba(255,80,80,.7);border:1px solid rgba(255,0,0,.12)}
+    .mp-source-badge.jiosaavn{background:rgba(0,200,83,.08);color:rgba(0,200,83,.7);border:1px solid rgba(0,200,83,.12)}
+    .mp-source-badge.gaana{background:rgba(255,153,0,.08);color:rgba(255,153,0,.7);border:1px solid rgba(255,153,0,.12)}
+
+    .mp-suggestions{position:absolute;left:0;right:0;top:100%;max-height:200px;overflow-y:auto;background:rgba(10,22,40,.95);border:1px solid rgba(0,229,255,.12);border-radius:8px;margin-top:4px;z-index:10;box-shadow:0 4px 16px rgba(0,0,0,.4)}
+    .mp-suggestions .mp-suggestion-item{display:flex;align-items:center;gap:8px;padding:8px 10px;cursor:pointer;transition:background .15s}
+    .mp-suggestions .mp-suggestion-item:hover,.mp-suggestions .mp-suggestion-item.active{background:rgba(0,229,255,.08)}
+    .mp-suggestions .mp-suggestion-item img{width:32px;height:32px;border-radius:4px;object-fit:cover}
+    .mp-suggestions .mp-suggestion-item .sg-title{font-size:11px;color:#b0e0e6;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .mp-suggestions .mp-suggestion-item .sg-artist{font-size:9px;color:rgba(0,229,255,.4);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .mp-suggestion-loading{padding:10px;text-align:center;font-size:10px;color:rgba(0,229,255,.3)}
+    .mp-search-input.loading{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24'%3E%3Cpath fill='rgba(0,229,255,0.4)' d='M12 2a10 10 0 0 1 10 10h-2a8 8 0 0 0-8-8V2z'%3E%3CanimateTransform attributeName='transform' type='rotate' from='0 12 12' to='360 12 12' dur='0.8s' repeatCount='indefinite'/%3E%3C/path%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center;background-size:14px}
+    .mp-offline-banner{padding:8px 12px;margin:6px 0;border-radius:6px;background:rgba(255,60,60,.06);border:1px solid rgba(255,60,60,.15);font-size:10px;color:rgba(255,60,60,.7);display:none;align-items:center;gap:8px}
+    .mp-offline-banner.visible{display:flex}
+    .mp-offline-banner button{padding:3px 8px;border-radius:4px;border:1px solid rgba(255,60,60,.2);background:rgba(255,60,60,.05);color:rgba(255,60,60,.7);font-size:9px;cursor:pointer;font-family:inherit}
+    .mp-offline-banner button:hover{background:rgba(255,60,60,.1)}
 
     @media(max-width:500px){
       .chat{width:calc(100% - 24px);left:12px}
@@ -224,7 +245,10 @@
       </div>
       <div class="mp-search">
         <input class="mp-search-input" placeholder="Search songs..." autocomplete="off" />
+        <div class="mp-correction"></div>
         <div class="mp-results"></div>
+        <div class="mp-suggestions" style="display:none"></div>
+        <div class="mp-offline-banner"><span>Unable to connect. Check your network.</span><button class="mp-retry-btn">Retry</button></div>
       </div>
     </div>
     <div id="yt-player-container" style="display:none"></div>
@@ -728,12 +752,22 @@
             }
           }
         });
+
+        // Dismiss correction banner on new input or clear
+        searchInput.addEventListener('input', () => {
+          const correctionBanner = document.querySelector('.mp-correction');
+          if (correctionBanner) correctionBanner.classList.remove('visible');
+        });
       }
 
       // Perform search against backend
       async search(query) {
         const resultsEl = document.querySelector('.mp-results');
         if (!resultsEl) return;
+
+        // Dismiss correction banner on new search
+        const correctionBanner = document.querySelector('.mp-correction');
+        if (correctionBanner) correctionBanner.classList.remove('visible');
 
         // Show loading state
         resultsEl.innerHTML = '<div style="padding:8px;font-size:11px;color:rgba(0,229,255,.4)">Searching...</div>';
@@ -749,6 +783,23 @@
           }
 
           const data = await response.json();
+
+          // Show/hide correction banner
+          if (correctionBanner) {
+            if (data.correction) {
+              correctionBanner.innerHTML = 'Did you mean: <a class="mp-correction-link">' + data.correction + '</a>?';
+              correctionBanner.classList.add('visible');
+              const self = this;
+              correctionBanner.querySelector('.mp-correction-link').addEventListener('click', function() {
+                const searchInput = document.querySelector('.mp-search-input');
+                if (searchInput) searchInput.value = data.correction;
+                correctionBanner.classList.remove('visible');
+                self.search(data.correction);
+              });
+            } else {
+              correctionBanner.classList.remove('visible');
+            }
+          }
 
           if (data.results && data.results.length > 0) {
             this.displayResults(data.results);
@@ -794,6 +845,13 @@
           infoDiv.appendChild(artistDiv);
           item.appendChild(img);
           item.appendChild(infoDiv);
+
+          // Source badge
+          const sourceName = (track.source || 'youtube').toLowerCase();
+          const badge = document.createElement('span');
+          badge.className = 'mp-source-badge ' + sourceName;
+          badge.textContent = sourceName;
+          item.appendChild(badge);
 
           // On click, load all results into queue starting at this track's index
           item.addEventListener('click', () => {
@@ -969,6 +1027,213 @@
         console.warn('YouTube IFrame API failed to load within timeout');
       }
     }, 10000);
+
+    // === Autocomplete ===
+    (function() {
+      let acTimer = null;  // debounce timer
+      let acController = null;  // AbortController for cancellation
+      let acActiveIndex = -1;  // keyboard navigation index
+
+      const searchInput = document.querySelector('.mp-search-input');
+      const suggestionsPanel = document.querySelector('.mp-suggestions');
+      const offlineBanner = document.querySelector('.mp-offline-banner');
+      const retryBtn = document.querySelector('.mp-retry-btn');
+
+      if (!searchInput || !suggestionsPanel) return;
+
+      // --- LRU Cache (50 entries, 5-min TTL) ---
+      class AcCache {
+        constructor(maxSize, ttlMs) {
+          this.maxSize = maxSize || 50;
+          this.ttlMs = ttlMs || 5 * 60 * 1000;
+          this.cache = new Map();
+        }
+        get(key) {
+          const entry = this.cache.get(key);
+          if (!entry) return null;
+          if (Date.now() - entry.ts > this.ttlMs) {
+            this.cache.delete(key);
+            return null;
+          }
+          // Move to end (MRU)
+          this.cache.delete(key);
+          this.cache.set(key, entry);
+          return entry.data;
+        }
+        set(key, data) {
+          if (this.cache.has(key)) this.cache.delete(key);
+          this.cache.set(key, { data: data, ts: Date.now() });
+          // Evict oldest if over capacity
+          while (this.cache.size > this.maxSize) {
+            var firstKey = this.cache.keys().next().value;
+            this.cache.delete(firstKey);
+          }
+        }
+      }
+
+      var acCache = new AcCache(50, 5 * 60 * 1000);
+
+      // --- Offline handling ---
+      var retryCount = 0;
+      var retryTimer = null;
+
+      function handleOfflineError() {
+        if (retryCount < 3) {
+          retryCount++;
+          retryTimer = setTimeout(function() {
+            var query = searchInput.value.trim();
+            if (query.length >= 2) fetchSuggestions(query);
+          }, 5000);
+        } else {
+          // Show persistent error with manual retry
+          if (offlineBanner) offlineBanner.classList.add('visible');
+        }
+      }
+
+      if (retryBtn) {
+        retryBtn.addEventListener('click', function() {
+          retryCount = 0;
+          if (offlineBanner) offlineBanner.classList.remove('visible');
+          var query = searchInput.value.trim();
+          if (query.length >= 2) fetchSuggestions(query);
+        });
+      }
+
+      // Debounce handler on input
+      searchInput.addEventListener('input', function() {
+        clearTimeout(acTimer);
+        clearTimeout(retryTimer);
+        retryCount = 0;
+        if (offlineBanner) offlineBanner.classList.remove('visible');
+
+        var query = this.value.trim();
+
+        if (query.length < 2) {
+          hideSuggestions();
+          return;
+        }
+
+        acTimer = setTimeout(function() { fetchSuggestions(query); }, 250);
+      });
+
+      // Keyboard navigation
+      searchInput.addEventListener('keydown', function(e) {
+        var items = suggestionsPanel.querySelectorAll('.mp-suggestion-item');
+        if (!items.length) return;
+
+        if (e.key === 'ArrowDown') {
+          e.preventDefault();
+          acActiveIndex = Math.min(acActiveIndex + 1, items.length - 1);
+          updateActiveItem(items);
+        } else if (e.key === 'ArrowUp') {
+          e.preventDefault();
+          acActiveIndex = Math.max(acActiveIndex - 1, -1);
+          updateActiveItem(items);
+        } else if (e.key === 'Enter' && acActiveIndex >= 0) {
+          e.preventDefault();
+          items[acActiveIndex].click();
+        } else if (e.key === 'Escape') {
+          hideSuggestions();
+        }
+      });
+
+      function updateActiveItem(items) {
+        items.forEach(function(item, i) { item.classList.toggle('active', i === acActiveIndex); });
+        if (acActiveIndex >= 0) items[acActiveIndex].scrollIntoView({block: 'nearest'});
+      }
+
+      function fetchSuggestions(query) {
+        // Check cache first
+        var cached = acCache.get(query.toLowerCase());
+        if (cached) {
+          renderSuggestions(cached);
+          return;
+        }
+
+        // Cancel previous request
+        if (acController) acController.abort();
+        acController = new AbortController();
+
+        // Show loading spinner
+        searchInput.classList.add('loading');
+
+        fetch('/music/autocomplete?q=' + encodeURIComponent(query), {
+          signal: acController.signal,
+          headers: {'Authorization': 'Bearer ' + (window.jt || '')}
+        }).then(function(resp) {
+          return resp.json();
+        }).then(function(data) {
+          var suggestions = data.suggestions || [];
+          // Cache the result
+          acCache.set(query.toLowerCase(), suggestions);
+          renderSuggestions(suggestions);
+          // Reset retry count on success
+          retryCount = 0;
+          if (offlineBanner) offlineBanner.classList.remove('visible');
+        }).catch(function(err) {
+          if (err.name !== 'AbortError') {
+            handleOfflineError();
+          }
+        }).finally(function() {
+          searchInput.classList.remove('loading');
+        });
+      }
+
+      function renderSuggestions(suggestions) {
+        if (!suggestions.length) {
+          suggestionsPanel.innerHTML = '<div class="mp-suggestion-loading">No results found</div>';
+          suggestionsPanel.style.display = 'block';
+          return;
+        }
+
+        acActiveIndex = -1;
+        suggestionsPanel.innerHTML = suggestions.map(function(s) {
+          return '<div class="mp-suggestion-item" data-videoid="' + (s.video_id || '') + '" data-source="' + (s.source || '') + '" data-title="' + (s.title || '').replace(/"/g, '&quot;') + '" data-artist="' + (s.artist || '').replace(/"/g, '&quot;') + '" data-thumb="' + (s.thumbnail_url || '') + '">' +
+            '<img src="' + (s.thumbnail_url || '') + '" alt="" />' +
+            '<div>' +
+              '<div class="sg-title">' + (s.title || '') + '</div>' +
+              '<div class="sg-artist">' + (s.artist || '') + '</div>' +
+            '</div>' +
+          '</div>';
+        }).join('');
+
+        suggestionsPanel.style.display = 'block';
+
+        // Click handler for suggestions
+        suggestionsPanel.querySelectorAll('.mp-suggestion-item').forEach(function(item) {
+          item.addEventListener('click', function() { selectSuggestion(item); });
+        });
+      }
+
+      function selectSuggestion(item) {
+        var track = {
+          video_id: item.dataset.videoid,
+          title: item.dataset.title,
+          artist: item.dataset.artist,
+          thumbnail_url: item.dataset.thumb,
+          source: item.dataset.source
+        };
+        hideSuggestions();
+        searchInput.value = track.title;
+        // Load the track in the music player
+        if (window.musicPlayer) {
+          window.musicPlayer.loadTrack(track);
+        }
+      }
+
+      function hideSuggestions() {
+        suggestionsPanel.style.display = 'none';
+        suggestionsPanel.innerHTML = '';
+        acActiveIndex = -1;
+      }
+
+      // Hide suggestions when clicking outside
+      document.addEventListener('click', function(e) {
+        if (!suggestionsPanel.contains(e.target) && e.target !== searchInput) {
+          hideSuggestions();
+        }
+      });
+    })();
   </script>
 
   <!-- Hidden container for YouTube IFrame Player -->
