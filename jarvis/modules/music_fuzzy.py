@@ -10,8 +10,48 @@ from __future__ import annotations
 
 import re
 
-from rapidfuzz import fuzz
-from rapidfuzz.distance import Levenshtein
+try:
+    from rapidfuzz import fuzz
+    from rapidfuzz.distance import Levenshtein
+
+    def _levenshtein_distance(s1: str, s2: str) -> int:
+        return Levenshtein.distance(s1, s2)
+
+    def _partial_ratio(s1: str, s2: str) -> float:
+        return fuzz.partial_ratio(s1, s2) / 100.0
+
+except ImportError:
+    # Pure-Python fallback when rapidfuzz is unavailable (e.g., Vercel serverless)
+    def _levenshtein_distance(s1: str, s2: str) -> int:
+        if len(s1) < len(s2):
+            return _levenshtein_distance(s2, s1)
+        if len(s2) == 0:
+            return len(s1)
+        prev_row = list(range(len(s2) + 1))
+        for i, c1 in enumerate(s1):
+            curr_row = [i + 1]
+            for j, c2 in enumerate(s2):
+                insertions = prev_row[j + 1] + 1
+                deletions = curr_row[j] + 1
+                substitutions = prev_row[j] + (c1 != c2)
+                curr_row.append(min(insertions, deletions, substitutions))
+            prev_row = curr_row
+        return prev_row[-1]
+
+    def _partial_ratio(s1: str, s2: str) -> float:
+        if not s1 or not s2:
+            return 0.0
+        shorter, longer = (s1, s2) if len(s1) <= len(s2) else (s2, s1)
+        best = 0.0
+        l_short = len(shorter)
+        for i in range(len(longer) - l_short + 1):
+            sub = longer[i:i + l_short]
+            matches = sum(a == b for a, b in zip(shorter, sub))
+            ratio = matches / l_short
+            if ratio > best:
+                best = ratio
+        return best
+
 
 from jarvis.modules.music_catalog import CatalogCache
 from jarvis.modules.music_models import FuzzyMatch
@@ -81,7 +121,7 @@ class FuzzyMatcher:
 
         for candidate in candidates:
             candidate_lower = candidate.lower()
-            distance = Levenshtein.distance(query_normalized, candidate_lower)
+            distance = _levenshtein_distance(query_normalized, candidate_lower)
             if distance <= 2 and distance < best_distance:
                 best_distance = distance
                 best_match = candidate
@@ -123,8 +163,8 @@ class FuzzyMatcher:
         for candidate in candidates:
             candidate_lower = candidate.lower()
             # Compute similarity score using partial_ratio for substring matching
-            score = fuzz.partial_ratio(query_normalized, candidate_lower) / 100.0
-            distance = Levenshtein.distance(query_normalized, candidate_lower)
+            score = _partial_ratio(query_normalized, candidate_lower)
+            distance = _levenshtein_distance(query_normalized, candidate_lower)
 
             # Only include if there's meaningful similarity (score > 0)
             if score > 0:

@@ -779,7 +779,8 @@
           });
 
           if (!response.ok) {
-            throw new Error('Search request failed');
+            const errData = await response.json().catch(() => ({}));
+            throw new Error(errData.error || 'Search request failed');
           }
 
           const data = await response.json();
@@ -808,7 +809,7 @@
             resultsEl.classList.add('has-results');
           }
         } catch (err) {
-          resultsEl.innerHTML = '<div style="padding:8px;font-size:11px;color:#ff4444">Search failed</div>';
+          resultsEl.innerHTML = '<div style="padding:8px;font-size:11px;color:#ff4444">' + (err.message || 'Search failed') + '</div>';
           resultsEl.classList.add('has-results');
         }
       }

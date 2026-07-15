@@ -337,6 +337,9 @@ def music_search():
         result = engine.search(query)
     except ValueError as e:
         return jsonify({"error": str(e)}), 400
+    except Exception as e:
+        logger.error("Music search error for query '{}': {}", query, e)
+        return jsonify({"error": "Search temporarily unavailable. Please try again."}), 503
 
     # If all sources failed and no results, return 503
     if not result.results and result.sources_failed and len(result.sources_failed) == len(result.sources_queried):
