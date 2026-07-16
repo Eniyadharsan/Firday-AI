@@ -73,7 +73,7 @@
     .ib.rec svg{fill:#ff4444}
 
     /* Right detail panel */
-    .detail{position:fixed;top:50px;right:16px;bottom:16px;width:360px;z-index:90;border-radius:12px;background:rgba(10,22,40,.8);backdrop-filter:blur(16px);border:1px solid rgba(0,229,255,.08);display:none;flex-direction:column;overflow:hidden}
+    .detail{position:fixed;top:50px;right:16px;bottom:16px;width:360px;z-index:200;border-radius:12px;background:rgba(10,22,40,.8);backdrop-filter:blur(16px);border:1px solid rgba(0,229,255,.08);display:none;flex-direction:column;overflow:hidden}
     .detail.open{display:flex}
     .detail-head{padding:12px 16px;border-bottom:1px solid rgba(0,229,255,.06);display:flex;justify-content:space-between;align-items:center}
     .detail-head h4{font-size:11px;color:rgba(0,229,255,.5);letter-spacing:2px;font-weight:normal}
@@ -85,7 +85,75 @@
     /* Watery mouse effect canvas */
     .fx{position:fixed;inset:0;pointer-events:none;z-index:5}
 
-    /* Music Player - Now Playing Panel */
+    /* Music Panel - Floating Glassmorphism Overlay */
+    .music-panel{position:fixed;bottom:16px;right:16px;max-width:340px;max-height:50vh;overflow-y:auto;background:rgba(10,22,40,0.25);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border:1px solid rgba(0,229,255,0.15);box-shadow:0 8px 20px rgba(0,0,0,0.25);border-radius:16px;z-index:150}
+    @supports not (backdrop-filter: blur(1px)){.music-panel{background:rgba(10,22,40,0.8)}}
+    .music-panel.no-backdrop-filter{background:rgba(10,22,40,0.8);backdrop-filter:none;-webkit-backdrop-filter:none}
+    /* Music Panel text/icon contrast - ensures >= 4.5:1 ratio against glassmorphism background */
+    .music-panel .mp-title{color:#ffffff}
+    .music-panel .mp-artist{color:rgba(255,255,255,0.85)}
+    .music-panel .mp-time-current,.music-panel .mp-time-total{color:rgba(255,255,255,0.7)}
+    .music-panel .mp-controls button{color:#ffffff;border-color:rgba(255,255,255,0.2)}
+    .music-panel .mp-controls button:hover{color:#ffffff;border-color:rgba(255,255,255,0.4)}
+    .music-panel .mp-close{color:#ffffff;border-color:rgba(255,255,255,0.2)}
+    .music-panel .mp-search-input{color:#ffffff}
+    .music-panel .mp-search-input::placeholder{color:rgba(255,255,255,0.5)}
+    .music-panel .mp-result-item .mp-result-title{color:#ffffff}
+    .music-panel .mp-result-item .mp-result-artist{color:rgba(255,255,255,0.7)}
+
+    /* Music Panel - Header */
+    .mp-header{display:flex;align-items:center;justify-content:space-between;padding:10px 14px 6px;border-bottom:1px solid rgba(0,229,255,0.08)}
+    .mp-header-title{font-size:10px;letter-spacing:2px;color:rgba(255,255,255,0.6);text-transform:uppercase;font-weight:normal}
+    .music-panel .mp-close{position:relative;top:auto;right:auto;background:none;border:1px solid rgba(255,255,255,0.15);color:#ffffff;width:22px;height:22px;border-radius:50%;cursor:pointer;font-size:13px;display:flex;align-items:center;justify-content:center;transition:all 0.2s;line-height:1}
+    .music-panel .mp-close:hover{background:rgba(255,255,255,0.08);border-color:rgba(255,255,255,0.3)}
+
+    /* Music Panel - Now Playing Section */
+    .mp-now-playing{display:flex;align-items:center;gap:10px;padding:10px 14px 6px}
+    .mp-album-art{width:48px;height:48px;border-radius:6px;object-fit:cover;background:rgba(0,229,255,0.05);border:1px solid rgba(0,229,255,0.08);flex-shrink:0}
+    .mp-track-info{flex:1;min-width:0;overflow:hidden}
+    .mp-track-info .mp-title{font-size:12px;font-weight:bold;letter-spacing:0.3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .mp-track-info .mp-artist{font-size:10px;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+    /* Music Panel - Playback Controls (compact row) */
+    .music-panel .mp-controls{display:flex;align-items:center;justify-content:center;gap:10px;padding:6px 14px 12px}
+    .music-panel .mp-controls button{background:none;border:1px solid rgba(255,255,255,0.15);color:#ffffff;width:32px;height:32px;border-radius:50%;cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;transition:all 0.2s}
+    .music-panel .mp-controls button:hover{background:rgba(0,229,255,0.08);border-color:rgba(0,229,255,0.3);color:#00e5ff}
+    .music-panel .mp-controls .mp-play-pause{width:38px;height:38px;font-size:16px;border-color:rgba(0,229,255,0.2);color:#00e5ff}
+    .music-panel .mp-controls .mp-play-pause:hover{background:rgba(0,229,255,0.12);border-color:rgba(0,229,255,0.4)}
+
+    /* Music Panel - Progress Section */
+    .mp-progress-section{padding:0 14px 12px}
+    .mp-progress-section .mp-progress-bar{width:100%;height:4px;background:rgba(255,255,255,0.1);border-radius:2px;overflow:hidden;cursor:pointer}
+    .mp-progress-section .mp-progress-fill{height:100%;width:0%;background:rgba(0,229,255,0.85);border-radius:2px;transition:width 0.3s linear}
+    .mp-progress-section .mp-time{display:flex;justify-content:space-between;margin-top:4px}
+    .mp-progress-section .mp-time-current,.mp-progress-section .mp-time-total{font-size:9px;color:rgba(255,255,255,0.6);letter-spacing:0.5px}
+
+    /* Music Panel - Search Section */
+    .mp-search-section{position:relative;padding:0 14px 12px}
+    .mp-search-section .mp-search-input{width:100%;padding:8px 12px;border-radius:20px;border:1px solid rgba(0,229,255,0.1);background:rgba(0,229,255,0.03);color:#ffffff;font-family:inherit;font-size:11px;outline:none;transition:border-color 0.2s}
+    .mp-search-section .mp-search-input:focus{border-color:rgba(0,229,255,0.3)}
+    .mp-search-section .mp-search-input::placeholder{color:rgba(255,255,255,0.5)}
+    .mp-search-section .mp-suggestions{position:absolute;left:14px;right:14px;top:36px;max-height:200px;overflow-y:auto;background:rgba(10,22,40,0.95);border:1px solid rgba(0,229,255,0.12);border-radius:8px;margin-top:4px;z-index:10;box-shadow:0 4px 16px rgba(0,0,0,0.4)}
+    .mp-search-section .mp-suggestions .mp-suggestion-item{display:flex;align-items:center;gap:8px;padding:8px 10px;cursor:pointer;transition:background 0.15s}
+    .mp-search-section .mp-suggestions .mp-suggestion-item:hover,.mp-search-section .mp-suggestions .mp-suggestion-item.active{background:rgba(0,229,255,0.08)}
+    .mp-search-section .mp-suggestions .mp-suggestion-item img{width:32px;height:32px;border-radius:4px;object-fit:cover}
+    .mp-search-section .mp-suggestions .mp-suggestion-item .sg-title{font-size:11px;color:#ffffff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .mp-search-section .mp-suggestions .mp-suggestion-item .sg-artist{font-size:9px;color:rgba(255,255,255,0.6);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .mp-search-section .mp-search-results{max-height:150px;overflow-y:auto;margin-top:6px}
+    .mp-search-section .mp-search-results::-webkit-scrollbar{width:3px}
+    .mp-search-section .mp-search-results::-webkit-scrollbar-thumb{background:rgba(0,229,255,0.15);border-radius:2px}
+    .mp-search-section .mp-search-results .mp-result-item{display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:6px;cursor:pointer;transition:background 0.15s}
+    .mp-search-section .mp-search-results .mp-result-item:hover{background:rgba(0,229,255,0.06)}
+    .mp-search-section .mp-search-results .mp-result-item img{width:36px;height:36px;border-radius:4px;object-fit:cover}
+    .mp-search-section .mp-search-results .mp-result-item .mp-result-title{font-size:11px;color:#ffffff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .mp-search-section .mp-search-results .mp-result-item .mp-result-artist{font-size:9px;color:rgba(255,255,255,0.7);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .mp-search-section .mp-search-error{padding:8px;font-size:11px;color:rgba(255,60,60,0.8);text-align:center}
+
+    /* Music Panel open/close animation classes */
+    .music-panel.panel-hidden,.music-player.panel-hidden{transform:scale(0.95);opacity:0;pointer-events:none;transition:transform 250ms ease-in,opacity 250ms ease-in}
+    .music-panel.panel-visible,.music-player.panel-visible{transform:scale(1);opacity:1;pointer-events:auto;transition:transform 300ms ease-out,opacity 300ms ease-out}
+
+    /* Music Player - Now Playing Panel (legacy, pending DOM migration) */
     .music-player{position:fixed;bottom:0;left:0;right:0;z-index:150;background:rgba(10,22,40,.92);backdrop-filter:blur(20px);border-top-left-radius:16px;border-top-right-radius:16px;border-top:1px solid rgba(0,229,255,.1);box-shadow:0 -4px 30px rgba(0,0,0,.5);transition:transform .35s cubic-bezier(.4,0,.2,1),opacity .3s ease;overflow:hidden}
     .music-player.hidden{transform:translateY(100%);opacity:0;pointer-events:none}
     .mp-bg{position:absolute;inset:0;background-size:cover;background-position:center;filter:blur(40px) brightness(.3);opacity:.4;z-index:0;transition:background-image .5s ease}
@@ -147,10 +215,21 @@
     .mp-offline-banner button{padding:3px 8px;border-radius:4px;border:1px solid rgba(255,60,60,.2);background:rgba(255,60,60,.05);color:rgba(255,60,60,.7);font-size:9px;cursor:pointer;font-family:inherit}
     .mp-offline-banner button:hover{background:rgba(255,60,60,.1)}
 
+    /* Music Toggle Button */
+    .music-toggle-btn{position:fixed;bottom:16px;right:16px;width:44px;height:44px;border-radius:50%;background:rgba(10,22,40,0.25);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border:1px solid rgba(0,229,255,0.15);box-shadow:0 8px 20px rgba(0,0,0,0.25);color:#ffffff;font-size:18px;display:flex;align-items:center;justify-content:center;cursor:pointer;z-index:160;transition:all 0.2s ease;user-select:none}
+    .music-toggle-btn:hover{background:rgba(0,229,255,0.1);border-color:rgba(0,229,255,0.3);transform:scale(1.05)}
+    .music-toggle-btn:active{transform:scale(0.95)}
+    .music-toggle-btn.playing{animation:music-toggle-pulse 2s ease-in-out infinite;border-color:rgba(0,229,255,0.5);box-shadow:0 0 12px rgba(0,229,255,0.4),0 0 24px rgba(0,229,255,0.15),0 8px 20px rgba(0,0,0,0.25);background:rgba(0,229,255,0.08)}
+    .music-toggle-btn.disabled{opacity:0.5;pointer-events:none;cursor:default}
+    @keyframes music-toggle-pulse{0%,100%{box-shadow:0 0 12px rgba(0,229,255,0.4),0 0 24px rgba(0,229,255,0.15),0 8px 20px rgba(0,0,0,0.25);border-color:rgba(0,229,255,0.5);transform:scale(1)}50%{box-shadow:0 0 22px rgba(0,229,255,0.6),0 0 40px rgba(0,229,255,0.25),0 8px 20px rgba(0,0,0,0.25);border-color:rgba(0,229,255,0.7);transform:scale(1.05)}}
+    @supports not (backdrop-filter: blur(1px)){.music-toggle-btn{background:rgba(10,22,40,0.8)}}
+
     @media(max-width:500px){
       .chat{width:calc(100% - 24px);left:12px}
       .detail{width:calc(100% - 24px);right:12px;left:12px}
       .molecule{width:130px;height:130px}
+      /* Music panel responsive layout */
+      .music-panel{max-width:none;width:calc(100vw - 32px);left:16px;right:16px;max-height:50vh}
       /* Music player responsive layout */
       .music-player{max-height:60vh;overflow-y:auto;border-top-left-radius:12px;border-top-right-radius:12px}
       .mp-content{padding:12px 14px 10px;gap:8px}
@@ -221,8 +300,48 @@
   <!-- Music Player Mini Indicator (shown when player is hidden but still playing) -->
   <div id="mp-mini-indicator" class="mp-mini hidden">🎵 <span class="mp-mini-title"></span></div>
 
-  <!-- Music Player - Now Playing Panel -->
-  <div id="music-player" class="music-player hidden">
+  <!-- Music Panel - Compact Floating Glassmorphism Overlay (redesigned) -->
+  <div class="music-panel panel-hidden">
+    <!-- Header with close button -->
+    <div class="mp-header">
+      <span class="mp-header-title">Now Playing</span>
+      <button class="mp-close" aria-label="Close music panel">&times;</button>
+    </div>
+    <!-- Now playing section with album art + track info + controls -->
+    <div class="mp-now-playing">
+      <img class="mp-album-art" src="" alt="Album art" style="width:48px;height:48px;object-fit:cover;border-radius:6px;">
+      <div class="mp-track-info">
+        <div class="mp-title" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"></div>
+        <div class="mp-artist" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"></div>
+      </div>
+    </div>
+    <!-- Playback controls -->
+    <div class="mp-controls">
+      <button class="mp-prev" aria-label="Previous track">⏮</button>
+      <button class="mp-play-pause" aria-label="Play/Pause">▶</button>
+      <button class="mp-next" aria-label="Next track">⏭</button>
+    </div>
+    <!-- Progress bar and time display -->
+    <div class="mp-progress-section">
+      <div class="mp-progress-bar">
+        <div class="mp-progress-fill" style="width: 0%"></div>
+      </div>
+      <div class="mp-time">
+        <span class="mp-time-current">0:00</span>
+        <span class="mp-time-total">0:00</span>
+      </div>
+    </div>
+    <!-- Search section -->
+    <div class="mp-search-section">
+      <input class="mp-search-input" type="text" placeholder="Search songs..." maxlength="200" aria-label="Search for songs">
+      <div class="mp-suggestions" style="display:none;"></div>
+      <div class="mp-search-results" style="display:none;"></div>
+      <div class="mp-search-error" style="display:none;"></div>
+    </div>
+  </div>
+
+  <!-- Music Player - Legacy Panel (deprecated, hidden - replaced by .music-panel above) -->
+  <div id="music-player" class="music-player hidden" style="display:none">
     <div class="mp-bg"></div>
     <div class="mp-content">
       <button class="mp-close" aria-label="Close player">✕</button>
@@ -623,10 +742,17 @@
         return null;
       }
 
-      // Format seconds into "m:ss" display string
+      // Format seconds into time display string
+      // Returns "m:ss" for < 3600 seconds, "h:mm:ss" for >= 3600 seconds
       formatTime(seconds) {
         if (!seconds || seconds < 0 || !isFinite(seconds)) return '0:00';
         const totalSeconds = Math.floor(seconds);
+        if (totalSeconds >= 3600) {
+          const hours = Math.floor(totalSeconds / 3600);
+          const mins = Math.floor((totalSeconds % 3600) / 60);
+          const secs = totalSeconds % 60;
+          return hours + ':' + (mins < 10 ? '0' : '') + mins + ':' + (secs < 10 ? '0' : '') + secs;
+        }
         const mins = Math.floor(totalSeconds / 60);
         const secs = totalSeconds % 60;
         return mins + ':' + (secs < 10 ? '0' : '') + secs;
@@ -648,23 +774,29 @@
             progress = currentTime / duration;
           }
 
-          // Update progress bar width (safely check for element existence)
+          // Update progress bar width in legacy panel (safely check for element existence)
           const progressBar = document.querySelector('.mp-progress-bar');
           if (progressBar) {
             progressBar.style.width = (progress * 100) + '%';
           }
 
-          // Update current time display
-          const timeCurrent = document.querySelector('.mp-time-current');
-          if (timeCurrent) {
-            timeCurrent.textContent = this.formatTime(currentTime);
+          // Update progress fill in the new compact music-panel
+          const progressFill = document.querySelector('.mp-progress-section .mp-progress-fill');
+          if (progressFill) {
+            progressFill.style.width = (progress * 100) + '%';
           }
 
-          // Update total duration display
-          const timeTotal = document.querySelector('.mp-time-total');
-          if (timeTotal) {
-            timeTotal.textContent = this.formatTime(duration);
-          }
+          // Update current time display (both legacy and new panel)
+          const timeCurrent = document.querySelectorAll('.mp-time-current');
+          timeCurrent.forEach(el => {
+            el.textContent = this.formatTime(currentTime);
+          });
+
+          // Update total duration display (both legacy and new panel)
+          const timeTotal = document.querySelectorAll('.mp-time-total');
+          timeTotal.forEach(el => {
+            el.textContent = this.formatTime(duration);
+          });
         }, 1000);
       }
 
@@ -679,17 +811,23 @@
       // UI methods
       show() {
         this.visible = true;
-        const panel = document.getElementById('music-player');
-        if (panel) panel.classList.remove('hidden');
+        // Use PanelManager to show the new music panel
+        if (window.panelManager && typeof window.panelManager.show === 'function') {
+          window.panelManager.show();
+        }
         // Hide the mini indicator when panel is open
         const mini = document.getElementById('mp-mini-indicator');
         if (mini) mini.classList.add('hidden');
+        // Reset toggle button to idle when panel is visible
+        this._updateTogglePlayingState();
       }
 
       hide() {
         this.visible = false;
-        const panel = document.getElementById('music-player');
-        if (panel) panel.classList.add('hidden');
+        // Use PanelManager to hide the new music panel
+        if (window.panelManager && typeof window.panelManager.hide === 'function') {
+          window.panelManager.hide();
+        }
         // Show mini indicator if music is still playing
         this._updateMiniIndicator();
       }
@@ -697,18 +835,29 @@
       updateNowPlaying(track) {
         if (!track) return;
 
-        // Update album art
-        const art = document.querySelector('.mp-art');
+        // Update the NEW music-panel elements
+        const panel = document.querySelector('.music-panel');
+        if (panel) {
+          const albumArt = panel.querySelector('.mp-album-art');
+          if (albumArt) albumArt.src = track.thumbnail_url || '';
+
+          const titleEl = panel.querySelector('.mp-track-info .mp-title');
+          if (titleEl) titleEl.textContent = track.title || '';
+
+          const artistEl = panel.querySelector('.mp-track-info .mp-artist');
+          if (artistEl) artistEl.textContent = track.artist || '';
+        }
+
+        // Also update legacy panel elements (for any remaining references)
+        const art = document.querySelector('#music-player .mp-art');
         if (art) art.src = track.thumbnail_url;
 
-        // Update title and artist
-        const title = document.querySelector('.mp-title');
-        if (title) title.textContent = track.title;
+        const legacyTitle = document.querySelector('#music-player .mp-title');
+        if (legacyTitle) legacyTitle.textContent = track.title;
 
-        const artist = document.querySelector('.mp-artist');
-        if (artist) artist.textContent = track.artist;
+        const legacyArtist = document.querySelector('#music-player .mp-artist');
+        if (legacyArtist) legacyArtist.textContent = track.artist;
 
-        // Update blurred background
         const bg = document.querySelector('.mp-bg');
         if (bg) bg.style.backgroundImage = 'url(' + track.thumbnail_url + ')';
 
@@ -734,49 +883,169 @@
         } else {
           mini.classList.add('hidden');
         }
+        // Update toggle button playing indicator
+        this._updateTogglePlayingState();
+      }
+
+      // Update toggle button playing state: pulse when playing and panel is hidden
+      _updateTogglePlayingState() {
+        if (window.musicToggleButton && typeof window.musicToggleButton.setState === 'function') {
+          if (!this.visible && this.isPlaying) {
+            window.musicToggleButton.setState('playing');
+          } else if (window.musicToggleButton.state !== 'disabled') {
+            window.musicToggleButton.setState('idle');
+          }
+        }
       }
 
       // --- Search Interface ---
 
-      // Initialize search input and event listeners
+      // Validate search input: returns false if query.length > 200
+      validateSearchInput(query) {
+        if (query.length > 200) return false;
+        return true;
+      }
+
+      // Clear suggestions: hides and empties the .mp-suggestions container within .music-panel
+      clearSuggestions() {
+        const panel = document.querySelector('.music-panel');
+        if (!panel) return;
+        const suggestionsEl = panel.querySelector('.mp-suggestions');
+        if (suggestionsEl) {
+          suggestionsEl.style.display = 'none';
+          suggestionsEl.innerHTML = '';
+        }
+      }
+
+      // Initialize search input and event listeners (binds to .mp-search-input within .music-panel)
       initSearch() {
-        const searchInput = document.querySelector('.mp-search-input');
+        const panel = document.querySelector('.music-panel');
+        if (!panel) return;
+        const searchInput = panel.querySelector('.mp-search-input');
         if (!searchInput) return;
+
+        let debounceTimer = null;
+        let acController = null;
+        let acActiveIndex = -1;
 
         // Submit on Enter key
         searchInput.addEventListener('keydown', (e) => {
           if (e.key === 'Enter') {
             const query = searchInput.value.trim();
-            if (query) {
+            if (query && this.validateSearchInput(query)) {
               this.search(query);
+            }
+          }
+          // Keyboard navigation for suggestions
+          const suggestionsEl = panel.querySelector('.mp-suggestions');
+          if (suggestionsEl && suggestionsEl.style.display !== 'none') {
+            const items = suggestionsEl.querySelectorAll('.mp-suggestion-item');
+            if (items.length) {
+              if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                acActiveIndex = Math.min(acActiveIndex + 1, items.length - 1);
+                items.forEach((item, i) => item.classList.toggle('active', i === acActiveIndex));
+                if (acActiveIndex >= 0) items[acActiveIndex].scrollIntoView({block: 'nearest'});
+              } else if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                acActiveIndex = Math.max(acActiveIndex - 1, -1);
+                items.forEach((item, i) => item.classList.toggle('active', i === acActiveIndex));
+                if (acActiveIndex >= 0) items[acActiveIndex].scrollIntoView({block: 'nearest'});
+              } else if (e.key === 'Enter' && acActiveIndex >= 0) {
+                e.preventDefault();
+                items[acActiveIndex].click();
+              } else if (e.key === 'Escape') {
+                this.clearSuggestions();
+              }
             }
           }
         });
 
-        // Dismiss correction banner on new input or clear
+        // Debounced autocomplete on input event
         searchInput.addEventListener('input', () => {
-          const correctionBanner = document.querySelector('.mp-correction');
+          clearTimeout(debounceTimer);
+          const query = searchInput.value.trim();
+
+          // Validate input length
+          if (!this.validateSearchInput(searchInput.value)) {
+            // Truncate to 200 characters
+            searchInput.value = searchInput.value.slice(0, 200);
+          }
+
+          // Clear suggestions if below 2 characters
+          if (query.length < 2) {
+            this.clearSuggestions();
+            return;
+          }
+
+          // Debounce 250ms then call autocomplete
+          debounceTimer = setTimeout(() => {
+            // Cancel previous autocomplete request
+            if (acController) acController.abort();
+            acController = new AbortController();
+
+            fetch('/music/autocomplete?q=' + encodeURIComponent(query), {
+              signal: acController.signal,
+              headers: {'Authorization': 'Bearer ' + (window.jt || '')}
+            })
+            .then(resp => resp.json())
+            .then(data => {
+              const suggestions = data.suggestions || [];
+              acActiveIndex = -1;
+              this.displaySuggestions(suggestions);
+            })
+            .catch(err => {
+              if (err.name !== 'AbortError') {
+                // Silently handle errors for autocomplete
+                console.warn('Autocomplete error:', err);
+              }
+            });
+          }, 250);
+        });
+
+        // Dismiss correction banner on new input
+        searchInput.addEventListener('input', () => {
+          const correctionBanner = panel.querySelector('.mp-correction');
           if (correctionBanner) correctionBanner.classList.remove('visible');
+        });
+
+        // Hide suggestions when clicking outside
+        document.addEventListener('click', (e) => {
+          const suggestionsEl = panel.querySelector('.mp-suggestions');
+          if (suggestionsEl && !suggestionsEl.contains(e.target) && e.target !== searchInput) {
+            this.clearSuggestions();
+          }
         });
       }
 
       // Perform search against backend
       async search(query) {
-        const resultsEl = document.querySelector('.mp-results');
-        if (!resultsEl) return;
+        const panel = document.querySelector('.music-panel');
+        if (!panel) return;
+        const resultsEl = panel.querySelector('.mp-search-results');
+        const errorEl = panel.querySelector('.mp-search-error');
+        if (!resultsEl || !errorEl) return;
 
         // Dismiss correction banner on new search
-        const correctionBanner = document.querySelector('.mp-correction');
+        const correctionBanner = panel.querySelector('.mp-correction');
         if (correctionBanner) correctionBanner.classList.remove('visible');
 
-        // Show loading state
+        // Show loading state: show results area, hide error
+        errorEl.style.display = 'none';
+        errorEl.textContent = '';
+        resultsEl.style.display = 'block';
         resultsEl.innerHTML = '<div style="padding:8px;font-size:11px;color:rgba(0,229,255,.4)">Searching...</div>';
-        resultsEl.classList.add('has-results');
+
+        // Set up AbortController with 5-second timeout
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 5000);
 
         try {
           const response = await fetch('/music/search?q=' + encodeURIComponent(query), {
+            signal: controller.signal,
             headers: { 'Authorization': 'Bearer ' + (window.jt || '') }
           });
+          clearTimeout(timeoutId);
 
           if (!response.ok) {
             const errData = await response.json().catch(() => ({}));
@@ -792,7 +1061,7 @@
               correctionBanner.classList.add('visible');
               const self = this;
               correctionBanner.querySelector('.mp-correction-link').addEventListener('click', function() {
-                const searchInput = document.querySelector('.mp-search-input');
+                const searchInput = panel.querySelector('.mp-search-input');
                 if (searchInput) searchInput.value = data.correction;
                 correctionBanner.classList.remove('visible');
                 self.search(data.correction);
@@ -803,27 +1072,50 @@
           }
 
           if (data.results && data.results.length > 0) {
+            // Show results, hide error
+            errorEl.style.display = 'none';
+            errorEl.textContent = '';
+            resultsEl.style.display = 'block';
             this.displayResults(data.results);
           } else {
-            resultsEl.innerHTML = '<div style="padding:8px;font-size:11px;color:rgba(0,229,255,.4)">No songs found</div>';
-            resultsEl.classList.add('has-results');
+            // No results found — show error, hide results
+            resultsEl.style.display = 'none';
+            resultsEl.innerHTML = '';
+            errorEl.textContent = 'No results found';
+            errorEl.style.display = 'block';
           }
         } catch (err) {
-          resultsEl.innerHTML = '<div style="padding:8px;font-size:11px;color:#ff4444">' + (err.message || 'Search failed') + '</div>';
-          resultsEl.classList.add('has-results');
+          clearTimeout(timeoutId);
+          // Hide results, show error
+          resultsEl.style.display = 'none';
+          resultsEl.innerHTML = '';
+          if (err.name === 'AbortError') {
+            // Timeout (5-second) or aborted request
+            errorEl.textContent = 'Search temporarily unavailable';
+          } else {
+            // Network error or other fetch rejection
+            errorEl.textContent = 'Search temporarily unavailable';
+          }
+          errorEl.style.display = 'block';
         }
       }
 
-      // Render search results in the results container
+      // Render search results in the new panel's .mp-search-results container
+      // Capped at 20 items max per Requirement 5.4
       displayResults(results) {
-        const resultsEl = document.querySelector('.mp-results');
+        const panel = document.querySelector('.music-panel');
+        if (!panel) return;
+        const resultsEl = panel.querySelector('.mp-search-results');
         if (!resultsEl) return;
 
-        // Clear existing content
+        // Clear existing content and show the container
         resultsEl.innerHTML = '';
-        resultsEl.classList.add('has-results');
+        resultsEl.style.display = 'block';
 
-        results.forEach((track, index) => {
+        // Cap at 20 results max (Requirement 5.4, Property 6)
+        const capped = results.slice(0, 20);
+
+        capped.forEach((track, index) => {
           const item = document.createElement('div');
           item.className = 'mp-result-item';
 
@@ -854,13 +1146,70 @@
           badge.textContent = sourceName;
           item.appendChild(badge);
 
-          // On click, load all results into queue starting at this track's index
+          // On click, show loading indicator then initiate playback (Requirement 5.3)
           item.addEventListener('click', () => {
-            this.loadQueue(results, index);
-            this.updateNowPlaying(results[index]);
+            // Show loading indicator on the clicked item
+            item.style.opacity = '0.6';
+            item.style.pointerEvents = 'none';
+            const loadingSpan = document.createElement('span');
+            loadingSpan.className = 'mp-result-loading';
+            loadingSpan.textContent = 'Loading...';
+            loadingSpan.style.cssText = 'font-size:9px;color:rgba(0,229,255,0.7);margin-left:auto;flex-shrink:0';
+            item.appendChild(loadingSpan);
+
+            // Load the track (initiates playback)
+            this.loadTrack(track);
           });
 
           resultsEl.appendChild(item);
+        });
+      }
+
+      // Display autocomplete suggestions in the .mp-suggestions container within .music-panel
+      // Capped at 8 items max per Requirement 5.2
+      displaySuggestions(suggestions) {
+        const panel = document.querySelector('.music-panel');
+        if (!panel) return;
+        const suggestionsEl = panel.querySelector('.mp-suggestions');
+        if (!suggestionsEl) return;
+
+        if (!suggestions || suggestions.length === 0) {
+          suggestionsEl.innerHTML = '';
+          suggestionsEl.style.display = 'none';
+          return;
+        }
+
+        // Cap at 8 suggestions max (Requirement 5.2, Property 5)
+        const capped = suggestions.slice(0, 8);
+
+        suggestionsEl.innerHTML = capped.map(s => {
+          return '<div class="mp-suggestion-item" data-videoid="' + (s.video_id || '') + '" data-source="' + (s.source || '') + '" data-title="' + (s.title || '').replace(/"/g, '&quot;') + '" data-artist="' + (s.artist || '').replace(/"/g, '&quot;') + '" data-thumb="' + (s.thumbnail_url || '') + '">' +
+            '<img src="' + (s.thumbnail_url || '') + '" alt="" />' +
+            '<div>' +
+              '<div class="sg-title">' + (s.title || '') + '</div>' +
+              '<div class="sg-artist">' + (s.artist || '') + '</div>' +
+            '</div>' +
+          '</div>';
+        }).join('');
+
+        suggestionsEl.style.display = 'block';
+
+        // Click handler for each suggestion
+        const self = this;
+        suggestionsEl.querySelectorAll('.mp-suggestion-item').forEach(item => {
+          item.addEventListener('click', () => {
+            const track = {
+              video_id: item.dataset.videoid,
+              title: item.dataset.title,
+              artist: item.dataset.artist,
+              thumbnail_url: item.dataset.thumb,
+              source: item.dataset.source
+            };
+            self.clearSuggestions();
+            const searchInput = panel.querySelector('.mp-search-input');
+            if (searchInput) searchInput.value = track.title;
+            self.loadTrack(track);
+          });
         });
       }
 
@@ -940,24 +1289,58 @@
 
       // Initialize playback control button event listeners
       initControls() {
-        const playBtn = document.querySelector('.mp-play');
-        const nextBtn = document.querySelector('.mp-next');
-        const prevBtn = document.querySelector('.mp-prev');
-        const closeBtn = document.querySelector('.mp-close');
-        const miniIndicator = document.getElementById('mp-mini-indicator');
+        // --- Wire the NEW music-panel controls ---
+        const panel = document.querySelector('.music-panel');
+        if (panel) {
+          const playPauseBtn = panel.querySelector('.mp-play-pause');
+          const nextBtn = panel.querySelector('.mp-next');
+          const prevBtn = panel.querySelector('.mp-prev');
+          const closeBtn = panel.querySelector('.mp-close');
 
-        if (playBtn) {
-          playBtn.addEventListener('click', () => this.togglePlayPause());
+          if (playPauseBtn) {
+            playPauseBtn.addEventListener('click', () => this.togglePlayPause());
+          }
+          if (nextBtn) {
+            nextBtn.addEventListener('click', () => this.next());
+          }
+          if (prevBtn) {
+            prevBtn.addEventListener('click', () => this.previous());
+          }
+          if (closeBtn) {
+            closeBtn.addEventListener('click', () => {
+              if (window.panelManager && typeof window.panelManager.hide === 'function') {
+                window.panelManager.hide();
+              }
+              this.visible = false;
+              this._updateMiniIndicator();
+            });
+          }
         }
-        if (nextBtn) {
-          nextBtn.addEventListener('click', () => this.next());
+
+        // --- Wire legacy panel controls (for backward compatibility) ---
+        const legacyPanel = document.getElementById('music-player');
+        if (legacyPanel) {
+          const legacyPlayBtn = legacyPanel.querySelector('.mp-play');
+          const legacyNextBtn = legacyPanel.querySelector('.mp-next');
+          const legacyPrevBtn = legacyPanel.querySelector('.mp-prev');
+          const legacyCloseBtn = legacyPanel.querySelector('.mp-close');
+
+          if (legacyPlayBtn) {
+            legacyPlayBtn.addEventListener('click', () => this.togglePlayPause());
+          }
+          if (legacyNextBtn) {
+            legacyNextBtn.addEventListener('click', () => this.next());
+          }
+          if (legacyPrevBtn) {
+            legacyPrevBtn.addEventListener('click', () => this.previous());
+          }
+          if (legacyCloseBtn) {
+            legacyCloseBtn.addEventListener('click', () => this.hide());
+          }
         }
-        if (prevBtn) {
-          prevBtn.addEventListener('click', () => this.previous());
-        }
-        if (closeBtn) {
-          closeBtn.addEventListener('click', () => this.hide());
-        }
+
+        // Wire mini indicator click to show panel
+        const miniIndicator = document.getElementById('mp-mini-indicator');
         if (miniIndicator) {
           miniIndicator.addEventListener('click', () => this.show());
         }
@@ -968,30 +1351,58 @@
 
       // Update control button icons and enabled/disabled states
       updateControlsUI() {
-        const playBtn = document.querySelector('.mp-play');
-        const nextBtn = document.querySelector('.mp-next');
-        const prevBtn = document.querySelector('.mp-prev');
+        // --- Update NEW music-panel controls ---
+        const panel = document.querySelector('.music-panel');
+        if (panel) {
+          const playPauseBtn = panel.querySelector('.mp-play-pause');
+          const nextBtn = panel.querySelector('.mp-next');
+          const prevBtn = panel.querySelector('.mp-prev');
 
-        // Update play/pause icon based on playing state
-        if (playBtn) {
-          playBtn.textContent = this.isPlaying ? '⏸' : '▶';
-          playBtn.setAttribute('aria-label', this.isPlaying ? 'Pause' : 'Play');
+          if (playPauseBtn) {
+            playPauseBtn.textContent = this.isPlaying ? '⏸' : '▶';
+            playPauseBtn.setAttribute('aria-label', this.isPlaying ? 'Pause' : 'Play');
+          }
+
+          if (nextBtn) {
+            const atEnd = this.currentIndex >= this.queue.length - 1;
+            nextBtn.disabled = atEnd;
+            nextBtn.style.opacity = atEnd ? '0.3' : '1';
+            nextBtn.style.pointerEvents = atEnd ? 'none' : 'auto';
+          }
+
+          if (prevBtn) {
+            const atStart = this.currentIndex <= 0;
+            prevBtn.disabled = atStart;
+            prevBtn.style.opacity = atStart ? '0.3' : '1';
+            prevBtn.style.pointerEvents = atStart ? 'none' : 'auto';
+          }
         }
 
-        // Disable/enable next button at queue boundary
-        if (nextBtn) {
-          const atEnd = this.currentIndex >= this.queue.length - 1;
-          nextBtn.disabled = atEnd;
-          nextBtn.style.opacity = atEnd ? '0.3' : '1';
-          nextBtn.style.pointerEvents = atEnd ? 'none' : 'auto';
-        }
+        // --- Update legacy panel controls ---
+        const legacyPanel = document.getElementById('music-player');
+        if (legacyPanel) {
+          const playBtn = legacyPanel.querySelector('.mp-play');
+          const nextBtn = legacyPanel.querySelector('.mp-next');
+          const prevBtn = legacyPanel.querySelector('.mp-prev');
 
-        // Disable/enable previous button at queue boundary
-        if (prevBtn) {
-          const atStart = this.currentIndex <= 0;
-          prevBtn.disabled = atStart;
-          prevBtn.style.opacity = atStart ? '0.3' : '1';
-          prevBtn.style.pointerEvents = atStart ? 'none' : 'auto';
+          if (playBtn) {
+            playBtn.textContent = this.isPlaying ? '⏸' : '▶';
+            playBtn.setAttribute('aria-label', this.isPlaying ? 'Pause' : 'Play');
+          }
+
+          if (nextBtn) {
+            const atEnd = this.currentIndex >= this.queue.length - 1;
+            nextBtn.disabled = atEnd;
+            nextBtn.style.opacity = atEnd ? '0.3' : '1';
+            nextBtn.style.pointerEvents = atEnd ? 'none' : 'auto';
+          }
+
+          if (prevBtn) {
+            const atStart = this.currentIndex <= 0;
+            prevBtn.disabled = atStart;
+            prevBtn.style.opacity = atStart ? '0.3' : '1';
+            prevBtn.style.pointerEvents = atStart ? 'none' : 'auto';
+          }
         }
       }
     }
@@ -1029,16 +1440,19 @@
       }
     }, 10000);
 
-    // === Autocomplete ===
+    // === Autocomplete (Legacy Panel) ===
     (function() {
       let acTimer = null;  // debounce timer
       let acController = null;  // AbortController for cancellation
       let acActiveIndex = -1;  // keyboard navigation index
 
-      const searchInput = document.querySelector('.mp-search-input');
-      const suggestionsPanel = document.querySelector('.mp-suggestions');
-      const offlineBanner = document.querySelector('.mp-offline-banner');
-      const retryBtn = document.querySelector('.mp-retry-btn');
+      // Only bind to the legacy panel's search input (not the new .music-panel one)
+      const legacyPanel = document.getElementById('music-player');
+      if (!legacyPanel) return;
+      const searchInput = legacyPanel.querySelector('.mp-search-input');
+      const suggestionsPanel = legacyPanel.querySelector('.mp-suggestions');
+      const offlineBanner = legacyPanel.querySelector('.mp-offline-banner');
+      const retryBtn = legacyPanel.querySelector('.mp-retry-btn');
 
       if (!searchInput || !suggestionsPanel) return;
 
@@ -1237,7 +1651,263 @@
     })();
   </script>
 
-  <!-- Hidden container for YouTube IFrame Player -->
-  <div id="yt-player-container" style="display:none"></div>
+  <script>
+    // --- PanelManager Class (Animation Controller) ---
+    class PanelManager {
+      constructor(panelElement, toggleButton) {
+        this._panel = panelElement;
+        this._toggleButton = toggleButton;
+        this._state = 'hidden';
+        this._transitionEndHandler = null;
+
+        // Detect CSS transition support
+        this._supportsTransitions = 'transition' in document.documentElement.style
+          || 'webkitTransition' in document.documentElement.style;
+
+        // Initialize: apply panel-hidden class so panel starts hidden
+        if (this._panel) {
+          this._panel.classList.add('panel-hidden');
+          this._panel.classList.remove('panel-visible');
+          // Ensure pointer-events: none when hidden
+          this._panel.style.pointerEvents = 'none';
+        }
+      }
+
+      // Current state: 'hidden' | 'animating_in' | 'visible' | 'animating_out'
+      get state() {
+        return this._state;
+      }
+
+      // Trigger show animation: transition from hidden to visible
+      show() {
+        if (this._state === 'visible' || this._state === 'animating_in') return;
+        if (!this._panel) return;
+
+        // Clean up any pending transition listener
+        this._removeTransitionListener();
+
+        this._state = 'animating_in';
+        // Allow pointer events during show animation
+        this._panel.style.pointerEvents = '';
+
+        // Fallback for browsers without CSS transitions: immediate show
+        if (!this._supportsTransitions) {
+          this._panel.classList.remove('panel-hidden');
+          this._panel.classList.add('panel-visible');
+          this._state = 'visible';
+          this._panel.style.pointerEvents = 'auto';
+          return;
+        }
+
+        // Remove hidden class and add visible class to trigger CSS transition
+        this._panel.classList.remove('panel-hidden');
+        // Force a reflow so the browser registers the starting state
+        void this._panel.offsetWidth;
+        this._panel.classList.add('panel-visible');
+
+        // Listen for transitionend to finalize state
+        this._transitionEndHandler = (e) => {
+          // Only handle transitions on the panel itself (not children)
+          if (e.target !== this._panel) return;
+          this._removeTransitionListener();
+          this._state = 'visible';
+          this._panel.style.pointerEvents = 'auto';
+        };
+        this._panel.addEventListener('transitionend', this._transitionEndHandler);
+      }
+
+      // Trigger hide animation: transition from visible to hidden
+      hide() {
+        if (this._state === 'hidden' || this._state === 'animating_out') return;
+        if (!this._panel) return;
+
+        // Clean up any pending transition listener
+        this._removeTransitionListener();
+
+        this._state = 'animating_out';
+        // Disable pointer-events immediately when starting to hide (Req 7.3)
+        this._panel.style.pointerEvents = 'none';
+
+        // Fallback for browsers without CSS transitions: immediate hide
+        if (!this._supportsTransitions) {
+          this._panel.classList.remove('panel-visible');
+          this._panel.classList.add('panel-hidden');
+          this._state = 'hidden';
+          return;
+        }
+
+        // Remove visible class and add hidden class to trigger CSS transition
+        this._panel.classList.remove('panel-visible');
+        // Force a reflow so the browser registers the starting state
+        void this._panel.offsetWidth;
+        this._panel.classList.add('panel-hidden');
+
+        // Listen for transitionend to finalize state
+        this._transitionEndHandler = (e) => {
+          if (e.target !== this._panel) return;
+          this._removeTransitionListener();
+          this._state = 'hidden';
+        };
+        this._panel.addEventListener('transitionend', this._transitionEndHandler);
+      }
+
+      // Toggle visibility — handles mid-animation reversal per Req 7.4
+      // Req 7.4 takes precedence: cancel current animation and reverse from intermediate state
+      toggle() {
+        switch (this._state) {
+          case 'hidden':
+            this.show();
+            break;
+          case 'visible':
+            this.hide();
+            break;
+          case 'animating_in':
+          case 'animating_out':
+            // Mid-animation reversal (Req 7.4)
+            this._reverseAnimation();
+            break;
+        }
+      }
+
+      // Cancel current transition and reverse from intermediate state (Req 7.4)
+      _reverseAnimation() {
+        if (!this._panel) return;
+
+        // Clean up the current transition listener
+        this._removeTransitionListener();
+
+        // Fallback for browsers without CSS transitions: immediate flip
+        if (!this._supportsTransitions) {
+          if (this._state === 'animating_in') {
+            this._panel.classList.remove('panel-visible');
+            this._panel.classList.add('panel-hidden');
+            this._state = 'hidden';
+            this._panel.style.pointerEvents = 'none';
+          } else if (this._state === 'animating_out') {
+            this._panel.classList.remove('panel-hidden');
+            this._panel.classList.add('panel-visible');
+            this._state = 'visible';
+            this._panel.style.pointerEvents = 'auto';
+          }
+          return;
+        }
+
+        if (this._state === 'animating_in') {
+          // Currently showing → reverse to hiding
+          this._state = 'animating_out';
+          // Disable pointer-events when animating out
+          this._panel.style.pointerEvents = 'none';
+          this._panel.classList.remove('panel-visible');
+          void this._panel.offsetWidth;
+          this._panel.classList.add('panel-hidden');
+          this._transitionEndHandler = (e) => {
+            if (e.target !== this._panel) return;
+            this._removeTransitionListener();
+            this._state = 'hidden';
+          };
+          this._panel.addEventListener('transitionend', this._transitionEndHandler);
+        } else if (this._state === 'animating_out') {
+          // Currently hiding → reverse to showing
+          this._state = 'animating_in';
+          // Re-enable pointer-events when animating in
+          this._panel.style.pointerEvents = '';
+          this._panel.classList.remove('panel-hidden');
+          void this._panel.offsetWidth;
+          this._panel.classList.add('panel-visible');
+          this._transitionEndHandler = (e) => {
+            if (e.target !== this._panel) return;
+            this._removeTransitionListener();
+            this._state = 'visible';
+            this._panel.style.pointerEvents = 'auto';
+          };
+          this._panel.addEventListener('transitionend', this._transitionEndHandler);
+        }
+      }
+
+      // Remove the current transitionend listener
+      _removeTransitionListener() {
+        if (this._transitionEndHandler && this._panel) {
+          this._panel.removeEventListener('transitionend', this._transitionEndHandler);
+          this._transitionEndHandler = null;
+        }
+      }
+    }
+  </script>
+
+  <script>
+    // --- MusicToggleButton Class ---
+    class MusicToggleButton {
+      constructor(panelManager) {
+        this.panelManager = panelManager;
+        this.button = null;
+        this.state = 'idle'; // 'idle' | 'playing' | 'disabled'
+      }
+
+      // Renders the toggle button into the DOM
+      render() {
+        this.button = document.createElement('button');
+        this.button.id = 'music-toggle-btn';
+        this.button.className = 'music-toggle-btn';
+        this.button.setAttribute('aria-label', 'Toggle music panel');
+        this.button.textContent = '♪';
+
+        // Click handler delegates to PanelManager's toggle()
+        this.button.addEventListener('click', () => this._onClick());
+
+        document.body.appendChild(this.button);
+      }
+
+      // Updates visual state: idle, playing (pulsing), or disabled
+      setState(state) {
+        if (!this.button) return;
+        // Remove previous state classes
+        this.button.classList.remove('playing', 'disabled');
+        this.state = state;
+
+        if (state === 'playing') {
+          this.button.classList.add('playing');
+        } else if (state === 'disabled') {
+          this.button.classList.add('disabled');
+        }
+        // 'idle' has no additional class
+      }
+
+      // Click handler — delegates to PanelManager
+      _onClick() {
+        if (this.state === 'disabled') return;
+        if (this.panelManager && typeof this.panelManager.toggle === 'function') {
+          this.panelManager.toggle();
+        }
+      }
+    }
+
+    // Instantiate PanelManager with the music-panel element (or fallback to music-player)
+    const musicPanelEl = document.querySelector('.music-panel') || document.getElementById('music-player');
+    window.panelManager = new PanelManager(musicPanelEl, null);
+
+    // Instantiate and render the toggle button with the PanelManager wired in
+    window.musicToggleButton = new MusicToggleButton(window.panelManager);
+    window.musicToggleButton.render();
+
+    // Wire the toggle button reference back into PanelManager
+    window.panelManager._toggleButton = window.musicToggleButton;
+
+    // --- Backdrop-filter runtime detection and fallback ---
+    // Belt-and-suspenders alongside the @supports CSS rule for older browsers
+    (function() {
+      const supportsBackdrop = (CSS && CSS.supports) &&
+        (CSS.supports('backdrop-filter', 'blur(1px)') ||
+         CSS.supports('-webkit-backdrop-filter', 'blur(1px)'));
+
+      if (!supportsBackdrop) {
+        const panel = document.querySelector('.music-panel') || document.getElementById('music-player');
+        if (panel) {
+          panel.classList.add('no-backdrop-filter');
+        }
+      }
+    })();
+  </script>
+
+  <!-- Hidden container for YouTube IFrame Player (uses the one inside the legacy panel) -->
 </body>
 </html>
