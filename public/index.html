@@ -745,13 +745,15 @@
       if(window.authTab==='signin'){
         // Sign in
         try{const r=await fetch('/auth/email/signin',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email,password:pwd})});
+          if(!r.ok&&r.status===500){err.textContent='Server error. Check deployment logs.';return}
           const d=await r.json();
           if(d.token){window.jt=d.token;localStorage.setItem('jt',d.token);window.jm='chat';document.getElementById('loginOverlay').remove();
             msg('Welcome'+(d.user&&d.user.name?', '+d.user.name:'')+'. Online.','a');speak("Systems online. Ready.");statusEl.textContent='OPERATIONAL';orbSub.textContent='TAP TO TALK'}
-          else{err.textContent=d.error||'Sign in failed'}}catch(e){err.textContent='Cannot connect. Open http://localhost:7860 (not the file directly)'}
+          else{err.textContent=d.error||'Sign in failed'}}catch(e){err.textContent='Server unavailable. Please try again.'}
       } else {
         // Sign up — sends OTP first
         try{const r=await fetch('/auth/email/signup',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email,password:pwd,name})});
+          if(!r.ok&&r.status===500){err.textContent='Server error. Check deployment logs.';return}
           const d=await r.json();
           if(d.token){
             // No OTP required (RESEND_API_KEY not set) — direct signup
@@ -761,7 +763,7 @@
             // Show OTP input
             window._pendingEmail=email;
             showOtpScreen(email);
-          } else{err.textContent=d.error||'Signup failed'}}catch(e){err.textContent='Cannot connect. Open http://localhost:7860 (not the file directly)'}
+          } else{err.textContent=d.error||'Signup failed'}}catch(e){err.textContent='Server unavailable. Please try again.'}
       }
     };
 

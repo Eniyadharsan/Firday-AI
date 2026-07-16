@@ -8,3 +8,4 @@ PyPDF2==3.0.1
 PyJWT==2.9.0
 hypothesis
 rapidfuzz
+resend==2.33.0

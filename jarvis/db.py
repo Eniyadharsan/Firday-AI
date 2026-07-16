@@ -27,9 +27,19 @@ USE_TURSO: bool = bool(_raw_url.strip() and _raw_token.strip())
 TURSO_URL: str = _raw_url.replace("libsql://", "https://") if _raw_url else ""
 TURSO_TOKEN: str = _raw_token
 
-# Local fallback path
-LOCAL_DB = Path(os.getenv("JARVIS_DB_PATH", str(Path(__file__).resolve().parent.parent / ".jarvis-data" / "jarvis.db")))
-LOCAL_DB.parent.mkdir(parents=True, exist_ok=True)
+# Local fallback path — try project dir first, fall back to /tmp for serverless
+_preferred_db = Path(os.getenv("JARVIS_DB_PATH", str(Path(__file__).resolve().parent.parent / ".jarvis-data" / "jarvis.db")))
+try:
+    _preferred_db.parent.mkdir(parents=True, exist_ok=True)
+    # Test if writable
+    _test_file = _preferred_db.parent / ".write_test"
+    _test_file.write_text("ok")
+    _test_file.unlink()
+    LOCAL_DB = _preferred_db
+except (OSError, PermissionError):
+    # Read-only filesystem (Vercel, etc.) — use /tmp
+    LOCAL_DB = Path("/tmp/jarvis-data/jarvis.db")
+    LOCAL_DB.parent.mkdir(parents=True, exist_ok=True)
 
 # --- Persistent HTTP Session (reuses TCP/TLS connections) ---
 _session: requests.Session | None = None
