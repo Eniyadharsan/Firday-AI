@@ -681,10 +681,18 @@
 
     inp.addEventListener('keydown',e=>{if(e.key==='Enter')send()});
 
-    // Auth check — always require login
+    // Auth check — try stored token first, then show login
     (async()=>{
-      try{const r=await fetch('/auth/status');const d=await r.json();
-        showLoginScreen()}catch{msg("Connecting...",'a')}
+      try{
+        const stored=localStorage.getItem('jt');
+        if(stored){
+          // Verify stored token is still valid by making a test request
+          const vr=await fetch('/auth/status',{headers:{'Authorization':'Bearer '+stored}});
+          if(vr.ok){window.jt=stored;window.jm='chat';statusEl.textContent='OPERATIONAL';orbSub.textContent='TAP TO TALK';return}
+          else{localStorage.removeItem('jt')}
+        }
+        showLoginScreen();
+      }catch{showLoginScreen()}
     })();
 
     function showLoginScreen(){
@@ -738,14 +746,14 @@
         // Sign in
         try{const r=await fetch('/auth/email/signin',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email,password:pwd})});
           const d=await r.json();
-          if(d.token){window.jt=d.token;window.jm='chat';document.getElementById('loginOverlay').remove();
+          if(d.token){window.jt=d.token;localStorage.setItem('jt',d.token);window.jm='chat';document.getElementById('loginOverlay').remove();
             msg('Welcome'+(d.user&&d.user.name?', '+d.user.name:'')+'. Online.','a');speak("Systems online. Ready.");statusEl.textContent='OPERATIONAL';orbSub.textContent='TAP TO TALK'}
           else{err.textContent=d.error||'Failed'}}catch{err.textContent='Connection error'}
       } else {
         // Sign up — direct registration
         try{const r=await fetch('/auth/email/signup',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email,password:pwd,name})});
           const d=await r.json();
-          if(d.token){window.jt=d.token;window.jm='chat';document.getElementById('loginOverlay').remove();
+          if(d.token){window.jt=d.token;localStorage.setItem('jt',d.token);window.jm='chat';document.getElementById('loginOverlay').remove();
             msg('Welcome'+(name?', '+name:'')+'. Account created.','a');speak("Account created. Systems online.");statusEl.textContent='OPERATIONAL';orbSub.textContent='TAP TO TALK'}
           else{err.textContent=d.error||'Signup failed'}}catch{err.textContent='Connection error'}
       }
@@ -755,7 +763,7 @@
     async function send(){const t=inp.value.trim();if(!t)return;inp.value='';
       if(window.jm==='setup'||window.jm==='login'){msg('••••••','u');
         try{const r=await fetch(window.jm==='setup'?'/auth/setup':'/auth/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({password:t})});const d=await r.json();
-        if(d.token){window.jt=d.token;window.jm='chat';msg("Online. Ready, Sir.",'a');speak("Systems online. Ready, Sir.");statusEl.textContent='OPERATIONAL'}
+        if(d.token){window.jt=d.token;localStorage.setItem('jt',d.token);window.jm='chat';msg("Online. Ready, Sir.",'a');speak("Systems online. Ready, Sir.");statusEl.textContent='OPERATIONAL'}
         else msg(d.error||'Failed','a')}catch{msg('Error','a')}return}
 
       msg(t,'u');statusEl.textContent='PROCESSING';reactor.classList.add('speaking');orbSub.textContent='ANALYZING';
