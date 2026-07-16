@@ -8,367 +8,334 @@
   <link rel="manifest" href="/manifest.json">
   <title>JARVIS</title>
   <style>
-    /* Neural Orb Design Tokens */
+    /* ═══════════════════════════════════════════════════════════════
+       JARVIS NEURAL CORE — Merged Design
+       References: Holographic AI face nodes, organic neural sphere 
+       with energy rays, biological neuron with branching dendrites.
+       Speaking state: heartbeat bounce effect.
+    ═══════════════════════════════════════════════════════════════ */
     :root {
-      --orb-primary: #00e5ff;
-      --orb-deep: #0040ff;
-      --orb-listening: #00ff88;
-      --orb-glow-idle: 60px;
-      --orb-glow-speaking: 90px;
-      --orb-size-desktop: 140px;
-      --orb-size-mobile: 100px;
-      --transition-state: 300ms ease;
-      --particle-count: 20;
-      --connection-count: 8;
+      --core-cyan: #00e5ff;
+      --core-blue: #0040ff;
+      --core-purple: #7b2ff7;
+      --core-white: #e0f7ff;
+      --core-listening: #00ff88;
+      --core-size: 150px;
+      --core-size-mobile: 100px;
+      --dendrite-color: rgba(0, 229, 255, 0.5);
+      --node-color: rgba(0, 229, 255, 0.9);
     }
 
-    /* Neural Orb Keyframe Animations */
+    /* ── Keyframes ── */
 
-    /* Slow breathing scale/opacity pulse for idle state (3-5s cycle) */
-    @keyframes orbBreathe {
-      0%, 100% {
-        transform: scale(1);
-        opacity: 1;
-      }
-      50% {
-        transform: scale(1.04);
-        opacity: 0.92;
-      }
+    /* Idle: gentle breathing pulse */
+    @keyframes coreBreathe {
+      0%, 100% { transform: scale(1); opacity: 1; }
+      50% { transform: scale(1.03); opacity: 0.93; }
     }
 
-    /* Outer plasma fire flickering effect (2-4s cycle) */
-    @keyframes plasmaFlicker {
-      0%, 100% {
-        transform: scale(1);
-        opacity: 0.6;
-      }
-      25% {
-        transform: scale(1.05);
-        opacity: 0.8;
-      }
-      50% {
-        transform: scale(0.97);
-        opacity: 0.5;
-      }
-      75% {
-        transform: scale(1.03);
-        opacity: 0.7;
-      }
+    /* Speaking: heartbeat bounce — sharp pump then relax */
+    @keyframes heartbeat {
+      0% { transform: scale(1); }
+      8% { transform: scale(1.18); }
+      16% { transform: scale(0.95); }
+      24% { transform: scale(1.12); }
+      32% { transform: scale(1); }
+      100% { transform: scale(1); }
     }
 
-    /* Neural connection pulse travel animation */
-    @keyframes pulseTravel {
-      0% {
-        transform: translateX(0);
-        opacity: 0;
-      }
-      10% {
-        opacity: 1;
-      }
-      90% {
-        opacity: 1;
-      }
-      100% {
-        transform: translateX(var(--length, 80px));
-        opacity: 0;
-      }
+    /* Plasma corona flicker */
+    @keyframes coronaFlicker {
+      0%, 100% { transform: scale(1); opacity: 0.5; }
+      33% { transform: scale(1.06); opacity: 0.75; }
+      66% { transform: scale(0.96); opacity: 0.45; }
     }
 
-    /* Particle orbit/drift outward animation (6-12s idle) */
-    @keyframes particleDrift {
-      0% {
-        transform: rotate(var(--start-angle, 0deg)) translateX(70px) scale(1);
-        opacity: 0.8;
-      }
-      50% {
-        transform: rotate(calc(var(--start-angle, 0deg) + 180deg)) translateX(120px) scale(0.6);
-        opacity: 0.4;
-      }
-      100% {
-        transform: rotate(calc(var(--start-angle, 0deg) + 360deg)) translateX(70px) scale(1);
-        opacity: 0.8;
-      }
+    /* Energy ray shooting outward */
+    @keyframes rayShoot {
+      0% { transform: rotate(var(--ray-angle, 0deg)) scaleX(0); opacity: 0; }
+      20% { opacity: 1; }
+      100% { transform: rotate(var(--ray-angle, 0deg)) scaleX(1); opacity: 0; }
     }
 
-    /* Click feedback scale animation (150ms) */
-    @keyframes orbPress {
-      0% {
-        transform: scale(1);
-      }
-      50% {
-        transform: scale(0.92);
-      }
-      100% {
-        transform: scale(1);
-      }
+    /* Synapse pulse traveling along dendrite */
+    @keyframes synapseFire {
+      0% { transform: translateX(0) scale(1); opacity: 0; }
+      10% { opacity: 1; transform: translateX(10%) scale(1.2); }
+      80% { opacity: 0.8; }
+      100% { transform: translateX(var(--d-length, 100px)) scale(0.6); opacity: 0; }
     }
 
-    /* Neural Orb Core Styles */
-    .neural-orb {
-      width: var(--orb-size-desktop, 140px);
-      height: var(--orb-size-desktop, 140px);
-      border-radius: 50%;
-      background: radial-gradient(circle, #00e5ff 0%, #0040ff 100%);
-      box-shadow:
-        0 0 20px rgba(0, 229, 255, 0.6),
-        0 0 40px rgba(0, 229, 255, 0.4),
-        0 0 60px rgba(0, 229, 255, 0.2),
-        0 0 80px rgba(0, 64, 255, 0.15),
-        inset 0 0 20px rgba(0, 229, 255, 0.3);
-      animation: orbBreathe 4s ease-in-out infinite;
+    /* Particle cosmic drift */
+    @keyframes cosmicDrift {
+      0% { transform: rotate(var(--p-angle, 0deg)) translateX(80px); opacity: 0.7; }
+      50% { transform: rotate(calc(var(--p-angle, 0deg) + 180deg)) translateX(130px); opacity: 0.3; }
+      100% { transform: rotate(calc(var(--p-angle, 0deg) + 360deg)) translateX(80px); opacity: 0.7; }
+    }
+
+    /* Node glow pulse */
+    @keyframes nodeGlow {
+      0%, 100% { transform: scale(1); opacity: 0.6; }
+      50% { transform: scale(1.5); opacity: 1; }
+    }
+
+    /* Tap feedback */
+    @keyframes tapPulse {
+      0% { transform: scale(1); }
+      50% { transform: scale(0.9); }
+      100% { transform: scale(1); }
+    }
+
+    /* ── Core Sphere ── */
+    #reactor {
+      cursor: pointer;
       position: relative;
+      width: 260px;
+      height: 260px;
       margin: 0 auto;
-      will-change: transform, opacity;
-      transition: all var(--transition-state, 300ms ease);
+      display: flex;
+      align-items: center;
+      justify-content: center;
     }
 
+    .neural-orb {
+      width: var(--core-size);
+      height: var(--core-size);
+      border-radius: 50%;
+      background: radial-gradient(circle at 35% 35%, #ffffff 0%, var(--core-cyan) 20%, var(--core-blue) 60%, var(--core-purple) 100%);
+      box-shadow:
+        0 0 15px rgba(0, 229, 255, 0.8),
+        0 0 40px rgba(0, 229, 255, 0.5),
+        0 0 70px rgba(0, 64, 255, 0.3),
+        0 0 100px rgba(123, 47, 247, 0.15),
+        inset 0 0 25px rgba(255, 255, 255, 0.2),
+        inset 0 0 50px rgba(0, 229, 255, 0.3);
+      animation: coreBreathe 4s ease-in-out infinite;
+      position: relative;
+      z-index: 2;
+      will-change: transform, opacity;
+      transition: background 0.3s ease, box-shadow 0.3s ease;
+    }
+
+    /* Inner luminance layer */
     .neural-orb::before {
       content: '';
       position: absolute;
-      inset: -15px;
+      inset: -20px;
       border-radius: 50%;
-      background: radial-gradient(circle, rgba(0, 229, 255, 0.3) 0%, transparent 70%);
-      filter: blur(12px);
-      opacity: 0.7;
+      background: radial-gradient(circle, rgba(0, 229, 255, 0.25) 0%, rgba(123, 47, 247, 0.1) 50%, transparent 70%);
+      filter: blur(15px);
       pointer-events: none;
       will-change: transform, opacity;
     }
 
+    /* Outer plasma corona */
     .neural-orb::after {
       content: '';
       position: absolute;
-      inset: -25px;
+      inset: -35px;
       border-radius: 50%;
-      background: radial-gradient(circle, rgba(0, 229, 255, 0.15) 0%, rgba(0, 64, 255, 0.1) 40%, transparent 70%);
-      animation: plasmaFlicker 3s ease-in-out infinite;
+      background: radial-gradient(circle, rgba(0, 229, 255, 0.1) 0%, rgba(123, 47, 247, 0.08) 40%, transparent 65%);
+      animation: coronaFlicker 3s ease-in-out infinite;
       pointer-events: none;
       will-change: transform, opacity;
     }
 
-    /* Neural Connections Styles */
-    .neural-connections {
+    /* ── Dendrites (branching connections like neuron image 3) ── */
+    .dendrites {
       position: absolute;
       top: 50%;
       left: 50%;
-      transform: translate(-50%, -50%);
       width: 0;
       height: 0;
       pointer-events: none;
+      z-index: 1;
     }
 
-    .connection {
+    .dendrite {
       position: absolute;
       top: 0;
       left: 0;
-      width: var(--length, 80px);
+      width: var(--d-length, 100px);
       height: 2px;
-      background: linear-gradient(90deg, rgba(0, 229, 255, 0.4), rgba(0, 64, 255, 0.1));
-      transform-origin: 0 50%;
-      transform: rotate(var(--angle, 0deg));
+      transform-origin: 0% 50%;
+      transform: rotate(var(--d-angle, 0deg));
+      background: linear-gradient(90deg, var(--dendrite-color), transparent);
       border-radius: 1px;
+      opacity: 0.7;
     }
 
-    .connection .pulse {
+    /* Branch splits at end */
+    .dendrite::after {
+      content: '';
       position: absolute;
-      top: -2px;
-      left: 0;
-      width: 6px;
-      height: 6px;
+      right: -8px;
+      top: -3px;
+      width: 8px;
+      height: 8px;
       border-radius: 50%;
-      background: rgba(0, 229, 255, 0.8);
-      box-shadow: 0 0 6px rgba(0, 229, 255, 0.6), 0 0 12px rgba(0, 229, 255, 0.3);
-      animation: pulseTravel 3s ease-in-out infinite;
-      animation-delay: var(--delay, 0s);
+      background: var(--node-color);
+      box-shadow: 0 0 8px var(--core-cyan), 0 0 16px rgba(0, 229, 255, 0.3);
+      animation: nodeGlow 3s ease-in-out infinite;
+      animation-delay: var(--d-delay, 0s);
+    }
+
+    .dendrite .synapse {
+      position: absolute;
+      top: -3px;
+      left: 0;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.9);
+      box-shadow: 0 0 10px var(--core-cyan), 0 0 20px rgba(0, 229, 255, 0.5);
+      animation: synapseFire 3s ease-out infinite;
+      animation-delay: var(--d-delay, 0s);
       opacity: 0;
     }
 
-    .connection:nth-child(1) .pulse { --delay: 0s; }
-    .connection:nth-child(2) .pulse { --delay: 0.4s; }
-    .connection:nth-child(3) .pulse { --delay: 0.8s; }
-    .connection:nth-child(4) .pulse { --delay: 1.2s; }
-    .connection:nth-child(5) .pulse { --delay: 1.6s; }
-    .connection:nth-child(6) .pulse { --delay: 2.0s; }
-    .connection:nth-child(7) .pulse { --delay: 2.4s; }
-    .connection:nth-child(8) .pulse { --delay: 2.8s; }
+    /* ── Energy Rays (image 2 — shooting outward) ── */
+    .energy-rays {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 0;
+      height: 0;
+      pointer-events: none;
+      z-index: 0;
+    }
 
-    /* Particle System Styles */
+    .ray {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: var(--ray-len, 120px);
+      height: 1px;
+      background: linear-gradient(90deg, rgba(0, 229, 255, 0.6), rgba(123, 47, 247, 0.3), transparent);
+      transform-origin: 0% 50%;
+      transform: rotate(var(--ray-angle, 0deg)) scaleX(0);
+      animation: rayShoot var(--ray-dur, 2s) ease-out infinite;
+      animation-delay: var(--ray-delay, 0s);
+      opacity: 0;
+    }
+
+    /* ── Particle System (cosmic dust) ── */
     .particle-system {
       position: absolute;
       top: 50%;
       left: 50%;
-      transform: translate(-50%, -50%);
       width: 0;
       height: 0;
       pointer-events: none;
+      z-index: 0;
     }
 
     .particle {
       position: absolute;
-      width: var(--size, 2px);
-      height: var(--size, 2px);
+      width: var(--p-size, 2px);
+      height: var(--p-size, 2px);
       border-radius: 50%;
       background: rgba(0, 229, 255, 0.6);
       box-shadow: 0 0 4px rgba(0, 229, 255, 0.4);
-      animation: particleDrift var(--duration, 8s) ease-in-out infinite;
-      animation-delay: var(--delay, 0s);
+      animation: cosmicDrift var(--p-dur, 8s) ease-in-out infinite;
+      animation-delay: var(--p-delay, 0s);
       will-change: transform, opacity;
       pointer-events: none;
     }
 
-    .particle:nth-child(odd) {
-      background: rgba(0, 64, 255, 0.5);
-      box-shadow: 0 0 4px rgba(0, 64, 255, 0.3);
-    }
+    .particle:nth-child(odd) { background: rgba(123, 47, 247, 0.5); box-shadow: 0 0 4px rgba(123, 47, 247, 0.3); }
+    .particle:nth-child(3n) { background: rgba(0, 229, 255, 0.8); box-shadow: 0 0 6px rgba(0, 229, 255, 0.5); }
+    .particle:nth-child(5n) { background: rgba(255, 255, 255, 0.6); box-shadow: 0 0 4px rgba(255, 255, 255, 0.3); }
 
-    .particle:nth-child(3n) {
-      background: rgba(0, 229, 255, 0.8);
-      box-shadow: 0 0 6px rgba(0, 229, 255, 0.5);
-    }
-
-    .particle:nth-child(4n) {
-      background: rgba(0, 180, 255, 0.4);
-      box-shadow: 0 0 3px rgba(0, 180, 255, 0.2);
-    }
-
-    /* Speaking State Styles */
+    /* ── SPEAKING STATE: Heartbeat Bounce ── */
     .speaking .neural-orb {
-      transform: scale(1.15);
+      animation: heartbeat 0.8s ease-in-out infinite;
       box-shadow:
-        0 0 30px rgba(0, 229, 255, 0.8),
-        0 0 60px rgba(0, 229, 255, 0.6),
-        0 0 90px rgba(0, 229, 255, 0.4),
-        0 0 120px rgba(0, 64, 255, 0.25),
-        inset 0 0 30px rgba(0, 229, 255, 0.4);
-      animation: orbBreathe 1.5s ease-in-out infinite;
+        0 0 25px rgba(0, 229, 255, 1),
+        0 0 60px rgba(0, 229, 255, 0.7),
+        0 0 100px rgba(0, 64, 255, 0.5),
+        0 0 140px rgba(123, 47, 247, 0.3),
+        inset 0 0 30px rgba(255, 255, 255, 0.3),
+        inset 0 0 60px rgba(0, 229, 255, 0.4);
     }
 
     .speaking .neural-orb::after {
-      animation: plasmaFlicker 1s ease-in-out infinite;
+      animation: coronaFlicker 0.6s ease-in-out infinite;
     }
 
-    .speaking .connection .pulse {
-      animation: pulseTravel 0.75s ease-in-out infinite;
+    .speaking .dendrite .synapse {
+      animation-duration: 0.8s;
+    }
+
+    .speaking .ray {
+      animation-duration: 1s;
     }
 
     .speaking .particle {
-      animation-duration: 4s;
+      animation-duration: 3s;
     }
 
-    /* Listening State Styles */
+    /* ── LISTENING STATE: Green shift + rhythmic pulse ── */
     .listening .neural-orb {
-      background: radial-gradient(circle, #00ff88 0%, #00b870 60%, #0040ff 100%);
+      background: radial-gradient(circle at 35% 35%, #ffffff 0%, var(--core-listening) 20%, #00b870 60%, #006644 100%);
       box-shadow:
-        0 0 20px rgba(0, 255, 136, 0.6),
-        0 0 40px rgba(0, 255, 136, 0.4),
-        0 0 60px rgba(0, 255, 136, 0.2),
-        0 0 80px rgba(0, 200, 100, 0.15),
-        inset 0 0 20px rgba(0, 255, 136, 0.3);
-      animation: orbBreathe 1.5s ease-in-out infinite;
+        0 0 15px rgba(0, 255, 136, 0.8),
+        0 0 40px rgba(0, 255, 136, 0.5),
+        0 0 70px rgba(0, 200, 100, 0.3),
+        0 0 100px rgba(0, 255, 136, 0.15),
+        inset 0 0 25px rgba(255, 255, 255, 0.2),
+        inset 0 0 50px rgba(0, 255, 136, 0.3);
+      animation: coreBreathe 1.5s ease-in-out infinite;
     }
 
     .listening .neural-orb::after {
-      background: radial-gradient(circle, rgba(0, 255, 136, 0.15) 0%, rgba(0, 200, 100, 0.1) 40%, transparent 70%);
-      animation: plasmaFlicker 1.5s ease-in-out infinite;
+      background: radial-gradient(circle, rgba(0, 255, 136, 0.1) 0%, rgba(0, 200, 100, 0.08) 40%, transparent 65%);
     }
 
-    .listening .connection {
-      background: linear-gradient(90deg, rgba(0, 255, 136, 0.4), rgba(0, 200, 100, 0.1));
+    .listening .dendrite {
+      background: linear-gradient(90deg, rgba(0, 255, 136, 0.5), transparent);
     }
 
-    .listening .connection .pulse {
-      background: rgba(0, 255, 136, 0.8);
-      box-shadow: 0 0 6px rgba(0, 255, 136, 0.6), 0 0 12px rgba(0, 255, 136, 0.3);
-      animation: pulseTravel 1.5s ease-in-out infinite;
+    .listening .dendrite::after {
+      background: rgba(0, 255, 136, 0.9);
+      box-shadow: 0 0 8px #00ff88, 0 0 16px rgba(0, 255, 136, 0.3);
     }
 
-    .listening .particle {
-      animation-duration: 6s;
+    .listening .dendrite .synapse {
+      background: rgba(255, 255, 255, 0.9);
+      box-shadow: 0 0 10px #00ff88, 0 0 20px rgba(0, 255, 136, 0.5);
     }
 
-    /* Transition and Interaction Styles */
-    #reactor {
-      cursor: pointer;
-      position: relative;
-      width: 180px;
-      height: 180px;
-      margin: 0 auto;
-    }
-
+    /* ── Interaction ── */
     #reactor:active .neural-orb {
-      animation: orbPress 150ms ease-out forwards;
+      animation: tapPulse 150ms ease-out forwards;
     }
 
-    /* Responsive Breakpoint: Mobile ≤500px */
+    /* ── Responsive ── */
     @media (max-width: 500px) {
-      .neural-orb {
-        width: var(--orb-size-mobile, 100px);
-        height: var(--orb-size-mobile, 100px);
-      }
-
-      #reactor {
-        width: 130px;
-        height: 130px;
-      }
-
-      .connection {
-        --length: 50px !important;
-      }
-
-      .particle:nth-child(n+11) {
-        display: none;
-      }
-
-      .neural-orb::before {
-        inset: -10px;
-      }
-
-      .neural-orb::after {
-        inset: -15px;
-      }
+      #reactor { width: 200px; height: 200px; }
+      .neural-orb { width: var(--core-size-mobile); height: var(--core-size-mobile); }
+      .dendrite { --d-length: 60px !important; }
+      .ray { --ray-len: 80px !important; }
+      .particle:nth-child(n+13) { display: none; }
+      .neural-orb::before { inset: -12px; }
+      .neural-orb::after { inset: -20px; }
     }
 
-    /* Reduced Motion: Disable all animations for accessibility */
+    /* ── Reduced Motion ── */
     @media (prefers-reduced-motion: reduce) {
-      .neural-orb, .particle, .connection .pulse, .neural-orb::after {
+      .neural-orb, .neural-orb::after, .particle, .dendrite .synapse, .ray {
         animation: none !important;
       }
-
-      .neural-orb {
-        box-shadow: 0 0 40px rgba(0, 229, 255, 0.5);
-      }
-
-      .neural-orb::before {
-        animation: none !important;
-      }
-
-      .particle-system {
-        display: none;
-      }
-
-      .connection .pulse {
-        display: none;
-      }
+      .neural-orb { box-shadow: 0 0 40px rgba(0, 229, 255, 0.5); }
+      .particle-system, .energy-rays { display: none; }
+      .dendrite .synapse { display: none; }
     }
 
-    /* Fallback: Browsers that do not support CSS animations */
     @supports not (animation: none) {
-      .neural-orb {
-        background: radial-gradient(circle, #00e5ff 0%, #0040ff 100%);
-        box-shadow: 0 0 40px rgba(0, 229, 255, 0.5);
-      }
-
-      .neural-orb::before,
-      .neural-orb::after {
-        display: none;
-      }
-
-      .particle-system {
-        display: none;
-      }
-
-      .neural-connections {
-        display: none;
-      }
+      .neural-orb { background: radial-gradient(circle, #00e5ff 0%, #0040ff 100%); box-shadow: 0 0 40px rgba(0, 229, 255, 0.5); }
+      .neural-orb::before, .neural-orb::after { display: none; }
+      .particle-system, .energy-rays, .dendrites { display: none; }
     }
 
     *{margin:0;padding:0;box-sizing:border-box}
@@ -618,39 +585,57 @@
   <div class="wake-indicator" id="wakeInd">● ALWAYS LISTENING</div>
 
   <div class="center">
-    <div id="reactor" onclick="handleOrb()" style="cursor: pointer">
-      <div class="neural-orb"></div>
-      <div class="neural-connections">
-        <div class="connection" style="--angle: 0deg; --length: 80px"><div class="pulse"></div></div>
-        <div class="connection" style="--angle: 45deg; --length: 65px"><div class="pulse"></div></div>
-        <div class="connection" style="--angle: 90deg; --length: 90px"><div class="pulse"></div></div>
-        <div class="connection" style="--angle: 135deg; --length: 55px"><div class="pulse"></div></div>
-        <div class="connection" style="--angle: 180deg; --length: 75px"><div class="pulse"></div></div>
-        <div class="connection" style="--angle: 225deg; --length: 60px"><div class="pulse"></div></div>
-        <div class="connection" style="--angle: 270deg; --length: 85px"><div class="pulse"></div></div>
-        <div class="connection" style="--angle: 315deg; --length: 70px"><div class="pulse"></div></div>
+    <div id="reactor" onclick="handleOrb()">
+      <!-- Energy Rays — shooting outward like image 2 -->
+      <div class="energy-rays">
+        <div class="ray" style="--ray-angle: 0deg; --ray-len: 130px; --ray-dur: 2.2s; --ray-delay: 0s"></div>
+        <div class="ray" style="--ray-angle: 30deg; --ray-len: 110px; --ray-dur: 2.8s; --ray-delay: 0.3s"></div>
+        <div class="ray" style="--ray-angle: 60deg; --ray-len: 140px; --ray-dur: 2s; --ray-delay: 0.7s"></div>
+        <div class="ray" style="--ray-angle: 90deg; --ray-len: 120px; --ray-dur: 2.5s; --ray-delay: 1.1s"></div>
+        <div class="ray" style="--ray-angle: 120deg; --ray-len: 135px; --ray-dur: 2.3s; --ray-delay: 0.5s"></div>
+        <div class="ray" style="--ray-angle: 150deg; --ray-len: 115px; --ray-dur: 2.7s; --ray-delay: 1.4s"></div>
+        <div class="ray" style="--ray-angle: 180deg; --ray-len: 125px; --ray-dur: 2.1s; --ray-delay: 0.9s"></div>
+        <div class="ray" style="--ray-angle: 210deg; --ray-len: 140px; --ray-dur: 2.6s; --ray-delay: 0.2s"></div>
+        <div class="ray" style="--ray-angle: 240deg; --ray-len: 110px; --ray-dur: 2.4s; --ray-delay: 1.2s"></div>
+        <div class="ray" style="--ray-angle: 270deg; --ray-len: 130px; --ray-dur: 2s; --ray-delay: 0.6s"></div>
+        <div class="ray" style="--ray-angle: 300deg; --ray-len: 120px; --ray-dur: 2.8s; --ray-delay: 1s"></div>
+        <div class="ray" style="--ray-angle: 330deg; --ray-len: 135px; --ray-dur: 2.3s; --ray-delay: 0.4s"></div>
       </div>
+
+      <!-- Dendrites — branching like neuron image 3 with synapse pulses -->
+      <div class="dendrites">
+        <div class="dendrite" style="--d-angle: 0deg; --d-length: 100px; --d-delay: 0s"><div class="synapse"></div></div>
+        <div class="dendrite" style="--d-angle: 40deg; --d-length: 85px; --d-delay: 0.4s"><div class="synapse"></div></div>
+        <div class="dendrite" style="--d-angle: 75deg; --d-length: 110px; --d-delay: 0.9s"><div class="synapse"></div></div>
+        <div class="dendrite" style="--d-angle: 110deg; --d-length: 70px; --d-delay: 1.3s"><div class="synapse"></div></div>
+        <div class="dendrite" style="--d-angle: 145deg; --d-length: 95px; --d-delay: 0.6s"><div class="synapse"></div></div>
+        <div class="dendrite" style="--d-angle: 180deg; --d-length: 105px; --d-delay: 1.8s"><div class="synapse"></div></div>
+        <div class="dendrite" style="--d-angle: 215deg; --d-length: 80px; --d-delay: 0.2s"><div class="synapse"></div></div>
+        <div class="dendrite" style="--d-angle: 250deg; --d-length: 115px; --d-delay: 1.1s"><div class="synapse"></div></div>
+        <div class="dendrite" style="--d-angle: 285deg; --d-length: 90px; --d-delay: 1.5s"><div class="synapse"></div></div>
+        <div class="dendrite" style="--d-angle: 320deg; --d-length: 100px; --d-delay: 0.7s"><div class="synapse"></div></div>
+      </div>
+
+      <!-- Core Sphere — organic plasma neural brain -->
+      <div class="neural-orb"></div>
+
+      <!-- Cosmic Particles -->
       <div class="particle-system">
-        <div class="particle" style="--size: 2px; --delay: 0s; --duration: 8s; --start-angle: 0deg"></div>
-        <div class="particle" style="--size: 3px; --delay: 0.5s; --duration: 10s; --start-angle: 18deg"></div>
-        <div class="particle" style="--size: 1px; --delay: 1s; --duration: 7s; --start-angle: 36deg"></div>
-        <div class="particle" style="--size: 4px; --delay: 1.5s; --duration: 11s; --start-angle: 54deg"></div>
-        <div class="particle" style="--size: 2px; --delay: 2s; --duration: 9s; --start-angle: 72deg"></div>
-        <div class="particle" style="--size: 3px; --delay: 2.5s; --duration: 6s; --start-angle: 90deg"></div>
-        <div class="particle" style="--size: 1px; --delay: 3s; --duration: 12s; --start-angle: 108deg"></div>
-        <div class="particle" style="--size: 2px; --delay: 3.5s; --duration: 8s; --start-angle: 126deg"></div>
-        <div class="particle" style="--size: 4px; --delay: 4s; --duration: 7s; --start-angle: 144deg"></div>
-        <div class="particle" style="--size: 3px; --delay: 4.5s; --duration: 10s; --start-angle: 162deg"></div>
-        <div class="particle" style="--size: 2px; --delay: 5s; --duration: 9s; --start-angle: 180deg"></div>
-        <div class="particle" style="--size: 1px; --delay: 5.5s; --duration: 11s; --start-angle: 198deg"></div>
-        <div class="particle" style="--size: 3px; --delay: 6s; --duration: 6s; --start-angle: 216deg"></div>
-        <div class="particle" style="--size: 4px; --delay: 6.5s; --duration: 8s; --start-angle: 234deg"></div>
-        <div class="particle" style="--size: 2px; --delay: 7s; --duration: 12s; --start-angle: 252deg"></div>
-        <div class="particle" style="--size: 1px; --delay: 7.5s; --duration: 7s; --start-angle: 270deg"></div>
-        <div class="particle" style="--size: 3px; --delay: 8s; --duration: 9s; --start-angle: 288deg"></div>
-        <div class="particle" style="--size: 2px; --delay: 8.5s; --duration: 10s; --start-angle: 306deg"></div>
-        <div class="particle" style="--size: 4px; --delay: 9s; --duration: 6s; --start-angle: 324deg"></div>
-        <div class="particle" style="--size: 1px; --delay: 9.5s; --duration: 11s; --start-angle: 342deg"></div>
+        <div class="particle" style="--p-size: 2px; --p-delay: 0s; --p-dur: 8s; --p-angle: 0deg"></div>
+        <div class="particle" style="--p-size: 3px; --p-delay: 0.6s; --p-dur: 10s; --p-angle: 24deg"></div>
+        <div class="particle" style="--p-size: 1px; --p-delay: 1.2s; --p-dur: 7s; --p-angle: 48deg"></div>
+        <div class="particle" style="--p-size: 3px; --p-delay: 1.8s; --p-dur: 11s; --p-angle: 72deg"></div>
+        <div class="particle" style="--p-size: 2px; --p-delay: 2.4s; --p-dur: 9s; --p-angle: 96deg"></div>
+        <div class="particle" style="--p-size: 4px; --p-delay: 3s; --p-dur: 6s; --p-angle: 120deg"></div>
+        <div class="particle" style="--p-size: 1px; --p-delay: 3.6s; --p-dur: 12s; --p-angle: 144deg"></div>
+        <div class="particle" style="--p-size: 2px; --p-delay: 4.2s; --p-dur: 8s; --p-angle: 168deg"></div>
+        <div class="particle" style="--p-size: 3px; --p-delay: 4.8s; --p-dur: 7s; --p-angle: 192deg"></div>
+        <div class="particle" style="--p-size: 4px; --p-delay: 5.4s; --p-dur: 10s; --p-angle: 216deg"></div>
+        <div class="particle" style="--p-size: 2px; --p-delay: 6s; --p-dur: 9s; --p-angle: 240deg"></div>
+        <div class="particle" style="--p-size: 1px; --p-delay: 6.6s; --p-dur: 11s; --p-angle: 264deg"></div>
+        <div class="particle" style="--p-size: 3px; --p-delay: 7.2s; --p-dur: 6s; --p-angle: 288deg"></div>
+        <div class="particle" style="--p-size: 2px; --p-delay: 7.8s; --p-dur: 8s; --p-angle: 312deg"></div>
+        <div class="particle" style="--p-size: 4px; --p-delay: 8.4s; --p-dur: 12s; --p-angle: 336deg"></div>
       </div>
     </div>
     <div class="label">JARVIS</div>
