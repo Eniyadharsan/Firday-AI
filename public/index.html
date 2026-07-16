@@ -748,15 +748,51 @@
           const d=await r.json();
           if(d.token){window.jt=d.token;localStorage.setItem('jt',d.token);window.jm='chat';document.getElementById('loginOverlay').remove();
             msg('Welcome'+(d.user&&d.user.name?', '+d.user.name:'')+'. Online.','a');speak("Systems online. Ready.");statusEl.textContent='OPERATIONAL';orbSub.textContent='TAP TO TALK'}
-          else{err.textContent=d.error||'Failed'}}catch{err.textContent='Connection error'}
+          else{err.textContent=d.error||'Sign in failed'}}catch(e){err.textContent='Cannot connect to server. Is it running?'}
       } else {
-        // Sign up — direct registration
+        // Sign up — sends OTP first
         try{const r=await fetch('/auth/email/signup',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email,password:pwd,name})});
           const d=await r.json();
-          if(d.token){window.jt=d.token;localStorage.setItem('jt',d.token);window.jm='chat';document.getElementById('loginOverlay').remove();
-            msg('Welcome'+(name?', '+name:'')+'. Account created.','a');speak("Account created. Systems online.");statusEl.textContent='OPERATIONAL';orbSub.textContent='TAP TO TALK'}
-          else{err.textContent=d.error||'Signup failed'}}catch{err.textContent='Connection error'}
+          if(d.token){
+            // No OTP required (RESEND_API_KEY not set) — direct signup
+            window.jt=d.token;localStorage.setItem('jt',d.token);window.jm='chat';document.getElementById('loginOverlay').remove();
+            msg('Welcome'+(name?', '+name:'')+'. Account created.','a');speak("Account created. Systems online.");statusEl.textContent='OPERATIONAL';orbSub.textContent='TAP TO TALK'
+          } else if(d.otpSent){
+            // Show OTP input
+            window._pendingEmail=email;
+            showOtpScreen(email);
+          } else{err.textContent=d.error||'Signup failed'}}catch(e){err.textContent='Cannot connect to server. Is it running?'}
       }
+    };
+
+    window.showOtpScreen=function(email){
+      const form=document.querySelector('#loginOverlay > div:last-child');
+      if(!form)return;
+      form.innerHTML=`
+        <div style="text-align:center;margin-bottom:16px">
+          <div style="font-size:13px;color:#00e5ff;letter-spacing:1px;margin-bottom:6px">VERIFY EMAIL</div>
+          <div style="font-size:11px;color:rgba(0,229,255,.4)">Code sent to ${email}</div>
+        </div>
+        <input id="otpInput" type="text" maxlength="6" placeholder="Enter 6-digit code" style="padding:14px;border-radius:10px;border:1px solid rgba(0,229,255,.15);background:rgba(0,229,255,.03);color:#00e5ff;font-family:inherit;font-size:20px;text-align:center;letter-spacing:8px;outline:none" onfocus="this.style.borderColor='rgba(0,229,255,.3)'" onblur="this.style.borderColor='rgba(0,229,255,.15)'"/>
+        <button onclick="verifyOtp()" style="padding:12px;border-radius:10px;border:1px solid rgba(0,229,255,.15);background:rgba(0,229,255,.08);color:#00e5ff;font-size:12px;cursor:pointer;letter-spacing:1px;font-family:inherit;margin-top:4px;transition:all .2s;font-weight:bold">VERIFY</button>
+        <div id="authErr" style="font-size:10px;color:#ff4444;text-align:center;min-height:14px"></div>
+        <div style="font-size:10px;color:rgba(0,229,255,.3);text-align:center;margin-top:8px;cursor:pointer" onclick="location.reload()">← Back to login</div>
+      `;
+      document.getElementById('otpInput').focus();
+      document.getElementById('otpInput').addEventListener('keydown',e=>{if(e.key==='Enter')verifyOtp()});
+    };
+
+    window.verifyOtp=async function(){
+      const code=document.getElementById('otpInput').value.trim();
+      const err=document.getElementById('authErr');err.textContent='';
+      if(!code||code.length<6){err.textContent='Enter the 6-digit code';return}
+      try{
+        const r=await fetch('/auth/email/verify-otp',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:window._pendingEmail,code})});
+        const d=await r.json();
+        if(d.token){window.jt=d.token;localStorage.setItem('jt',d.token);window.jm='chat';document.getElementById('loginOverlay').remove();
+          msg('Welcome. Account verified and created.','a');speak("Email verified. Account created. Systems online.");statusEl.textContent='OPERATIONAL';orbSub.textContent='TAP TO TALK'}
+        else{err.textContent=d.error||'Verification failed'}
+      }catch(e){err.textContent='Cannot connect to server. Is it running?'}
     };
 
     // Send

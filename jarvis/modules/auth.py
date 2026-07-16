@@ -1,18 +1,22 @@
 """
-Authentication — JWT tokens + password hashing.
+Authentication — JWT tokens + password hashing + email OTP verification.
 Uses Turso cloud DB via jarvis.db module.
 """
 
 import time
 import secrets
 import hashlib
+import random
 from functools import wraps
 from typing import Callable
 import jwt
 from flask import request, jsonify
 from loguru import logger
-from jarvis.config import JWT_SECRET
+from jarvis.config import JWT_SECRET, RESEND_API_KEY
 from jarvis import db
+
+# In-memory OTP store: {email: {"code": "123456", "expires": timestamp, "password": ..., "name": ...}}
+_pending_otps: dict[str, dict] = {}
 
 
 def hash_password(password: str) -> str:
@@ -67,7 +71,44 @@ def get_current_user_id() -> str:
     return user.get("sub", "default") if user else "default"
 
 
+def _generate_otp() -> str:
+    """Generate a 6-digit OTP code."""
+    return str(random.randint(100000, 999999))
+
+
+def _send_otp_email(email: str, code: str) -> bool:
+    """Send OTP email via Resend. Returns True on success."""
+    if not RESEND_API_KEY:
+        logger.warning("RESEND_API_KEY not set — skipping OTP email, auto-verifying")
+        return True
+
+    try:
+        import resend
+        resend.api_key = RESEND_API_KEY
+
+        resend.Emails.send({
+            "from": "JARVIS <onboarding@resend.dev>",
+            "to": [email],
+            "subject": "Your JARVIS Verification Code",
+            "html": f"""
+                <div style="font-family:monospace;background:#0a1628;color:#00e5ff;padding:40px;border-radius:12px;text-align:center">
+                    <h1 style="letter-spacing:4px;margin-bottom:8px">J.A.R.V.I.S</h1>
+                    <p style="color:rgba(0,229,255,0.6);font-size:12px;margin-bottom:30px">PERSONAL AI SYSTEM</p>
+                    <p style="color:#fff;font-size:14px;margin-bottom:20px">Your verification code is:</p>
+                    <div style="font-size:36px;letter-spacing:8px;color:#00e5ff;background:rgba(0,229,255,0.08);border:1px solid rgba(0,229,255,0.2);border-radius:8px;padding:16px;display:inline-block">{code}</div>
+                    <p style="color:rgba(255,255,255,0.5);font-size:11px;margin-top:24px">This code expires in 10 minutes.</p>
+                </div>
+            """,
+        })
+        logger.info(f"OTP email sent to {email}")
+        return True
+    except Exception as e:
+        logger.error(f"Failed to send OTP email to {email}: {e}")
+        return False
+
+
 def signup(email: str, password: str, name: str) -> dict:
+    """Initiate signup — sends OTP for email verification."""
     if not email or not password:
         return {"error": "Email and password required."}
     if len(password) < 6:
@@ -78,6 +119,63 @@ def signup(email: str, password: str, name: str) -> dict:
     existing = db.execute("SELECT id FROM users WHERE email = ?", [email])
     if existing:
         return {"error": "Email already registered."}
+
+    # Generate and store pending signup data
+    code = _generate_otp()
+    _pending_otps[email] = {
+        "code": code,
+        "expires": time.time() + 600,  # 10 minutes
+        "password": password,
+        "name": name or email.split("@")[0],
+    }
+
+    if not RESEND_API_KEY:
+        # No email service configured — skip OTP, complete signup directly
+        logger.info(f"No RESEND_API_KEY — auto-verifying signup for {email}")
+        return _complete_signup(email)
+
+    sent = _send_otp_email(email, code)
+    if not sent:
+        # Email failed — still complete signup (graceful fallback)
+        logger.warning(f"OTP email failed for {email} — completing signup without verification")
+        return _complete_signup(email)
+
+    return {"otpSent": True, "message": "Verification code sent to your email."}
+
+
+def verify_otp(email: str, code: str) -> dict:
+    """Verify OTP and complete signup."""
+    pending = _pending_otps.get(email)
+    if not pending:
+        return {"error": "No pending verification. Please sign up again."}
+
+    if time.time() > pending["expires"]:
+        del _pending_otps[email]
+        return {"error": "Code expired. Please sign up again."}
+
+    if pending["code"] != code.strip():
+        return {"error": "Invalid code. Please try again."}
+
+    # OTP verified — complete signup
+    del _pending_otps[email]
+    return _complete_signup(email, pending["password"], pending["name"])
+
+
+def _complete_signup(email: str, password: str = None, name: str = None) -> dict:
+    """Finalize user registration after OTP verification."""
+    pending = _pending_otps.get(email)
+    if password is None and pending:
+        password = pending["password"]
+        name = pending["name"]
+        del _pending_otps[email]
+    elif password is None:
+        # Fallback for no-OTP mode
+        pending = _pending_otps.get(email)
+        if not pending:
+            return {"error": "Registration data not found."}
+        password = pending["password"]
+        name = pending["name"]
+        del _pending_otps[email]
 
     user_id = secrets.token_hex(16)
     pw_hash = hash_password(password)
