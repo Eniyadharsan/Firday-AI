@@ -1,13 +1,3 @@
----
-title: JARVIS AI
-emoji: 🤖
-colorFrom: blue
-colorTo: purple
-sdk: docker
-app_port: 7860
-pinned: false
----
-
 # J.A.R.V.I.S — Personal AI Assistant
 
 A Tony Stark-inspired personal AI assistant powered by Cerebras AI (120B parameters). Voice-enabled, real-time data, image generation, and more.
@@ -34,7 +24,7 @@ A Tony Stark-inspired personal AI assistant powered by Cerebras AI (120B paramet
 | Images | Pollinations.ai |
 | Voice | Browser Web Speech API |
 | Frontend | Vanilla HTML/CSS/JS |
-| Deploy | Docker on Hugging Face Spaces |
+| Deploy | Vercel |
 
 ## Run Locally
 
@@ -48,7 +38,7 @@ Open http://localhost:7860
 
 ## Deploy
 
-Already deployed on Hugging Face Spaces. Push to this repo and it auto-deploys.
+Deployed on Vercel. Push to `main` and it auto-deploys.
 
 ## Environment Variables
 

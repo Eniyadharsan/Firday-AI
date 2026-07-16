@@ -399,10 +399,10 @@
 
     inp.addEventListener('keydown',e=>{if(e.key==='Enter')send()});
 
-    // Auth check — skip on HF Space (owner access), require on other domains
+    // Auth check — skip on Vercel (owner access), require on other domains
     (async()=>{
-      const isHF=window.location.hostname.includes('hf.space')||window.location.hostname.includes('huggingface')||window.location.hostname.includes('vercel.app');
-      if(isHF){
+      const isVercel=window.location.hostname.includes('vercel.app');
+      if(isVercel){
         window.jm='chat';window.jt='owner';
         statusEl.textContent='OPERATIONAL';orbSub.textContent='TAP TO TALK';
         msg("Online. Ready, Sir.",'a');

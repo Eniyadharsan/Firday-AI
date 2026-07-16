@@ -51,7 +51,7 @@ def require_auth(f: Callable) -> Callable:
     @wraps(f)
     def decorated(*args, **kwargs):
         host = request.host or ""
-        if "hf.space" in host or "huggingface" in host or "vercel.app" in host:
+        if "vercel.app" in host:
             request.user = {"sub": "owner", "email": "owner@jarvis"}
             return f(*args, **kwargs)
         user = get_user_from_request()
