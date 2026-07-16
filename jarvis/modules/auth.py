@@ -76,11 +76,12 @@ def _generate_otp() -> str:
     return str(random.randint(100000, 999999))
 
 
-def _send_otp_email(email: str, code: str) -> bool:
-    """Send OTP email via Resend. Returns True on success."""
+def _send_otp_email(email: str, code: str) -> str:
+    """Send OTP email via Resend.
+    Returns: 'sent' on success, 'skipped' if free-tier can't send to this email, 'failed' on error."""
     if not RESEND_API_KEY:
-        logger.warning("RESEND_API_KEY not set — skipping OTP email, auto-verifying")
-        return True
+        logger.warning("RESEND_API_KEY not set — skipping OTP email")
+        return "skipped"
 
     try:
         import resend
@@ -101,10 +102,15 @@ def _send_otp_email(email: str, code: str) -> bool:
             """,
         })
         logger.info(f"OTP email sent to {email}")
-        return True
+        return "sent"
     except Exception as e:
-        logger.error(f"Failed to send OTP email to {email}: {e}")
-        return False
+        error_msg = str(e)
+        logger.error(f"Failed to send OTP email to {email}: {error_msg}")
+        # Resend free tier limitation — can only send to the account owner's email
+        if "only send testing emails" in error_msg or "verify a domain" in error_msg:
+            logger.warning(f"Resend free tier: cannot send to {email}. Skipping OTP.")
+            return "skipped"
+        return "failed"
 
 
 def signup(email: str, password: str, name: str) -> dict:
@@ -136,13 +142,17 @@ def signup(email: str, password: str, name: str) -> dict:
         logger.info(f"No RESEND_API_KEY — auto-verifying signup for {email}")
         return _complete_signup(email)
 
-    sent = _send_otp_email(email, code)
-    if not sent:
-        # Email failed — still complete signup (graceful fallback)
-        logger.warning(f"OTP email failed for {email} — completing signup without verification")
+    result = _send_otp_email(email, code)
+    if result == "sent":
+        return {"otpSent": True, "message": "Verification code sent to your email."}
+    elif result == "skipped":
+        # Free tier can't send to this email — complete signup without OTP
+        logger.info(f"OTP skipped for {email} — completing signup directly")
         return _complete_signup(email)
-
-    return {"otpSent": True, "message": "Verification code sent to your email."}
+    else:
+        # Email failed — return error
+        del _pending_otps[email]
+        return {"error": "Could not send verification email. Please try again."}
 
 
 def verify_otp(email: str, code: str) -> dict:
