@@ -8,6 +8,369 @@
   <link rel="manifest" href="/manifest.json">
   <title>JARVIS</title>
   <style>
+    /* Neural Orb Design Tokens */
+    :root {
+      --orb-primary: #00e5ff;
+      --orb-deep: #0040ff;
+      --orb-listening: #00ff88;
+      --orb-glow-idle: 60px;
+      --orb-glow-speaking: 90px;
+      --orb-size-desktop: 140px;
+      --orb-size-mobile: 100px;
+      --transition-state: 300ms ease;
+      --particle-count: 20;
+      --connection-count: 8;
+    }
+
+    /* Neural Orb Keyframe Animations */
+
+    /* Slow breathing scale/opacity pulse for idle state (3-5s cycle) */
+    @keyframes orbBreathe {
+      0%, 100% {
+        transform: scale(1);
+        opacity: 1;
+      }
+      50% {
+        transform: scale(1.04);
+        opacity: 0.92;
+      }
+    }
+
+    /* Outer plasma fire flickering effect (2-4s cycle) */
+    @keyframes plasmaFlicker {
+      0%, 100% {
+        transform: scale(1);
+        opacity: 0.6;
+      }
+      25% {
+        transform: scale(1.05);
+        opacity: 0.8;
+      }
+      50% {
+        transform: scale(0.97);
+        opacity: 0.5;
+      }
+      75% {
+        transform: scale(1.03);
+        opacity: 0.7;
+      }
+    }
+
+    /* Neural connection pulse travel animation */
+    @keyframes pulseTravel {
+      0% {
+        transform: translateX(0);
+        opacity: 0;
+      }
+      10% {
+        opacity: 1;
+      }
+      90% {
+        opacity: 1;
+      }
+      100% {
+        transform: translateX(var(--length, 80px));
+        opacity: 0;
+      }
+    }
+
+    /* Particle orbit/drift outward animation (6-12s idle) */
+    @keyframes particleDrift {
+      0% {
+        transform: rotate(var(--start-angle, 0deg)) translateX(70px) scale(1);
+        opacity: 0.8;
+      }
+      50% {
+        transform: rotate(calc(var(--start-angle, 0deg) + 180deg)) translateX(120px) scale(0.6);
+        opacity: 0.4;
+      }
+      100% {
+        transform: rotate(calc(var(--start-angle, 0deg) + 360deg)) translateX(70px) scale(1);
+        opacity: 0.8;
+      }
+    }
+
+    /* Click feedback scale animation (150ms) */
+    @keyframes orbPress {
+      0% {
+        transform: scale(1);
+      }
+      50% {
+        transform: scale(0.92);
+      }
+      100% {
+        transform: scale(1);
+      }
+    }
+
+    /* Neural Orb Core Styles */
+    .neural-orb {
+      width: var(--orb-size-desktop, 140px);
+      height: var(--orb-size-desktop, 140px);
+      border-radius: 50%;
+      background: radial-gradient(circle, #00e5ff 0%, #0040ff 100%);
+      box-shadow:
+        0 0 20px rgba(0, 229, 255, 0.6),
+        0 0 40px rgba(0, 229, 255, 0.4),
+        0 0 60px rgba(0, 229, 255, 0.2),
+        0 0 80px rgba(0, 64, 255, 0.15),
+        inset 0 0 20px rgba(0, 229, 255, 0.3);
+      animation: orbBreathe 4s ease-in-out infinite;
+      position: relative;
+      margin: 0 auto;
+      will-change: transform, opacity;
+      transition: all var(--transition-state, 300ms ease);
+    }
+
+    .neural-orb::before {
+      content: '';
+      position: absolute;
+      inset: -15px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(0, 229, 255, 0.3) 0%, transparent 70%);
+      filter: blur(12px);
+      opacity: 0.7;
+      pointer-events: none;
+      will-change: transform, opacity;
+    }
+
+    .neural-orb::after {
+      content: '';
+      position: absolute;
+      inset: -25px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(0, 229, 255, 0.15) 0%, rgba(0, 64, 255, 0.1) 40%, transparent 70%);
+      animation: plasmaFlicker 3s ease-in-out infinite;
+      pointer-events: none;
+      will-change: transform, opacity;
+    }
+
+    /* Neural Connections Styles */
+    .neural-connections {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 0;
+      height: 0;
+      pointer-events: none;
+    }
+
+    .connection {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: var(--length, 80px);
+      height: 2px;
+      background: linear-gradient(90deg, rgba(0, 229, 255, 0.4), rgba(0, 64, 255, 0.1));
+      transform-origin: 0 50%;
+      transform: rotate(var(--angle, 0deg));
+      border-radius: 1px;
+    }
+
+    .connection .pulse {
+      position: absolute;
+      top: -2px;
+      left: 0;
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: rgba(0, 229, 255, 0.8);
+      box-shadow: 0 0 6px rgba(0, 229, 255, 0.6), 0 0 12px rgba(0, 229, 255, 0.3);
+      animation: pulseTravel 3s ease-in-out infinite;
+      animation-delay: var(--delay, 0s);
+      opacity: 0;
+    }
+
+    .connection:nth-child(1) .pulse { --delay: 0s; }
+    .connection:nth-child(2) .pulse { --delay: 0.4s; }
+    .connection:nth-child(3) .pulse { --delay: 0.8s; }
+    .connection:nth-child(4) .pulse { --delay: 1.2s; }
+    .connection:nth-child(5) .pulse { --delay: 1.6s; }
+    .connection:nth-child(6) .pulse { --delay: 2.0s; }
+    .connection:nth-child(7) .pulse { --delay: 2.4s; }
+    .connection:nth-child(8) .pulse { --delay: 2.8s; }
+
+    /* Particle System Styles */
+    .particle-system {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 0;
+      height: 0;
+      pointer-events: none;
+    }
+
+    .particle {
+      position: absolute;
+      width: var(--size, 2px);
+      height: var(--size, 2px);
+      border-radius: 50%;
+      background: rgba(0, 229, 255, 0.6);
+      box-shadow: 0 0 4px rgba(0, 229, 255, 0.4);
+      animation: particleDrift var(--duration, 8s) ease-in-out infinite;
+      animation-delay: var(--delay, 0s);
+      will-change: transform, opacity;
+      pointer-events: none;
+    }
+
+    .particle:nth-child(odd) {
+      background: rgba(0, 64, 255, 0.5);
+      box-shadow: 0 0 4px rgba(0, 64, 255, 0.3);
+    }
+
+    .particle:nth-child(3n) {
+      background: rgba(0, 229, 255, 0.8);
+      box-shadow: 0 0 6px rgba(0, 229, 255, 0.5);
+    }
+
+    .particle:nth-child(4n) {
+      background: rgba(0, 180, 255, 0.4);
+      box-shadow: 0 0 3px rgba(0, 180, 255, 0.2);
+    }
+
+    /* Speaking State Styles */
+    .speaking .neural-orb {
+      transform: scale(1.15);
+      box-shadow:
+        0 0 30px rgba(0, 229, 255, 0.8),
+        0 0 60px rgba(0, 229, 255, 0.6),
+        0 0 90px rgba(0, 229, 255, 0.4),
+        0 0 120px rgba(0, 64, 255, 0.25),
+        inset 0 0 30px rgba(0, 229, 255, 0.4);
+      animation: orbBreathe 1.5s ease-in-out infinite;
+    }
+
+    .speaking .neural-orb::after {
+      animation: plasmaFlicker 1s ease-in-out infinite;
+    }
+
+    .speaking .connection .pulse {
+      animation: pulseTravel 0.75s ease-in-out infinite;
+    }
+
+    .speaking .particle {
+      animation-duration: 4s;
+    }
+
+    /* Listening State Styles */
+    .listening .neural-orb {
+      background: radial-gradient(circle, #00ff88 0%, #00b870 60%, #0040ff 100%);
+      box-shadow:
+        0 0 20px rgba(0, 255, 136, 0.6),
+        0 0 40px rgba(0, 255, 136, 0.4),
+        0 0 60px rgba(0, 255, 136, 0.2),
+        0 0 80px rgba(0, 200, 100, 0.15),
+        inset 0 0 20px rgba(0, 255, 136, 0.3);
+      animation: orbBreathe 1.5s ease-in-out infinite;
+    }
+
+    .listening .neural-orb::after {
+      background: radial-gradient(circle, rgba(0, 255, 136, 0.15) 0%, rgba(0, 200, 100, 0.1) 40%, transparent 70%);
+      animation: plasmaFlicker 1.5s ease-in-out infinite;
+    }
+
+    .listening .connection {
+      background: linear-gradient(90deg, rgba(0, 255, 136, 0.4), rgba(0, 200, 100, 0.1));
+    }
+
+    .listening .connection .pulse {
+      background: rgba(0, 255, 136, 0.8);
+      box-shadow: 0 0 6px rgba(0, 255, 136, 0.6), 0 0 12px rgba(0, 255, 136, 0.3);
+      animation: pulseTravel 1.5s ease-in-out infinite;
+    }
+
+    .listening .particle {
+      animation-duration: 6s;
+    }
+
+    /* Transition and Interaction Styles */
+    #reactor {
+      cursor: pointer;
+      position: relative;
+      width: 180px;
+      height: 180px;
+      margin: 0 auto;
+    }
+
+    #reactor:active .neural-orb {
+      animation: orbPress 150ms ease-out forwards;
+    }
+
+    /* Responsive Breakpoint: Mobile ≤500px */
+    @media (max-width: 500px) {
+      .neural-orb {
+        width: var(--orb-size-mobile, 100px);
+        height: var(--orb-size-mobile, 100px);
+      }
+
+      #reactor {
+        width: 130px;
+        height: 130px;
+      }
+
+      .connection {
+        --length: 50px !important;
+      }
+
+      .particle:nth-child(n+11) {
+        display: none;
+      }
+
+      .neural-orb::before {
+        inset: -10px;
+      }
+
+      .neural-orb::after {
+        inset: -15px;
+      }
+    }
+
+    /* Reduced Motion: Disable all animations for accessibility */
+    @media (prefers-reduced-motion: reduce) {
+      .neural-orb, .particle, .connection .pulse, .neural-orb::after {
+        animation: none !important;
+      }
+
+      .neural-orb {
+        box-shadow: 0 0 40px rgba(0, 229, 255, 0.5);
+      }
+
+      .neural-orb::before {
+        animation: none !important;
+      }
+
+      .particle-system {
+        display: none;
+      }
+
+      .connection .pulse {
+        display: none;
+      }
+    }
+
+    /* Fallback: Browsers that do not support CSS animations */
+    @supports not (animation: none) {
+      .neural-orb {
+        background: radial-gradient(circle, #00e5ff 0%, #0040ff 100%);
+        box-shadow: 0 0 40px rgba(0, 229, 255, 0.5);
+      }
+
+      .neural-orb::before,
+      .neural-orb::after {
+        display: none;
+      }
+
+      .particle-system {
+        display: none;
+      }
+
+      .neural-connections {
+        display: none;
+      }
+    }
+
     *{margin:0;padding:0;box-sizing:border-box}
     body{font-family:'Courier New',monospace;background:#0a1628;color:#00e5ff;height:100vh;overflow:hidden}
 
@@ -31,24 +394,7 @@
     .hud-top .right{font-size:10px;color:rgba(0,229,255,.4);letter-spacing:1px}
 
     /* Center orb */
-    /* Center molecular structure */
     .center{position:fixed;top:45%;left:50%;transform:translate(-50%,-50%);text-align:center;z-index:10}
-    .molecule{width:180px;height:180px;margin:0 auto;position:relative;cursor:pointer}
-    .nucleus{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:30px;height:30px;border-radius:50%;background:radial-gradient(circle,rgba(0,229,255,.8),rgba(0,100,255,.3) 70%);box-shadow:0 0 25px rgba(0,229,255,.5),0 0 50px rgba(0,229,255,.2);transition:all .3s}
-    .orbit{position:absolute;inset:0;border-radius:50%;border:1px solid rgba(0,229,255,.1);animation:orbit1 8s linear infinite}
-    .orbit:nth-child(2){inset:15px;border-color:rgba(123,47,247,.1);animation:orbit2 6s linear infinite;transform:rotateX(60deg)}
-    .orbit:nth-child(3){inset:30px;border-color:rgba(0,255,136,.08);animation:orbit3 10s linear infinite;transform:rotateY(60deg)}
-    @keyframes orbit1{from{transform:rotateZ(0)}to{transform:rotateZ(360deg)}}
-    @keyframes orbit2{from{transform:rotateX(60deg) rotateZ(0)}to{transform:rotateX(60deg) rotateZ(360deg)}}
-    @keyframes orbit3{from{transform:rotateY(60deg) rotateZ(0)}to{transform:rotateY(60deg) rotateZ(360deg)}}
-    .electron{position:absolute;width:8px;height:8px;border-radius:50%;background:#00e5ff;box-shadow:0 0 8px #00e5ff,0 0 16px rgba(0,229,255,.4);top:-4px;left:50%;margin-left:-4px}
-    .orbit:nth-child(2) .electron{background:#7b2ff7;box-shadow:0 0 8px #7b2ff7,0 0 16px rgba(123,47,247,.4)}
-    .orbit:nth-child(3) .electron{background:#00ff88;box-shadow:0 0 8px #00ff88,0 0 16px rgba(0,255,136,.4)}
-    /* Fast mode when speaking */
-    .molecule.speaking .orbit{animation-duration:2s !important}
-    .molecule.speaking .nucleus{box-shadow:0 0 40px rgba(0,229,255,.7),0 0 80px rgba(0,229,255,.3);width:35px;height:35px}
-    .molecule.listening .orbit{animation-duration:3s !important}
-    .molecule.listening .nucleus{background:radial-gradient(circle,rgba(0,255,136,.8),rgba(0,200,100,.3) 70%);box-shadow:0 0 30px rgba(0,255,136,.5)}
     .label{margin-top:20px;font-size:18px;letter-spacing:6px;color:rgba(0,229,255,.6);font-weight:bold}
     .sub-label{font-size:10px;color:rgba(0,229,255,.3);letter-spacing:2px;margin-top:4px}
     .wake-indicator{display:none}
@@ -227,7 +573,7 @@
     @media(max-width:500px){
       .chat{width:calc(100% - 24px);left:12px}
       .detail{width:calc(100% - 24px);right:12px;left:12px}
-      .molecule{width:130px;height:130px}
+
       /* Music panel responsive layout - position ABOVE the chat on mobile */
       .music-panel{max-width:none;width:calc(100vw - 32px);left:16px;right:16px;max-height:35vh;bottom:auto;top:50px}
       /* Music toggle button - position to the right of chat input on mobile */
@@ -272,11 +618,40 @@
   <div class="wake-indicator" id="wakeInd">● ALWAYS LISTENING</div>
 
   <div class="center">
-    <div class="molecule" id="reactor" onclick="handleOrb()">
-      <div class="orbit"><div class="electron"></div></div>
-      <div class="orbit"><div class="electron"></div></div>
-      <div class="orbit"><div class="electron"></div></div>
-      <div class="nucleus"></div>
+    <div id="reactor" onclick="handleOrb()" style="cursor: pointer">
+      <div class="neural-orb"></div>
+      <div class="neural-connections">
+        <div class="connection" style="--angle: 0deg; --length: 80px"><div class="pulse"></div></div>
+        <div class="connection" style="--angle: 45deg; --length: 65px"><div class="pulse"></div></div>
+        <div class="connection" style="--angle: 90deg; --length: 90px"><div class="pulse"></div></div>
+        <div class="connection" style="--angle: 135deg; --length: 55px"><div class="pulse"></div></div>
+        <div class="connection" style="--angle: 180deg; --length: 75px"><div class="pulse"></div></div>
+        <div class="connection" style="--angle: 225deg; --length: 60px"><div class="pulse"></div></div>
+        <div class="connection" style="--angle: 270deg; --length: 85px"><div class="pulse"></div></div>
+        <div class="connection" style="--angle: 315deg; --length: 70px"><div class="pulse"></div></div>
+      </div>
+      <div class="particle-system">
+        <div class="particle" style="--size: 2px; --delay: 0s; --duration: 8s; --start-angle: 0deg"></div>
+        <div class="particle" style="--size: 3px; --delay: 0.5s; --duration: 10s; --start-angle: 18deg"></div>
+        <div class="particle" style="--size: 1px; --delay: 1s; --duration: 7s; --start-angle: 36deg"></div>
+        <div class="particle" style="--size: 4px; --delay: 1.5s; --duration: 11s; --start-angle: 54deg"></div>
+        <div class="particle" style="--size: 2px; --delay: 2s; --duration: 9s; --start-angle: 72deg"></div>
+        <div class="particle" style="--size: 3px; --delay: 2.5s; --duration: 6s; --start-angle: 90deg"></div>
+        <div class="particle" style="--size: 1px; --delay: 3s; --duration: 12s; --start-angle: 108deg"></div>
+        <div class="particle" style="--size: 2px; --delay: 3.5s; --duration: 8s; --start-angle: 126deg"></div>
+        <div class="particle" style="--size: 4px; --delay: 4s; --duration: 7s; --start-angle: 144deg"></div>
+        <div class="particle" style="--size: 3px; --delay: 4.5s; --duration: 10s; --start-angle: 162deg"></div>
+        <div class="particle" style="--size: 2px; --delay: 5s; --duration: 9s; --start-angle: 180deg"></div>
+        <div class="particle" style="--size: 1px; --delay: 5.5s; --duration: 11s; --start-angle: 198deg"></div>
+        <div class="particle" style="--size: 3px; --delay: 6s; --duration: 6s; --start-angle: 216deg"></div>
+        <div class="particle" style="--size: 4px; --delay: 6.5s; --duration: 8s; --start-angle: 234deg"></div>
+        <div class="particle" style="--size: 2px; --delay: 7s; --duration: 12s; --start-angle: 252deg"></div>
+        <div class="particle" style="--size: 1px; --delay: 7.5s; --duration: 7s; --start-angle: 270deg"></div>
+        <div class="particle" style="--size: 3px; --delay: 8s; --duration: 9s; --start-angle: 288deg"></div>
+        <div class="particle" style="--size: 2px; --delay: 8.5s; --duration: 10s; --start-angle: 306deg"></div>
+        <div class="particle" style="--size: 4px; --delay: 9s; --duration: 6s; --start-angle: 324deg"></div>
+        <div class="particle" style="--size: 1px; --delay: 9.5s; --duration: 11s; --start-angle: 342deg"></div>
+      </div>
     </div>
     <div class="label">JARVIS</div>
     <div class="sub-label" id="orbSub">TAP TO TALK</div>
