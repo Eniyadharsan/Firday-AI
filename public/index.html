@@ -488,6 +488,43 @@
       coreGrad.addColorStop(1,'transparent');
       octx.fillStyle=coreGrad;octx.beginPath();octx.arc(cx,cy,radius*0.5,0,Math.PI*2);octx.fill();
 
+      // Fiery energy rays — shoot outward, glow with phase
+      const rayCount = 16;
+      for (let i = 0; i < rayCount; i++) {
+        const angle = (i / rayCount) * Math.PI * 2 + orbTime * 0.3;
+        const rayLen = radius * (0.6 + 0.5 * Math.sin(angle * 3 + orbTime * 4) * orbPulse);
+        const rayWidth = 1.5 + Math.sin(angle * 2 + orbTime * 5) * 1;
+        const intensity = 0.3 + 0.5 * Math.sin(i * 1.7 + orbTime * 3);
+
+        const x1 = cx + Math.cos(angle) * radius * 0.9;
+        const y1 = cy + Math.sin(angle) * radius * 0.9;
+        const x2 = cx + Math.cos(angle) * (radius + rayLen);
+        const y2 = cy + Math.sin(angle) * (radius + rayLen);
+
+        const rayGrad = octx.createLinearGradient(x1, y1, x2, y2);
+        rayGrad.addColorStop(0, `rgba(${r + 80 > 255 ? 255 : r + 80},${g},${b},${(intensity * 0.8).toFixed(2)})`);
+        rayGrad.addColorStop(0.4, `rgba(${r},${g},${b},${(intensity * 0.5).toFixed(2)})`);
+        rayGrad.addColorStop(1, 'transparent');
+
+        octx.beginPath();
+        octx.moveTo(x1, y1);
+        octx.lineTo(x2, y2);
+        octx.strokeStyle = rayGrad;
+        octx.lineWidth = rayWidth;
+        octx.shadowColor = `rgba(${r},${g},${b},0.6)`;
+        octx.shadowBlur = 8;
+        octx.stroke();
+        octx.shadowBlur = 0;
+      }
+
+      // Secondary fiery glow halo around the orb
+      const haloGrad = octx.createRadialGradient(cx, cy, radius * 0.85, cx, cy, radius * 1.3);
+      haloGrad.addColorStop(0, `rgba(${r},${g},${b},${(0.1 + 0.1 * orbPulse).toFixed(2)})`);
+      haloGrad.addColorStop(0.5, `rgba(${r},${g},${b},${(0.04 * orbPulse).toFixed(2)})`);
+      haloGrad.addColorStop(1, 'transparent');
+      octx.fillStyle = haloGrad;
+      octx.beginPath(); octx.arc(cx, cy, radius * 1.3, 0, Math.PI * 2); octx.fill();
+
       // Dust cloud ring
       for(const d of dust){
         d.a+=d.speed;
