@@ -12,6 +12,7 @@ COPY jarvis/ ./jarvis/
 COPY public/ ./public/
 
 ENV PORT=7860
+ENV HOST=0.0.0.0
 EXPOSE 7860
 
 CMD ["python", "app.py"]

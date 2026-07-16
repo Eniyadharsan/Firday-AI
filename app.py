@@ -470,5 +470,9 @@ def research_endpoint():
 # ===== Start =====
 
 if __name__ == "__main__":
-    logger.info(f"JARVIS v2.1 starting on port {PORT}")
-    app.run(host="0.0.0.0", port=PORT, debug=False)
+    import os
+    # Bind to 0.0.0.0 only in container/cloud environments (Vercel, Docker, Railway)
+    # Default to localhost for local development (avoids exposing to all interfaces)
+    host = os.getenv("HOST", "127.0.0.1")
+    logger.info(f"JARVIS v2.1 starting on {host}:{PORT}")
+    app.run(host=host, port=PORT, debug=False)
