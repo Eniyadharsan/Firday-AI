@@ -129,6 +129,14 @@ def signup():
         return jsonify(result), 400
     return jsonify({"success": True, **result})
 
+@app.route("/auth/email/verify-otp", methods=["POST"])
+def verify_otp():
+    data = request.json or {}
+    result = auth.verify_otp(data.get("email", ""), data.get("code", ""))
+    if "error" in result:
+        return jsonify(result), 400
+    return jsonify({"success": True, **result})
+
 @app.route("/auth/email/signin", methods=["POST"])
 def signin():
     data = request.json or {}
