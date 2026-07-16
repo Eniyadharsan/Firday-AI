@@ -7,20 +7,41 @@ on:
     branches: [main]
 
 jobs:
-  test:
+  quality:
     runs-on: ubuntu-latest
-    continue-on-error: true
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Full clone for SonarCloud
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
+
       - name: Install dependencies
         run: pip install -r requirements.txt
+
+      - name: Lint with Ruff
+        run: |
+          pip install ruff
+          ruff check jarvis/ app.py --output-format=json > ruff-report.json || true
+          ruff check jarvis/ app.py --ignore E501,F841
+
+      - name: Type check with Pyright
+        run: |
+          pip install pyright
+          pyright app.py jarvis/ --outputjson > pyright-report.json || true
+        continue-on-error: true
+
       - name: Run tests
-        run: pytest tests/ -v --tb=short -k "not web_search" || true
-      - name: Lint
-        run: pip install ruff && ruff check jarvis/ app.py --ignore E501,F841 || true
+        run: |
+          pip install pytest pytest-cov
+          pytest tests/ -v --tb=short -k "not web_search" --cov=jarvis --cov=app --cov-report=xml:coverage.xml || true
+
+      - name: SonarCloud Scan
+        uses: SonarSource/sonarcloud-github-action@master
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
 
   docker:
     runs-on: ubuntu-latest
