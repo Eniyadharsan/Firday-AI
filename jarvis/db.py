@@ -28,7 +28,7 @@ TURSO_URL: str = _raw_url.replace("libsql://", "https://") if _raw_url else ""
 TURSO_TOKEN: str = _raw_token
 
 # Local fallback path
-LOCAL_DB = Path("/tmp/jarvis-data/jarvis.db")
+LOCAL_DB = Path(os.getenv("JARVIS_DB_PATH", str(Path(__file__).resolve().parent.parent / ".jarvis-data" / "jarvis.db")))
 LOCAL_DB.parent.mkdir(parents=True, exist_ok=True)
 
 # --- Persistent HTTP Session (reuses TCP/TLS connections) ---
