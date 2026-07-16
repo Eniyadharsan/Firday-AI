@@ -39,6 +39,105 @@
       display: block;
     }
 
+    /* Neural Orb Elements */
+    .neural-orb {
+      width: 140px;
+      height: 140px;
+      border-radius: 50%;
+      background: radial-gradient(circle, #00e5ff 0%, #0040ff 100%);
+      box-shadow: 0 0 60px rgba(0, 229, 255, 0.6), 0 0 120px rgba(0, 64, 255, 0.3);
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      will-change: transform, opacity;
+      transition: all 300ms ease;
+    }
+
+    .neural-connections {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+    }
+
+    .connection {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: var(--length, 80px);
+      height: 2px;
+      background: rgba(0, 229, 255, 0.3);
+      transform-origin: left center;
+      transform: rotate(var(--angle, 0deg));
+    }
+
+    .connection .pulse {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #00e5ff;
+      position: absolute;
+      top: -2px;
+    }
+
+    .particle-system {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+    }
+
+    .particle {
+      position: absolute;
+      width: var(--size, 2px);
+      height: var(--size, 2px);
+      border-radius: 50%;
+      background: rgba(0, 229, 255, 0.6);
+      top: 50%;
+      left: 50%;
+      will-change: transform, opacity;
+    }
+
+    /* ── Speaking State ── */
+    .speaking .neural-orb {
+      transform: translate(-50%, -50%) scale(1.15);
+      box-shadow: 0 0 90px rgba(0, 229, 255, 0.8), 0 0 160px rgba(0, 64, 255, 0.5);
+    }
+
+    .speaking .connection .pulse {
+      animation-duration: 0.8s;
+    }
+
+    .speaking .particle {
+      animation-duration: 4s;
+    }
+
+    /* ── Listening State ── */
+    .listening .neural-orb {
+      background: radial-gradient(circle, #00ff88 0%, #00a86b 100%);
+      box-shadow: 0 0 70px rgba(0, 255, 136, 0.6), 0 0 130px rgba(0, 168, 107, 0.3);
+    }
+
+    .listening .connection {
+      background: rgba(0, 255, 136, 0.3);
+    }
+
+    .listening .connection .pulse {
+      background: #00ff88;
+      animation-duration: 1.5s;
+    }
+
+    .listening .particle {
+      background: rgba(0, 255, 136, 0.6);
+      animation-duration: 6s;
+    }
+
     /* ── Responsive ── */
     @media (max-width: 500px) {
       #reactor { width: 220px; height: 220px; }
@@ -291,6 +390,39 @@
 
   <div class="center">
     <div id="reactor" onclick="handleOrb()">
+      <div class="neural-orb"></div>
+      <div class="neural-connections">
+        <div class="connection" style="--angle:0deg;--length:80px"><div class="pulse"></div></div>
+        <div class="connection" style="--angle:45deg;--length:100px"><div class="pulse"></div></div>
+        <div class="connection" style="--angle:90deg;--length:70px"><div class="pulse"></div></div>
+        <div class="connection" style="--angle:135deg;--length:90px"><div class="pulse"></div></div>
+        <div class="connection" style="--angle:180deg;--length:85px"><div class="pulse"></div></div>
+        <div class="connection" style="--angle:225deg;--length:95px"><div class="pulse"></div></div>
+        <div class="connection" style="--angle:270deg;--length:75px"><div class="pulse"></div></div>
+        <div class="connection" style="--angle:315deg;--length:88px"><div class="pulse"></div></div>
+      </div>
+      <div class="particle-system">
+        <div class="particle" style="--size:2px;--delay:0s;--duration:8s;--start-angle:0deg"></div>
+        <div class="particle" style="--size:3px;--delay:0.5s;--duration:10s;--start-angle:18deg"></div>
+        <div class="particle" style="--size:1px;--delay:1s;--duration:7s;--start-angle:36deg"></div>
+        <div class="particle" style="--size:2px;--delay:1.5s;--duration:9s;--start-angle:54deg"></div>
+        <div class="particle" style="--size:4px;--delay:2s;--duration:11s;--start-angle:72deg"></div>
+        <div class="particle" style="--size:1px;--delay:0.3s;--duration:6s;--start-angle:90deg"></div>
+        <div class="particle" style="--size:3px;--delay:2.5s;--duration:12s;--start-angle:108deg"></div>
+        <div class="particle" style="--size:2px;--delay:0.8s;--duration:8s;--start-angle:126deg"></div>
+        <div class="particle" style="--size:1px;--delay:1.2s;--duration:10s;--start-angle:144deg"></div>
+        <div class="particle" style="--size:3px;--delay:3s;--duration:7s;--start-angle:162deg"></div>
+        <div class="particle" style="--size:2px;--delay:0.6s;--duration:9s;--start-angle:180deg"></div>
+        <div class="particle" style="--size:4px;--delay:1.8s;--duration:11s;--start-angle:198deg"></div>
+        <div class="particle" style="--size:1px;--delay:2.2s;--duration:6s;--start-angle:216deg"></div>
+        <div class="particle" style="--size:3px;--delay:0.4s;--duration:8s;--start-angle:234deg"></div>
+        <div class="particle" style="--size:2px;--delay:1.6s;--duration:10s;--start-angle:252deg"></div>
+        <div class="particle" style="--size:1px;--delay:2.8s;--duration:12s;--start-angle:270deg"></div>
+        <div class="particle" style="--size:4px;--delay:0.9s;--duration:7s;--start-angle:288deg"></div>
+        <div class="particle" style="--size:2px;--delay:3.2s;--duration:9s;--start-angle:306deg"></div>
+        <div class="particle" style="--size:3px;--delay:1.4s;--duration:11s;--start-angle:324deg"></div>
+        <div class="particle" style="--size:1px;--delay:2.6s;--duration:8s;--start-angle:342deg"></div>
+      </div>
       <canvas id="orbCanvas"></canvas>
     </div>
     <div class="label">JARVIS</div>

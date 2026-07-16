@@ -105,8 +105,8 @@ Replace the current molecular/orbiting-electron orb structure in `public/index.h
   - Verify responsive layout at ≤500px viewport
   - Verify prefers-reduced-motion disables animations
 
-- [ ]* 8. Write automated DOM and CSS assertion tests
-  - [ ]* 8.1 Write DOM structure tests
+- [x] 8. Write automated DOM and CSS assertion tests
+  - [x] 8.1 Write DOM structure tests
     - Verify `#reactor` element exists with `onclick="handleOrb()"`
     - Verify `.neural-orb`, `.neural-connections`, `.particle-system` elements are present
     - Verify at least 15 `.particle` elements exist
@@ -115,14 +115,14 @@ Replace the current molecular/orbiting-electron orb structure in `public/index.h
     - Verify `pointer-events: none` on `.particle-system` and `.neural-connections`
     - _Requirements: 4.1, 4.5, 3.1, 9.1, 9.4, 12.1, 12.3, 12.4_
 
-  - [ ]* 8.2 Write CSS computed style tests
+  - [x] 8.2 Write CSS computed style tests
     - Verify `.neural-orb` minimum width/height is 120px on desktop viewports
     - Verify `cursor: pointer` on `#reactor`
     - Verify `will-change` property on `.neural-orb` and `.particle` elements
     - Verify responsive sizing (≤100px) at viewport ≤500px
     - _Requirements: 1.1, 9.2, 10.1, 11.1, 11.2_
 
-  - [ ]* 8.3 Write state transition integration tests
+  - [x] 8.3 Write state transition integration tests
     - Add `.speaking` class to `#reactor`, verify `.neural-orb` computed transform includes scale > 1
     - Add `.listening` class to `#reactor`, verify color values shift toward green
     - Remove state classes, verify return to idle appearance
