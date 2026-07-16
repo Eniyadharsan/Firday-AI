@@ -16,8 +16,20 @@ def is_music_request(message: str) -> bool:
     if re.search(r"\bput on\s+\S", lower) or re.search(r"\bqueue\s+\S", lower):
         return True
 
-    # Backward compatibility: trigger word + music keyword
+    # Rule 3: Backward compatibility: trigger word + music keyword
     if re.search(r"\b(play|put on|queue)\b", lower) and re.search(r"\b(song|music|track)\b", lower):
+        return True
+
+    # Rule 4: Natural phrasing — "can you play", "please play", "I want to play"
+    if re.search(r"\b(can you|could you|please|i want to|i wanna|let's)\s+(play|listen to|hear)\b", lower):
+        return True
+
+    # Rule 5: "listen to" or "hear" + something (music intent)
+    if re.search(r"\b(listen to|listening to)\s+\S", lower):
+        return True
+
+    # Rule 6: Music keywords with intent verbs — "show me a song", "give me a song"
+    if re.search(r"\b(give|show|get)\s+me\b", lower) and re.search(r"\b(song|songs|music|track|tracks|playlist|tune|tunes)\b", lower):
         return True
 
     return False

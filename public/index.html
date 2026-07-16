@@ -767,6 +767,7 @@
           if(reply.length>250){msg(reply.slice(0,180)+'...','a');openDet(reply)}
           else msg(reply,'a');
           if(d.action==='play_music_embed'&&d.track){
+            closeDet();
             if(window.musicPlayer && window.musicPlayer.ytApiLoaded !== false){
               window.musicPlayer.loadTrack(d.track);
               speak('Now playing '+d.track.title+' by '+d.track.artist);
