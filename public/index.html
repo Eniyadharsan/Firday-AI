@@ -228,8 +228,10 @@
       .chat{width:calc(100% - 24px);left:12px}
       .detail{width:calc(100% - 24px);right:12px;left:12px}
       .molecule{width:130px;height:130px}
-      /* Music panel responsive layout */
-      .music-panel{max-width:none;width:calc(100vw - 32px);left:16px;right:16px;max-height:50vh}
+      /* Music panel responsive layout - position ABOVE the chat on mobile */
+      .music-panel{max-width:none;width:calc(100vw - 32px);left:16px;right:16px;max-height:35vh;bottom:auto;top:50px}
+      /* Music toggle button - position to the right of chat input on mobile */
+      .music-toggle-btn{bottom:20px;right:12px;width:36px;height:36px;font-size:14px}
       /* Music player responsive layout */
       .music-player{max-height:60vh;overflow-y:auto;border-top-left-radius:12px;border-top-right-radius:12px}
       .mp-content{padding:12px 14px 10px;gap:8px}
@@ -244,7 +246,7 @@
       .mp-info{min-width:80px}
       .mp-title{font-size:12px}
       .mp-artist{font-size:10px}
-      /* Ensure chat remains accessible above the music player */
+      /* Ensure chat remains at the bottom and accessible */
       .chat{bottom:16px;z-index:160}
     }
   </style>
