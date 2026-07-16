@@ -32,8 +32,8 @@ def verify_password(password: str, stored_hash: str) -> bool:
     return False
 
 
-def make_token(user_id: str, email: str) -> str:
-    payload = {"sub": user_id, "email": email, "iat": int(time.time()), "exp": int(time.time()) + 7 * 24 * 3600}
+def make_token(user_id: str, email: str, name: str = "") -> str:
+    payload = {"sub": user_id, "email": email, "name": name, "iat": int(time.time()), "exp": int(time.time()) + 7 * 24 * 3600}
     return jwt.encode(payload, JWT_SECRET, algorithm="HS256")
 
 
@@ -185,7 +185,7 @@ def _complete_signup(email: str, password: str = None, name: str = None) -> dict
     db.execute("INSERT INTO users (id, email, name, password_hash, created_at, last_login) VALUES (?, ?, ?, ?, ?, ?)",
                [user_id, email, user_name, pw_hash, now, now])
     logger.info(f"User registered: {email}")
-    return {"token": make_token(user_id, email), "user": {"id": user_id, "email": email, "name": user_name}}
+    return {"token": make_token(user_id, email, user_name), "user": {"id": user_id, "email": email, "name": user_name}}
 
 
 def signin(email: str, password: str) -> dict:
@@ -198,4 +198,4 @@ def signin(email: str, password: str) -> dict:
         return {"error": "Invalid email or password."}
 
     db.execute("UPDATE users SET last_login = ? WHERE id = ?", [time.strftime("%Y-%m-%dT%H:%M:%SZ"), row["id"]])
-    return {"token": make_token(row["id"], row["email"]), "user": {"id": row["id"], "email": row["email"], "name": row["name"]}}
+    return {"token": make_token(row["id"], row["email"], row["name"]), "user": {"id": row["id"], "email": row["email"], "name": row["name"]}}
