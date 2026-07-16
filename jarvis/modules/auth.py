@@ -108,7 +108,8 @@ def _send_otp_email(email: str, code: str) -> bool:
 
 
 def signup(email: str, password: str, name: str) -> dict:
-    """Initiate signup — sends OTP for email verification."""
+    """Initiate signup — sends OTP for email verification.
+    If email already exists, auto-signin instead of erroring."""
     if not email or not password:
         return {"error": "Email and password required."}
     if len(password) < 6:
@@ -118,7 +119,8 @@ def signup(email: str, password: str, name: str) -> dict:
 
     existing = db.execute("SELECT id FROM users WHERE email = ?", [email])
     if existing:
-        return {"error": "Email already registered."}
+        # Email already registered — try to sign them in automatically
+        return signin(email, password)
 
     # Generate and store pending signup data
     code = _generate_otp()
@@ -189,13 +191,16 @@ def _complete_signup(email: str, password: str = None, name: str = None) -> dict
 
 
 def signin(email: str, password: str) -> dict:
+    if not email or not password:
+        return {"error": "Email and password required."}
+
     rows = db.execute("SELECT id, email, name, password_hash FROM users WHERE email = ?", [email])
     if not rows:
-        return {"error": "Invalid email or password."}
+        return {"error": "Account not found. Please sign up first."}
 
     row = rows[0]
     if not verify_password(password, row["password_hash"]):
-        return {"error": "Invalid email or password."}
+        return {"error": "Invalid password."}
 
     db.execute("UPDATE users SET last_login = ? WHERE id = ?", [time.strftime("%Y-%m-%dT%H:%M:%SZ"), row["id"]])
     return {"token": make_token(row["id"], row["email"], row["name"]), "user": {"id": row["id"], "email": row["email"], "name": row["name"]}}
