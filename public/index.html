@@ -549,15 +549,8 @@
 
     inp.addEventListener('keydown',e=>{if(e.key==='Enter')send()});
 
-    // Auth check — skip on Vercel (owner access), require on other domains
+    // Auth check — always require login
     (async()=>{
-      const isVercel=window.location.hostname.includes('vercel.app');
-      if(isVercel){
-        window.jm='chat';window.jt='owner';
-        statusEl.textContent='OPERATIONAL';orbSub.textContent='TAP TO TALK';
-        msg("Online. Ready, Sir.",'a');
-        return;
-      }
       try{const r=await fetch('/auth/status');const d=await r.json();
         showLoginScreen()}catch{msg("Connecting...",'a')}
     })();
