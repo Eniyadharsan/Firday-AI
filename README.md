@@ -1,6 +1,6 @@
-# J.A.R.V.I.S — Personal AI Assistant
+# F.R.I.D.A.Y — Personal AI Assistant
 
-A personal AI assistant inspired by Tony Stark's JARVIS. Voice-enabled with real-time web data, music streaming, image/video generation, document intelligence, research reports, and multi-agent orchestration — all wrapped in a cosmic universe interface with a Canvas-rendered particle sphere orb.
+A personal AI assistant inspired by Tony Stark's FRIDAY. Voice-enabled with real-time web data, music streaming, image/video generation, document intelligence, research reports, and multi-agent orchestration — all wrapped in a cosmic universe interface with a Canvas-rendered particle sphere orb.
 
 ## Features
 
@@ -11,7 +11,7 @@ A personal AI assistant inspired by Tony Stark's JARVIS. Voice-enabled with real
 - **Task Planner** — Break goals into actionable steps with progress tracking
 
 ### Voice & Interface
-- **Voice Interaction** — Tap-to-talk with speech recognition, JARVIS speaks back via TTS
+- **Voice Interaction** — Tap-to-talk with speech recognition, FRIDAY speaks back via TTS
 - **Speech-Rate Pulsation** — The orb reacts in real-time to speech cadence (word boundary events)
 - **Cosmic Universe UI** — Pure black space background, twinkling starfield, canvas particle sphere
 - **Canvas Orb** — 1800-point organic particle sphere with flowing energy, fiery rays, dust cloud
@@ -65,8 +65,8 @@ A personal AI assistant inspired by Tony Stark's JARVIS. Voice-enabled with real
 
 ```bash
 # Clone the repository
-git clone https://github.com/Eniyadharsan/Jarvis-AI.git
-cd Jarvis-AI
+git clone https://github.com/Eniyadharsan/Friday-AI.git
+cd Friday-AI
 
 # Create virtual environment
 python -m venv .venv
@@ -92,8 +92,8 @@ Open **http://localhost:7860** in your browser.
 ### Docker
 
 ```bash
-docker build -t jarvis .
-docker run -p 7860:7860 --env-file .env jarvis
+docker build -t friday .
+docker run -p 7860:7860 --env-file .env friday
 ```
 
 ## Environment Variables
@@ -102,7 +102,7 @@ docker run -p 7860:7860 --env-file .env jarvis
 |----------|----------|---------|-------------|
 | `CEREBRAS_API_KEY` | Yes | — | Cerebras AI API key |
 | `PORT` | No | `7860` | Server port |
-| `JWT_SECRET` | No | `jarvis-secret-change-in-prod` | JWT signing secret (change in production) |
+| `JWT_SECRET` | No | `friday-secret-change-in-prod` | JWT signing secret (change in production) |
 | `TURSO_DATABASE_URL` | No | — | Turso database URL (falls back to local SQLite) |
 | `TURSO_AUTH_TOKEN` | No | — | Turso auth token |
 | `RESEND_API_KEY` | No | — | Resend API key for email OTP verification |
@@ -147,7 +147,7 @@ docker run -p 7860:7860 --env-file .env jarvis
 ├── requirements.txt          # Python dependencies
 ├── Dockerfile                # Docker deployment config
 ├── .env.example              # Environment variable template
-├── jarvis/
+├── friday/
 │   ├── config.py             # Configuration (env vars, paths)
 │   ├── db.py                 # Database layer (Turso/SQLite)
 │   ├── system_prompt.py      # AI system prompt
@@ -193,8 +193,8 @@ Push to `main` branch — auto-deploys via GitHub integration.
 
 ### Docker
 ```bash
-docker build -t jarvis .
-docker run -p 7860:7860 --env-file .env jarvis
+docker build -t friday .
+docker run -p 7860:7860 --env-file .env friday
 ```
 
 ### Manual (any server)

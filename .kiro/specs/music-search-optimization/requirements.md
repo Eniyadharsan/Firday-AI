@@ -2,7 +2,7 @@
 
 ## Introduction
 
-This feature optimizes the music search experience in the JARVIS AI assistant by adding real-time autocomplete suggestions, multi-language support for Indian and international languages, comprehensive religious/devotional music coverage, fuzzy matching with typo correction ("Did you mean...?"), and aggregation of results from multiple music sources beyond the current YouTube-only implementation.
+This feature optimizes the music search experience in the FRIDAY AI assistant by adding real-time autocomplete suggestions, multi-language support for Indian and international languages, comprehensive religious/devotional music coverage, fuzzy matching with typo correction ("Did you mean...?"), and aggregation of results from multiple music sources beyond the current YouTube-only implementation.
 
 ## Glossary
 

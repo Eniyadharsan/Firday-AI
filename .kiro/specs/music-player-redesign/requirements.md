@@ -2,12 +2,12 @@
 
 ## Introduction
 
-Redesign the JARVIS music player from a full-width bottom-fixed panel into a compact, floating "liquid glass" panel. The new player operates as an independent, draggable overlay that does not block chat interaction. It uses glassmorphism (frosted glass, transparency, backdrop blur) to match a modern aesthetic while remaining functional with now-playing info, playback controls, progress tracking, and song search.
+Redesign the FRIDAY music player from a full-width bottom-fixed panel into a compact, floating "liquid glass" panel. The new player operates as an independent, draggable overlay that does not block chat interaction. It uses glassmorphism (frosted glass, transparency, backdrop blur) to match a modern aesthetic while remaining functional with now-playing info, playback controls, progress tracking, and song search.
 
 ## Glossary
 
-- **Music_Panel**: The floating, compact music player UI container rendered as a glassmorphism overlay inside the JARVIS viewport.
-- **JARVIS_Chat**: The main conversational interface of the JARVIS assistant where users send and receive messages.
+- **Music_Panel**: The floating, compact music player UI container rendered as a glassmorphism overlay inside the FRIDAY viewport.
+- **FRIDAY_Chat**: The main conversational interface of the FRIDAY assistant where users send and receive messages.
 - **Toggle_Button**: A persistent UI element that opens or closes the Music_Panel independently of other UI state.
 - **Liquid_Glass_Style**: A visual design combining semi-transparent backgrounds, backdrop blur, subtle borders, and soft shadows to create a frosted-glass appearance.
 - **Playback_Controls**: The set of buttons for play/pause, next track, and previous track within the Music_Panel.
@@ -18,32 +18,32 @@ Redesign the JARVIS music player from a full-width bottom-fixed panel into a com
 
 ### Requirement 1: Floating Panel Positioning
 
-**User Story:** As a user, I want the music player to appear as a floating panel inside the JARVIS UI, so that it does not cover the full width of the screen or block the chat area.
+**User Story:** As a user, I want the music player to appear as a floating panel inside the FRIDAY UI, so that it does not cover the full width of the screen or block the chat area.
 
 #### Acceptance Criteria
 
 1. THE Music_Panel SHALL render as a fixed-position overlay with a maximum width of 400px and a maximum height of 320px rather than spanning the full viewport width.
 2. THE Music_Panel SHALL default to the bottom-right region of the viewport with a minimum margin of 16px from the right and bottom viewport edges.
-3. WHILE the Music_Panel is visible, THE JARVIS_Chat SHALL remain fully interactive and scrollable, with no pointer events on the chat area blocked by the panel.
+3. WHILE the Music_Panel is visible, THE FRIDAY_Chat SHALL remain fully interactive and scrollable, with no pointer events on the chat area blocked by the panel.
 4. THE Music_Panel SHALL render above chat content but below modal dialogs in the stacking order.
 5. IF the viewport width is less than 432px, THEN THE Music_Panel SHALL expand to fill the available viewport width minus 16px horizontal margin on each side.
 
 ### Requirement 2: Independent Toggle Visibility
 
-**User Story:** As a user, I want to open and close the music player independently, so that I can access it whenever I want without interrupting my conversation with JARVIS.
+**User Story:** As a user, I want to open and close the music player independently, so that I can access it whenever I want without interrupting my conversation with FRIDAY.
 
 #### Acceptance Criteria
 
-1. WHILE the Music_Panel is closed, THE Toggle_Button SHALL remain visible at a fixed position in the JARVIS UI without overlapping the Chat_Interface.
+1. WHILE the Music_Panel is closed, THE Toggle_Button SHALL remain visible at a fixed position in the FRIDAY UI without overlapping the Chat_Interface.
 2. WHEN the user clicks the Toggle_Button while the Music_Panel is hidden, THE Music_Panel SHALL transition from hidden to visible with a CSS transition completing within 300 milliseconds.
 3. WHEN the user clicks the close button on the Music_Panel while the Music_Panel is visible, THE Music_Panel SHALL transition from visible to hidden with a CSS transition completing within 300 milliseconds.
 4. WHILE the Music_Panel is hidden and the YouTube_IFrame_Player is actively playing audio, THE Toggle_Button SHALL display an animated visual indicator (such as a pulsing or glowing effect) distinguishable from the idle state to signal that playback is active.
 5. IF the user clicks the Toggle_Button while the panel transition animation is in progress, THEN THE System SHALL ignore the click until the current transition completes.
-6. THE Toggle_Button SHALL be visible in the JARVIS UI at all times after the Music_Player component has been initialized, regardless of whether a track has been loaded.
+6. THE Toggle_Button SHALL be visible in the FRIDAY UI at all times after the Music_Player component has been initialized, regardless of whether a track has been loaded.
 
 ### Requirement 3: Liquid Glass Visual Design
 
-**User Story:** As a user, I want the music player to have a frosted-glass aesthetic, so that it feels modern and blends into the JARVIS UI without harsh visual boundaries.
+**User Story:** As a user, I want the music player to have a frosted-glass aesthetic, so that it feels modern and blends into the FRIDAY UI without harsh visual boundaries.
 
 #### Acceptance Criteria
 
@@ -66,7 +66,7 @@ Redesign the JARVIS music player from a full-width bottom-fixed panel into a com
 3. THE Music_Panel SHALL contain Playback_Controls for previous, play/pause, and next track.
 4. THE Music_Panel SHALL contain a Progress_Bar whose filled width is proportional to the ratio of current playback position to total track duration.
 5. THE Music_Panel SHALL display current time and total duration labels in mm:ss format (or h:mm:ss for tracks 60 minutes or longer) positioned on the left and right sides of the Progress_Bar respectively.
-6. WHILE a track is loaded, THE Music_Panel SHALL remain visible and not obscure the JARVIS_Chat content area.
+6. WHILE a track is loaded, THE Music_Panel SHALL remain visible and not obscure the FRIDAY_Chat content area.
 
 ### Requirement 5: Integrated Song Search
 

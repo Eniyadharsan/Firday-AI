@@ -6,10 +6,10 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="theme-color" content="#0a1628">
   <link rel="manifest" href="/manifest.json">
-  <title>JARVIS</title>
+  <title>FRIDAY</title>
   <style>
     /* ═══════════════════════════════════════════════════════════════
-       JARVIS — Cosmic Universe Orb
+       FRIDAY — Cosmic Universe Orb
        Organic particle-mesh sphere (canvas-rendered) in blue
        centered in a deep space universe. Speech-rate pulsation.
     ═══════════════════════════════════════════════════════════════ */
@@ -369,7 +369,7 @@
   <canvas class="fx" id="fx"></canvas>
 
   <div class="hud-top">
-    <div class="left"><div class="dot"></div><span>J.A.R.V.I.S</span></div>
+    <div class="left"><div class="dot"></div><span>F.R.I.D.A.Y</span></div>
     <div style="display:flex;gap:8px;align-items:center">
       <button class="ib" onclick="newChat()" title="New chat" style="width:24px;height:24px"><svg viewBox="0 0 24 24" style="width:12px;height:12px;fill:#00e5ff"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg></button>
       <button class="ib" onclick="toggleHistory()" title="History" style="width:24px;height:24px"><svg viewBox="0 0 24 24" style="width:12px;height:12px;fill:#00e5ff"><path d="M13 3a9 9 0 0 0-9 9H1l3.89 3.89.07.14L9 12H6c0-3.87 3.13-7 7-7s7 3.13 7 7-3.13 7-7 7c-1.93 0-3.68-.79-4.94-2.06l-1.42 1.42A8.954 8.954 0 0 0 13 21a9 9 0 0 0 0-18zm-1 5v5l4.28 2.54.72-1.21-3.5-2.08V8H12z"/></svg></button>
@@ -433,7 +433,7 @@
       </div>
       <canvas id="orbCanvas"></canvas>
     </div>
-    <div class="label">JARVIS</div>
+    <div class="label">FRIDAY</div>
     <div class="sub-label" id="orbSub">TAP TO TALK</div>
   </div>
 
@@ -709,7 +709,7 @@
       login.innerHTML=`
         <canvas id="loginBg" style="position:absolute;inset:0;z-index:0"></canvas>
         <div style="position:relative;z-index:1;text-align:center;margin-bottom:30px">
-          <div style="font-size:36px;letter-spacing:8px;color:#00e5ff;font-weight:bold;text-shadow:0 0 20px rgba(0,229,255,0.4)">J.A.R.V.I.S</div>
+          <div style="font-size:36px;letter-spacing:8px;color:#00e5ff;font-weight:bold;text-shadow:0 0 20px rgba(0,229,255,0.4)">F.R.I.D.A.Y</div>
           <div style="font-size:11px;color:rgba(0,229,255,.25);margin-top:8px;letter-spacing:3px">PERSONAL AI SYSTEM</div>
         </div>
         <div style="position:relative;z-index:1;width:320px;padding:28px;border-radius:16px;background:rgba(0,10,30,.7);backdrop-filter:blur(20px);border:1px solid rgba(0,229,255,.08);display:flex;flex-direction:column;gap:12px;box-shadow:0 0 60px rgba(0,229,255,0.05)">
@@ -847,7 +847,7 @@
       msg(t,'u');statusEl.textContent='PROCESSING';reactor.classList.add('speaking');orbSub.textContent='ANALYZING';
       const tp=msg('...','t');
       try{const r=await fetch('/chat',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+(window.jt||'')},body:JSON.stringify({message:t,sessionId:sid})});
-        const d=await r.json();tp.remove();reactor.classList.remove('speaking');statusEl.textContent='OPERATIONAL';orbSub.textContent='SAY "HEY JARVIS"';
+        const d=await r.json();tp.remove();reactor.classList.remove('speaking');statusEl.textContent='OPERATIONAL';orbSub.textContent='SAY "HEY FRIDAY"';
         if(d.error){msg('Error: '+d.error,'a')}
         else{sid=d.sessionId;const reply=d.reply;
           if(reply.length>250){msg(reply.slice(0,180)+'...','a');openDet(reply)}
@@ -879,7 +879,7 @@
             speak("Research complete, Sir. Report is in the panel.");
           }
           else speak(reply.slice(0,400))}}
-      catch{tp.remove();reactor.classList.remove('speaking');statusEl.textContent='OPERATIONAL';orbSub.textContent='SAY "HEY JARVIS"';msg('Connection error','a')}}
+      catch{tp.remove();reactor.classList.remove('speaking');statusEl.textContent='OPERATIONAL';orbSub.textContent='SAY "HEY FRIDAY"';msg('Connection error','a')}}
 
     // TTS with speech-rate pulsation (drives canvas orb)
     let pulseFrame = null;
@@ -895,10 +895,10 @@
 
       u.onend=()=>{
         isSpeaking=false;orbTargetPulse=1;
-        reactor.classList.remove('speaking');orbSub.textContent='SAY "HEY JARVIS"';statusEl.textContent='OPERATIONAL';document.getElementById('stp').style.display='none';audio=null;startWakeListening()};
+        reactor.classList.remove('speaking');orbSub.textContent='SAY "HEY FRIDAY"';statusEl.textContent='OPERATIONAL';document.getElementById('stp').style.display='none';audio=null;startWakeListening()};
       audio=u;speechSynthesis.speak(u)}
     speechSynthesis.getVoices();
-    function stopTTS(){speechSynthesis.cancel();isSpeaking=false;orbTargetPulse=1;audio=null;reactor.classList.remove('speaking','listening');orbSub.textContent='SAY "HEY JARVIS"';statusEl.textContent='OPERATIONAL';document.getElementById('stp').style.display='none';startWakeListening()}
+    function stopTTS(){speechSynthesis.cancel();isSpeaking=false;orbTargetPulse=1;audio=null;reactor.classList.remove('speaking','listening');orbSub.textContent='SAY "HEY FRIDAY"';statusEl.textContent='OPERATIONAL';document.getElementById('stp').style.display='none';startWakeListening()}
 
     // Voice — simple tap-to-talk (no always-on wake word)
     if('webkitSpeechRecognition' in window||'SpeechRecognition' in window){

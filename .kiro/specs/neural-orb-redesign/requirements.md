@@ -2,15 +2,15 @@
 
 ## Introduction
 
-Redesign the JARVIS center orb animation from its current molecular/orbiting-electron structure to a neural-core aesthetic. The new design presents a large fiery blue sphere as the central element, surrounded by neural network connections, synapse firing patterns, particle trails, and cosmic energy emissions. The orb retains all existing interactive states (idle, speaking, listening) and the tap-to-talk interaction.
+Redesign the FRIDAY center orb animation from its current molecular/orbiting-electron structure to a neural-core aesthetic. The new design presents a large fiery blue sphere as the central element, surrounded by neural network connections, synapse firing patterns, particle trails, and cosmic energy emissions. The orb retains all existing interactive states (idle, speaking, listening) and the tap-to-talk interaction.
 
 ## Glossary
 
 - **Neural_Orb**: The redesigned center sphere element that replaces the current molecular structure, rendered as a fiery blue plasma core with neural network visual effects
 - **Orb_Container**: The `.center` container element that positions the Neural_Orb and its surrounding effects within the viewport
-- **Idle_State**: The default state when JARVIS is neither speaking nor listening, characterized by a gentle ambient glow and slow particle drift
-- **Speaking_State**: The active state when JARVIS is producing speech output, characterized by intensified energy emissions, faster neural firing, and expanded glow radius
-- **Listening_State**: The state when JARVIS is receiving voice input, characterized by a color shift toward green/teal and rhythmic pulsing
+- **Idle_State**: The default state when FRIDAY is neither speaking nor listening, characterized by a gentle ambient glow and slow particle drift
+- **Speaking_State**: The active state when FRIDAY is producing speech output, characterized by intensified energy emissions, faster neural firing, and expanded glow radius
+- **Listening_State**: The state when FRIDAY is receiving voice input, characterized by a color shift toward green/teal and rhythmic pulsing
 - **Neural_Connections**: Animated line elements radiating from the Neural_Orb that simulate synaptic pathways and neural network links
 - **Particle_System**: A collection of small animated elements representing cosmic dust, energy particles, and synapse sparks around the Neural_Orb
 - **Plasma_Effect**: The fiery blue glow and flame-like animation surrounding the core sphere, simulating blue fire or plasma energy
@@ -20,7 +20,7 @@ Redesign the JARVIS center orb animation from its current molecular/orbiting-ele
 
 ### Requirement 1: Core Sphere Rendering
 
-**User Story:** As a user, I want to see a large fiery blue sphere in the center of the interface, so that JARVIS feels like an intelligent neural core rather than a molecular diagram.
+**User Story:** As a user, I want to see a large fiery blue sphere in the center of the interface, so that FRIDAY feels like an intelligent neural core rather than a molecular diagram.
 
 #### Acceptance Criteria
 
@@ -65,7 +65,7 @@ Redesign the JARVIS center orb animation from its current molecular/orbiting-ele
 
 ### Requirement 5: Idle State Behavior
 
-**User Story:** As a user, I want the orb to display a calm, gentle animation when JARVIS is idle, so that I know the system is available but not actively processing.
+**User Story:** As a user, I want the orb to display a calm, gentle animation when FRIDAY is idle, so that I know the system is available but not actively processing.
 
 #### Acceptance Criteria
 
@@ -76,7 +76,7 @@ Redesign the JARVIS center orb animation from its current molecular/orbiting-ele
 
 ### Requirement 6: Speaking State Behavior
 
-**User Story:** As a user, I want the orb to become visually intense and active when JARVIS is speaking, so that I have clear visual feedback that the system is producing output.
+**User Story:** As a user, I want the orb to become visually intense and active when FRIDAY is speaking, so that I have clear visual feedback that the system is producing output.
 
 #### Acceptance Criteria
 
@@ -88,7 +88,7 @@ Redesign the JARVIS center orb animation from its current molecular/orbiting-ele
 
 ### Requirement 7: Listening State Behavior
 
-**User Story:** As a user, I want the orb to change appearance when JARVIS is listening to me, so that I have clear visual confirmation that my voice input is being received.
+**User Story:** As a user, I want the orb to change appearance when FRIDAY is listening to me, so that I have clear visual confirmation that my voice input is being received.
 
 #### Acceptance Criteria
 
@@ -120,7 +120,7 @@ Redesign the JARVIS center orb animation from its current molecular/orbiting-ele
 
 ### Requirement 10: Responsive Layout
 
-**User Story:** As a user accessing JARVIS on a mobile device, I want the neural orb to scale appropriately, so that the visual effect works across screen sizes.
+**User Story:** As a user accessing FRIDAY on a mobile device, I want the neural orb to scale appropriately, so that the visual effect works across screen sizes.
 
 #### Acceptance Criteria
 

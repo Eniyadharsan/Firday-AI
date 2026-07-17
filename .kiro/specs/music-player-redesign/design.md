@@ -2,7 +2,7 @@
 
 ## Overview
 
-This design transforms the JARVIS music player from its current full-width, bottom-fixed panel into a compact floating "liquid glass" overlay. The redesigned player uses glassmorphism (frosted glass with backdrop blur, semi-transparent backgrounds, soft borders and shadows) to feel modern and integrated within the JARVIS HUD aesthetic. The panel is independently togglable, non-blocking to the chat interface, responsive across viewport sizes, and animated with smooth scale/opacity transitions.
+This design transforms the FRIDAY music player from its current full-width, bottom-fixed panel into a compact floating "liquid glass" overlay. The redesigned player uses glassmorphism (frosted glass with backdrop blur, semi-transparent backgrounds, soft borders and shadows) to feel modern and integrated within the FRIDAY HUD aesthetic. The panel is independently togglable, non-blocking to the chat interface, responsive across viewport sizes, and animated with smooth scale/opacity transitions.
 
 ### Design Rationale
 

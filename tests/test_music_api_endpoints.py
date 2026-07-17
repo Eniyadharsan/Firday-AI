@@ -13,7 +13,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from jarvis.modules.music_models import AggregatedResult, Suggestion, TrackResult
+from friday.modules.music_models import AggregatedResult, Suggestion, TrackResult
 
 
 @pytest.fixture
@@ -29,9 +29,9 @@ def client():
 @pytest.fixture(autouse=True)
 def bypass_auth(monkeypatch):
     """Bypass the @require_auth decorator by making get_user_from_request return a valid user."""
-    from jarvis.modules import auth as auth_mod
+    from friday.modules import auth as auth_mod
 
-    monkeypatch.setattr(auth_mod, "get_user_from_request", lambda: {"sub": "test-user", "email": "test@jarvis"})
+    monkeypatch.setattr(auth_mod, "get_user_from_request", lambda: {"sub": "test-user", "email": "test@friday"})
 
 
 @pytest.fixture

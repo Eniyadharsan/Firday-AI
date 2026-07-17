@@ -1,5 +1,5 @@
 """
-Property-based tests for jarvis/db.py using Hypothesis.
+Property-based tests for friday/db.py using Hypothesis.
 Tests configuration, serialization, parsing, security, and fallback behavior.
 """
 
@@ -100,7 +100,7 @@ def test_property_3_parameter_type_serialization(value):
     For any Python value of type str, int, float, bool, or None,
     _serialize_param produces the correct typed dictionary format.
     """
-    from jarvis.db import _serialize_param
+    from friday.db import _serialize_param
 
     result = _serialize_param(value)
 
@@ -137,7 +137,7 @@ def test_property_3_unsupported_types(value):
     
     For unsupported types, _serialize_param produces text with str(val).
     """
-    from jarvis.db import _serialize_param
+    from friday.db import _serialize_param
 
     result = _serialize_param(value)
     assert result["type"] == "text"
@@ -200,12 +200,12 @@ def test_property_4_response_parsing(col_names, num_rows):
     mock_session.post.return_value = mock_response
 
     with patch.dict(os.environ, {"TURSO_DATABASE_URL": "https://test.turso.io", "TURSO_AUTH_TOKEN": "test-token"}):
-        with patch("jarvis.db.USE_TURSO", True):
-            with patch("jarvis.db.TURSO_URL", "https://test.turso.io"):
-                with patch("jarvis.db.TURSO_TOKEN", "test-token"):
-                    with patch("jarvis.db._session", mock_session):
-                        with patch("jarvis.db._pipeline_url", "https://test.turso.io/v2/pipeline"):
-                            from jarvis.db import _turso_execute
+        with patch("friday.db.USE_TURSO", True):
+            with patch("friday.db.TURSO_URL", "https://test.turso.io"):
+                with patch("friday.db.TURSO_TOKEN", "test-token"):
+                    with patch("friday.db._session", mock_session):
+                        with patch("friday.db._pipeline_url", "https://test.turso.io/v2/pipeline"):
+                            from friday.db import _turso_execute
                             result = _turso_execute("SELECT * FROM test", [])
 
     # Verify structure
@@ -244,17 +244,17 @@ def test_property_5_auth_token_never_logged(token):
     mock_response.text = "Internal Server Error"
 
     with patch.dict(os.environ, {"TURSO_DATABASE_URL": "https://test.turso.io", "TURSO_AUTH_TOKEN": token}):
-        with patch("jarvis.db.USE_TURSO", True):
-            with patch("jarvis.db.TURSO_URL", "https://test.turso.io"):
-                with patch("jarvis.db.TURSO_TOKEN", token):
+        with patch("friday.db.USE_TURSO", True):
+            with patch("friday.db.TURSO_URL", "https://test.turso.io"):
+                with patch("friday.db.TURSO_TOKEN", token):
                     mock_session = MagicMock()
                     mock_session.post.return_value = mock_response
-                    with patch("jarvis.db._session", mock_session):
-                        with patch("jarvis.db._pipeline_url", "https://test.turso.io/v2/pipeline"):
+                    with patch("friday.db._session", mock_session):
+                        with patch("friday.db._pipeline_url", "https://test.turso.io/v2/pipeline"):
                             # Capture loguru output
                             handler_id = logger.add(capture_log, format="{message}")
                             try:
-                                from jarvis.db import _turso_execute
+                                from friday.db import _turso_execute
                                 _turso_execute("SELECT 1", [])
                             finally:
                                 logger.remove(handler_id)
@@ -292,16 +292,16 @@ def test_property_6_error_response_log_truncation(response_body):
     mock_response.status_code = 500
     mock_response.text = response_body
 
-    with patch("jarvis.db.USE_TURSO", True):
-        with patch("jarvis.db.TURSO_URL", "https://test.turso.io"):
-            with patch("jarvis.db.TURSO_TOKEN", "safe-token"):
+    with patch("friday.db.USE_TURSO", True):
+        with patch("friday.db.TURSO_URL", "https://test.turso.io"):
+            with patch("friday.db.TURSO_TOKEN", "safe-token"):
                 mock_session = MagicMock()
                 mock_session.post.return_value = mock_response
-                with patch("jarvis.db._session", mock_session):
-                    with patch("jarvis.db._pipeline_url", "https://test.turso.io/v2/pipeline"):
+                with patch("friday.db._session", mock_session):
+                    with patch("friday.db._pipeline_url", "https://test.turso.io/v2/pipeline"):
                         handler_id = logger.add(capture_log, format="{message}")
                         try:
-                            from jarvis.db import _turso_execute
+                            from friday.db import _turso_execute
                             _turso_execute("SELECT 1", [])
                         finally:
                             logger.remove(handler_id)
@@ -345,8 +345,8 @@ def test_property_7_sql_injection_safety(value):
         temp_db = f.name
 
     try:
-        with patch("jarvis.db.LOCAL_DB", Path(temp_db)):
-            from jarvis.db import _local_execute
+        with patch("friday.db.LOCAL_DB", Path(temp_db)):
+            from friday.db import _local_execute
 
             # Create test table
             _local_execute("CREATE TABLE IF NOT EXISTS injection_test (id INTEGER PRIMARY KEY, data TEXT)", [])
@@ -369,10 +369,10 @@ def test_property_7_sql_injection_safety(value):
 def test_health_endpoint_returns_database_field_local():
     """Integration test: Health endpoint returns correct database field when Turso is not configured."""
     with patch.dict(os.environ, {"TURSO_DATABASE_URL": "", "TURSO_AUTH_TOKEN": ""}, clear=False):
-        with patch("jarvis.db.USE_TURSO", False):
+        with patch("friday.db.USE_TURSO", False):
             # Import app and create test client
             from app import app
-            with patch("jarvis.db.USE_TURSO", False):
+            with patch("friday.db.USE_TURSO", False):
                 client = app.test_client()
                 response = client.get("/health")
                 assert response.status_code == 200
@@ -383,7 +383,7 @@ def test_health_endpoint_returns_database_field_local():
 
 def test_health_endpoint_returns_database_field_turso():
     """Integration test: Health endpoint returns 'turso' when Turso is configured."""
-    with patch("jarvis.db.USE_TURSO", True):
+    with patch("friday.db.USE_TURSO", True):
         from app import app
         client = app.test_client()
         response = client.get("/health")
@@ -403,9 +403,9 @@ def test_init_tables_idempotent():
         temp_db = f.name
 
     try:
-        with patch("jarvis.db.LOCAL_DB", Path(temp_db)):
-            with patch("jarvis.db.USE_TURSO", False):
-                from jarvis.db import init_tables
+        with patch("friday.db.LOCAL_DB", Path(temp_db)):
+            with patch("friday.db.USE_TURSO", False):
+                from friday.db import init_tables
                 # Call twice - should not raise
                 init_tables()
                 init_tables()

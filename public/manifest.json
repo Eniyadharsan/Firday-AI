@@ -1,6 +1,6 @@
 {
-  "name": "JARVIS - Personal AI Assistant",
-  "short_name": "JARVIS",
+  "name": "FRIDAY - Personal AI Assistant",
+  "short_name": "FRIDAY",
   "description": "Your personal AI assistant with voice interaction",
   "start_url": "/",
   "display": "standalone",

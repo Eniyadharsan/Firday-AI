@@ -2,9 +2,9 @@
 
 ## Overview
 
-This design describes how the JARVIS AI assistant's music search will be enhanced from a single-source, keyword-only YouTube search into a multi-source, multi-language, intelligent search system with autocomplete, fuzzy matching, and devotional music awareness.
+This design describes how the FRIDAY AI assistant's music search will be enhanced from a single-source, keyword-only YouTube search into a multi-source, multi-language, intelligent search system with autocomplete, fuzzy matching, and devotional music awareness.
 
-The current architecture is simple: a Python Flask backend exposes `GET /music/search?q=...` which calls `search_tracks()` in `jarvis/modules/music.py`, querying YouTube Data API v3. The frontend has an inline search input (`.mp-search-input`) that fires on Enter and renders results in `.mp-results`. This design adds four new backend components (Autocomplete Service, Fuzzy Matcher, Music Aggregator, Language Processor) and a richer frontend search experience, while keeping the existing YouTube integration intact as one of multiple sources.
+The current architecture is simple: a Python Flask backend exposes `GET /music/search?q=...` which calls `search_tracks()` in `friday/modules/music.py`, querying YouTube Data API v3. The frontend has an inline search input (`.mp-search-input`) that fires on Enter and renders results in `.mp-results`. This design adds four new backend components (Autocomplete Service, Fuzzy Matcher, Music Aggregator, Language Processor) and a richer frontend search experience, while keeping the existing YouTube integration intact as one of multiple sources.
 
 ### Key Design Decisions
 
@@ -52,7 +52,7 @@ graph TD
 
 ## Components and Interfaces
 
-### 1. Autocomplete Service (`jarvis/modules/music_autocomplete.py`)
+### 1. Autocomplete Service (`friday/modules/music_autocomplete.py`)
 
 **Responsibility**: Provide fast, lightweight suggestions from cached data and live API results.
 
@@ -78,7 +78,7 @@ class Suggestion:
     source: str       # "youtube", "jiosaavn", "gaana"
 ```
 
-### 2. Fuzzy Matcher (`jarvis/modules/music_fuzzy.py`)
+### 2. Fuzzy Matcher (`friday/modules/music_fuzzy.py`)
 
 **Responsibility**: Detect typos, suggest corrections, and provide fuzzy-matched results.
 
@@ -104,7 +104,7 @@ class FuzzyMatcher:
 - `"ee"` ↔ `"i"`, `"oo"` ↔ `"u"`, `"th"` ↔ `"t"`, `"dh"` ↔ `"d"`
 - Word boundary collapsing: `"Tum hi"` → `"Tumhi"`
 
-### 3. Music Aggregator (`jarvis/modules/music_aggregator.py`)
+### 3. Music Aggregator (`friday/modules/music_aggregator.py`)
 
 **Responsibility**: Query multiple sources concurrently and merge/deduplicate results.
 
@@ -133,7 +133,7 @@ class MusicSourceAdapter(Protocol):
     def is_available(self) -> bool: ...
 ```
 
-### 4. Language Processor (`jarvis/modules/music_language.py`)
+### 4. Language Processor (`friday/modules/music_language.py`)
 
 **Responsibility**: Detect script, apply devotional keyword boosting, normalize queries.
 
@@ -155,7 +155,7 @@ class LanguageProcessor:
         ...
 ```
 
-### 5. Catalog Cache (`jarvis/modules/music_catalog.py`)
+### 5. Catalog Cache (`friday/modules/music_catalog.py`)
 
 **Responsibility**: Maintain a local index of recently seen track titles/artists for fuzzy matching.
 

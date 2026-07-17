@@ -4,8 +4,8 @@ import time
 import threading
 import pytest
 
-from jarvis.modules.music_catalog import CatalogCache
-from jarvis.modules.music_models import TrackResult
+from friday.modules.music_catalog import CatalogCache
+from friday.modules.music_models import TrackResult
 
 
 def _make_track(title: str, artist: str) -> TrackResult:

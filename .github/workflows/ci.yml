@@ -1,4 +1,4 @@
-name: JARVIS CI
+name: FRIDAY CI
 
 on:
   push:
@@ -20,11 +20,11 @@ jobs:
       - name: Run tests
         run: pytest tests/ -v --tb=short -k "not web_search" || true
       - name: Lint
-        run: pip install ruff && ruff check jarvis/ app.py --ignore E501,F841 || true
+        run: pip install ruff && ruff check friday/ app.py --ignore E501,F841 || true
 
   docker:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - name: Build Docker image
-        run: docker build -t jarvis-ai .
+        run: docker build -t friday-ai .

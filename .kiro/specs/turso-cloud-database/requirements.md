@@ -2,13 +2,13 @@
 
 ## Introduction
 
-This feature integrates Turso (cloud-hosted libSQL) as the primary persistent database for the Jarvis AI Assistant. The current deployment on Vercel uses ephemeral filesystem storage, meaning local SQLite data is lost on every redeploy. By connecting to a Turso cloud database, all user data (accounts, conversations, memories, documents, and plans) persists reliably across deployments and serverless function invocations.
+This feature integrates Turso (cloud-hosted libSQL) as the primary persistent database for the Friday AI Assistant. The current deployment on Vercel uses ephemeral filesystem storage, meaning local SQLite data is lost on every redeploy. By connecting to a Turso cloud database, all user data (accounts, conversations, memories, documents, and plans) persists reliably across deployments and serverless function invocations.
 
 ## Glossary
 
-- **Database_Module**: The `jarvis/db.py` module responsible for executing SQL queries against either Turso or local SQLite
+- **Database_Module**: The `friday/db.py` module responsible for executing SQL queries against either Turso or local SQLite
 - **Turso_Client**: The HTTP-based client that communicates with the Turso cloud database service via the pipeline API
-- **Local_SQLite**: The fallback SQLite database stored at `/tmp/jarvis-data/jarvis.db` used when Turso is unavailable
+- **Local_SQLite**: The fallback SQLite database stored at `/tmp/friday-data/friday.db` used when Turso is unavailable
 - **Connection_Config**: The set of environment variables (`TURSO_DATABASE_URL`, `TURSO_AUTH_TOKEN`) required to authenticate with Turso
 - **Schema_Initializer**: The component that creates required database tables on application startup
 - **Health_Endpoint**: The `/health` API route that reports system status including database connectivity
@@ -48,8 +48,8 @@ This feature integrates Turso (cloud-hosted libSQL) as the primary persistent da
 
 #### Acceptance Criteria
 
-1. WHEN Turso is unavailable and a query is executed, THE Database_Module SHALL execute the query against Local_SQLite at `/tmp/jarvis-data/jarvis.db`. Turso is considered unavailable when either the Turso connection environment variables are not configured, or the Turso HTTP request returns a non-200 status code, or the request fails due to a network error or exceeds a 10-second timeout.
-2. WHEN the local database path `/tmp/jarvis-data/` does not exist at module initialization, THE Database_Module SHALL create the directory including any missing parent directories before attempting database access.
+1. WHEN Turso is unavailable and a query is executed, THE Database_Module SHALL execute the query against Local_SQLite at `/tmp/friday-data/friday.db`. Turso is considered unavailable when either the Turso connection environment variables are not configured, or the Turso HTTP request returns a non-200 status code, or the request fails due to a network error or exceeds a 10-second timeout.
+2. WHEN the local database path `/tmp/friday-data/` does not exist at module initialization, THE Database_Module SHALL create the directory including any missing parent directories before attempting database access.
 3. WHEN a SELECT or PRAGMA query is executed locally, THE Database_Module SHALL return results as a list of dictionaries where each dictionary key is the column name and each value is the corresponding row value.
 4. WHEN an INSERT, UPDATE, or DELETE query is executed locally, THE Database_Module SHALL commit the transaction and return an empty list.
 5. IF a Local_SQLite query fails due to a database error, THEN THE Database_Module SHALL log the error at error severity level and return an empty list without raising an exception to the caller.

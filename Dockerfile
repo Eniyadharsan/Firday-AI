@@ -8,7 +8,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy code (this layer rebuilds on every code change — fast since deps are cached)
 COPY app.py .
-COPY jarvis/ ./jarvis/
+COPY friday/ ./friday/
 COPY public/ ./public/
 
 ENV PORT=7860

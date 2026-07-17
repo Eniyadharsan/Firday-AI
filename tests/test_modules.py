@@ -1,7 +1,7 @@
-"""Comprehensive tests for JARVIS modules."""
+"""Comprehensive tests for FRIDAY modules."""
 
 import pytest
-from jarvis.modules import music, image, search, news, auth, memory, video, agents
+from friday.modules import music, image, search, news, auth, memory, video, agents
 
 
 class TestAuth:

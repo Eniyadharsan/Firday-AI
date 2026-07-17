@@ -1,5 +1,5 @@
 """
-J.A.R.V.I.S - Personal AI Assistant
+F.R.I.D.A.Y - Personal AI Assistant
 Main application with proper security, rate limiting, and observability.
 """
 
@@ -11,10 +11,10 @@ from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from loguru import logger
 
-from jarvis.config import PORT
-from jarvis.system_prompt import get_system_prompt
-from jarvis.modules import llm, search, news, auth, music, memory, image, rag, mcp, video, agents, planner, long_memory, research
-from jarvis.modules.auth import require_auth, get_current_user_id
+from friday.config import PORT
+from friday.system_prompt import get_system_prompt
+from friday.modules import llm, search, news, auth, music, memory, image, rag, mcp, video, agents, planner, long_memory, research
+from friday.modules.auth import require_auth, get_current_user_id
 
 app = Flask(__name__, static_folder="public", static_url_path="")
 
@@ -26,15 +26,15 @@ def _get_search_engine():
     """Lazy-initialize and return the SearchEngine singleton."""
     global _search_engine
     if _search_engine is None:
-        from jarvis.modules.music_language import LanguageProcessor
-        from jarvis.modules.music_fuzzy import FuzzyMatcher
-        from jarvis.modules.music_catalog import CatalogCache
-        from jarvis.modules.music_aggregator import MusicAggregator
-        from jarvis.modules.music_autocomplete import AutocompleteService
-        from jarvis.modules.music_search_engine import SearchEngine
-        from jarvis.modules.music_youtube_adapter import YouTubeAdapter
-        from jarvis.modules.music_jiosaavn_adapter import JioSaavnAdapter
-        from jarvis.modules.music_gaana_adapter import GaanaAdapter
+        from friday.modules.music_language import LanguageProcessor
+        from friday.modules.music_fuzzy import FuzzyMatcher
+        from friday.modules.music_catalog import CatalogCache
+        from friday.modules.music_aggregator import MusicAggregator
+        from friday.modules.music_autocomplete import AutocompleteService
+        from friday.modules.music_search_engine import SearchEngine
+        from friday.modules.music_youtube_adapter import YouTubeAdapter
+        from friday.modules.music_jiosaavn_adapter import JioSaavnAdapter
+        from friday.modules.music_gaana_adapter import GaanaAdapter
 
         catalog_cache = CatalogCache()
         language_processor = LanguageProcessor()
@@ -111,7 +111,7 @@ def static_files(path: str):
 
 @app.route("/health")
 def health():
-    from jarvis.db import USE_TURSO
+    from friday.db import USE_TURSO
     return jsonify({"status": "running", "version": "2.1", "auth": "JWT", "rateLimit": "30/min on chat", "database": "turso" if USE_TURSO else "local_sqlite"})
 
 
@@ -482,5 +482,5 @@ if __name__ == "__main__":
     # Bind to 0.0.0.0 only in container/cloud environments (Vercel, Docker, Railway)
     # Default to localhost for local development (avoids exposing to all interfaces)
     host = os.getenv("HOST", "127.0.0.1")
-    logger.info(f"JARVIS v2.1 starting on {host}:{PORT}")
+    logger.info(f"FRIDAY v2.1 starting on {host}:{PORT}")
     app.run(host=host, port=PORT, debug=False)

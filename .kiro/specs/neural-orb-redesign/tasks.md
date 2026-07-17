@@ -80,7 +80,7 @@ Replace the current molecular/orbiting-electron orb structure in `public/index.h
     - Add `.neural-orb` element inside `#reactor`
     - Add `.neural-connections` container with 8 `.connection` elements (each containing a `.pulse` child), using varied `--angle` (0deg, 45deg, 90deg, 135deg, 180deg, 225deg, 270deg, 315deg) and varied `--length` values
     - Add `.particle-system` container with 20 `.particle` elements using varied `--size`, `--delay`, `--duration`, and `--start-angle` custom properties
-    - Preserve `.label` (JARVIS) and `.sub-label` (TAP TO TALK) elements below the orb
+    - Preserve `.label` (FRIDAY) and `.sub-label` (TAP TO TALK) elements below the orb
     - _Requirements: 9.1, 9.4, 12.1, 12.2, 12.3, 12.4_
 
   - [x] 5.2 Remove old molecular CSS styles

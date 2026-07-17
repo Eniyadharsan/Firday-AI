@@ -5,8 +5,8 @@ from unittest.mock import MagicMock, PropertyMock
 
 import pytest
 
-from jarvis.modules.music_aggregator import MusicAggregator, _SOURCE_PRIORITY
-from jarvis.modules.music_models import (
+from friday.modules.music_aggregator import MusicAggregator, _SOURCE_PRIORITY
+from friday.modules.music_models import (
     AggregatedResult,
     SearchContext,
     TrackResult,

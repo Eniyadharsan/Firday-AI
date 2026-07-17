@@ -5,8 +5,8 @@ from unittest.mock import patch, MagicMock
 import pytest
 import requests
 
-from jarvis.modules.music_jiosaavn_adapter import JioSaavnAdapter
-from jarvis.modules.music_models import TrackResult
+from friday.modules.music_jiosaavn_adapter import JioSaavnAdapter
+from friday.modules.music_models import TrackResult
 
 
 @pytest.fixture
@@ -60,7 +60,7 @@ class TestIsAvailable:
 
 
 class TestSearch:
-    @patch("jarvis.modules.music_jiosaavn_adapter.requests.get")
+    @patch("friday.modules.music_jiosaavn_adapter.requests.get")
     def test_successful_search(self, mock_get, adapter):
         mock_response = MagicMock()
         mock_response.json.return_value = _mock_api_response([
@@ -85,7 +85,7 @@ class TestSearch:
         assert track.match_score == 0.0
         assert "500x500" in track.thumbnail_url
 
-    @patch("jarvis.modules.music_jiosaavn_adapter.requests.get")
+    @patch("friday.modules.music_jiosaavn_adapter.requests.get")
     def test_uses_correct_api_params(self, mock_get, adapter):
         mock_response = MagicMock()
         mock_response.json.return_value = _mock_api_response([])
@@ -100,21 +100,21 @@ class TestSearch:
             timeout=5,
         )
 
-    @patch("jarvis.modules.music_jiosaavn_adapter.requests.get")
+    @patch("friday.modules.music_jiosaavn_adapter.requests.get")
     def test_timeout_returns_empty_list(self, mock_get, adapter):
         mock_get.side_effect = requests.exceptions.Timeout()
 
         results = adapter.search("any query")
         assert results == []
 
-    @patch("jarvis.modules.music_jiosaavn_adapter.requests.get")
+    @patch("friday.modules.music_jiosaavn_adapter.requests.get")
     def test_connection_error_returns_empty_list(self, mock_get, adapter):
         mock_get.side_effect = requests.exceptions.ConnectionError()
 
         results = adapter.search("any query")
         assert results == []
 
-    @patch("jarvis.modules.music_jiosaavn_adapter.requests.get")
+    @patch("friday.modules.music_jiosaavn_adapter.requests.get")
     def test_http_error_returns_empty_list(self, mock_get, adapter):
         mock_response = MagicMock()
         mock_response.raise_for_status.side_effect = requests.exceptions.HTTPError(
@@ -125,7 +125,7 @@ class TestSearch:
         results = adapter.search("any query")
         assert results == []
 
-    @patch("jarvis.modules.music_jiosaavn_adapter.requests.get")
+    @patch("friday.modules.music_jiosaavn_adapter.requests.get")
     def test_invalid_json_returns_empty_list(self, mock_get, adapter):
         mock_response = MagicMock()
         mock_response.raise_for_status = MagicMock()
@@ -135,7 +135,7 @@ class TestSearch:
         results = adapter.search("any query")
         assert results == []
 
-    @patch("jarvis.modules.music_jiosaavn_adapter.requests.get")
+    @patch("friday.modules.music_jiosaavn_adapter.requests.get")
     def test_missing_id_skips_track(self, mock_get, adapter):
         mock_response = MagicMock()
         mock_response.json.return_value = _mock_api_response([
@@ -147,7 +147,7 @@ class TestSearch:
         results = adapter.search("test")
         assert results == []
 
-    @patch("jarvis.modules.music_jiosaavn_adapter.requests.get")
+    @patch("friday.modules.music_jiosaavn_adapter.requests.get")
     def test_missing_name_skips_track(self, mock_get, adapter):
         mock_response = MagicMock()
         mock_response.json.return_value = _mock_api_response([
@@ -159,7 +159,7 @@ class TestSearch:
         results = adapter.search("test")
         assert results == []
 
-    @patch("jarvis.modules.music_jiosaavn_adapter.requests.get")
+    @patch("friday.modules.music_jiosaavn_adapter.requests.get")
     def test_respects_max_results(self, mock_get, adapter):
         tracks = [_sample_track_data(track_id=f"id_{i}", name=f"Song {i}") for i in range(10)]
         mock_response = MagicMock()
@@ -170,7 +170,7 @@ class TestSearch:
         results = adapter.search("songs", max_results=3)
         assert len(results) == 3
 
-    @patch("jarvis.modules.music_jiosaavn_adapter.requests.get")
+    @patch("friday.modules.music_jiosaavn_adapter.requests.get")
     def test_fallback_artist_from_primaryArtists_field(self, mock_get, adapter):
         """Test fallback when artists.primary is empty but primaryArtists exists."""
         mock_response = MagicMock()
@@ -192,7 +192,7 @@ class TestSearch:
         assert len(results) == 1
         assert results[0].artist == "Fallback Artist"
 
-    @patch("jarvis.modules.music_jiosaavn_adapter.requests.get")
+    @patch("friday.modules.music_jiosaavn_adapter.requests.get")
     def test_handles_image_as_string(self, mock_get, adapter):
         """Test handling when image field is a plain string URL."""
         mock_response = MagicMock()
@@ -213,7 +213,7 @@ class TestSearch:
         assert len(results) == 1
         assert results[0].thumbnail_url == "https://img.com/direct.jpg"
 
-    @patch("jarvis.modules.music_jiosaavn_adapter.requests.get")
+    @patch("friday.modules.music_jiosaavn_adapter.requests.get")
     def test_duration_none_when_missing(self, mock_get, adapter):
         mock_response = MagicMock()
         mock_response.json.return_value = _mock_api_response([
@@ -232,7 +232,7 @@ class TestSearch:
         assert len(results) == 1
         assert results[0].duration_seconds is None
 
-    @patch("jarvis.modules.music_jiosaavn_adapter.requests.get")
+    @patch("friday.modules.music_jiosaavn_adapter.requests.get")
     def test_request_exception_returns_empty_list(self, mock_get, adapter):
         mock_get.side_effect = requests.exceptions.RequestException("generic error")
 

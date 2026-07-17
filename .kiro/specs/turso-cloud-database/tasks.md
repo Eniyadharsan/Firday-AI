@@ -2,7 +2,7 @@
 
 ## Task 1: Implement Turso Configuration and URL Normalization
 
-- [x] Add `TURSO_DATABASE_URL` and `TURSO_AUTH_TOKEN` reading from environment variables with empty string defaults in `jarvis/db.py`
+- [x] Add `TURSO_DATABASE_URL` and `TURSO_AUTH_TOKEN` reading from environment variables with empty string defaults in `friday/db.py`
 - [x] Implement URL scheme normalization: replace `libsql://` with `https://`, leave `https://` unchanged
 - [x] Set `USE_TURSO = True` only when both env vars are non-empty and contain non-whitespace characters (use `.strip()` check)
 - [x] Ensure no hardcoded or default credentials exist
@@ -35,7 +35,7 @@
 
 ## Task 4: Implement Local SQLite Fallback and execute_insert
 
-- [x] Ensure `/tmp/jarvis-data/` directory is created with `mkdir(parents=True, exist_ok=True)` at module init
+- [x] Ensure `/tmp/friday-data/` directory is created with `mkdir(parents=True, exist_ok=True)` at module init
 - [x] Implement `_local_execute()` with parameterized query execution (prevents SQL injection)
 - [x] For SELECT/PRAGMA: return list of dicts with column-name keys
 - [x] For INSERT/UPDATE/DELETE/CREATE: commit transaction and return empty list
@@ -56,7 +56,7 @@
 ## Task 6: Update Health Endpoint and Remove libsql-experimental Dependency
 
 - [x] Update `/health` route in `app.py` to include `"database": "turso" if USE_TURSO else "local_sqlite"` field
-- [x] Import `USE_TURSO` from `jarvis.db` in the health endpoint
+- [x] Import `USE_TURSO` from `friday.db` in the health endpoint
 - [x] Remove `libsql-experimental==0.0.68` from `requirements.txt`
 - [x] Add `hypothesis` to `requirements.txt` for property-based testing
 - [x] Ensure `requests` is already in requirements.txt (it is)

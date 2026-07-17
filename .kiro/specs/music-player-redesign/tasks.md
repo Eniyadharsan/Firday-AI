@@ -2,7 +2,7 @@
 
 ## Overview
 
-Refactor the JARVIS music player from a full-width bottom-fixed bar into a compact floating "liquid glass" overlay panel. The implementation restructures the existing `MusicPlayer` class and DOM layout in `public/index.html`, adds a `PanelManager` for animation state, a `MusicToggleButton` for independent visibility control, and applies glassmorphism CSS. All backend endpoints remain unchanged.
+Refactor the FRIDAY music player from a full-width bottom-fixed bar into a compact floating "liquid glass" overlay panel. The implementation restructures the existing `MusicPlayer` class and DOM layout in `public/index.html`, adds a `PanelManager` for animation state, a `MusicToggleButton` for independent visibility control, and applies glassmorphism CSS. All backend endpoints remain unchanged.
 
 ## Tasks
 

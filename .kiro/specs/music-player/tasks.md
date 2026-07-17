@@ -2,18 +2,18 @@
 
 ## Overview
 
-This plan implements an embedded music player for the Jarvis AI Assistant, replacing the current "open YouTube in a new tab" behavior with an in-app player using the YouTube IFrame API. The implementation covers: enhancing the backend music module with YouTube Data API search, adding a `/music/search` endpoint, updating the `/chat` response for music requests, and building a full Now Playing UI with playback controls, search, and queue management in vanilla JavaScript.
+This plan implements an embedded music player for the Friday AI Assistant, replacing the current "open YouTube in a new tab" behavior with an in-app player using the YouTube IFrame API. The implementation covers: enhancing the backend music module with YouTube Data API search, adding a `/music/search` endpoint, updating the `/chat` response for music requests, and building a full Now Playing UI with playback controls, search, and queue management in vanilla JavaScript.
 
 ## Tasks
 
 - [x] 1. Enhance backend music module with search and parsing
-  - [x] 1.1 Add `search_tracks` function to `jarvis/modules/music.py`
+  - [x] 1.1 Add `search_tracks` function to `friday/modules/music.py`
     - Implement YouTube Data API v3 search using the API key from environment
     - Return a list of up to 10 track dicts with keys: `video_id`, `title`, `artist`, `thumbnail_url`
     - Handle API errors gracefully (missing key, rate limits, network failures)
     - _Requirements: 6.1, 6.2, 6.3_
 
-  - [x] 1.2 Add `extract_artist_title` function to `jarvis/modules/music.py`
+  - [x] 1.2 Add `extract_artist_title` function to `friday/modules/music.py`
     - Parse YouTube video titles into (artist, title) tuples
     - Handle common patterns: "Artist - Title", "Title by Artist", "Artist: Title"
     - Fall back to full title as title and "Unknown Artist" when pattern not recognized
@@ -25,15 +25,15 @@ This plan implements an embedded music player for the Jarvis AI Assistant, repla
     - Keep backward compatibility with existing detection
     - _Requirements: 1.1_
 
-  - [ ]* 1.4 Write property tests for `extract_artist_title` (Python/Hypothesis)
+  - [x] 1.4 Write property tests for `extract_artist_title` (Python/Hypothesis)
     - **Property 1: Artist/Title Parsing Round-Trip**
     - **Validates: Requirements 1.1, 6.2**
 
-  - [ ]* 1.5 Write property tests for `is_music_request` (Python/Hypothesis)
+  - [x] 1.5 Write property tests for `is_music_request` (Python/Hypothesis)
     - **Property 2: Music Request Detection Consistency**
     - **Validates: Requirements 1.1**
 
-  - [ ]* 1.6 Write property tests for `search_tracks` response structure (Python/Hypothesis)
+  - [x] 1.6 Write property tests for `search_tracks` response structure (Python/Hypothesis)
     - **Property 3: Search Response Structure Invariant**
     - Mock the YouTube Data API to test response structure guarantees
     - **Validates: Requirements 4.2, 6.2, 6.3**
@@ -53,13 +53,13 @@ This plan implements an embedded music player for the Jarvis AI Assistant, repla
     - Fall back to error message if no results found
     - _Requirements: 1.1, 1.2, 1.3, 1.4_
 
-  - [ ]* 2.3 Write unit tests for `/music/search` endpoint
+  - [x] 2.3 Write unit tests for `/music/search` endpoint
     - Test valid query returns 200 with correct structure
     - Test empty query returns 400
     - Test unauthenticated request returns 401
     - _Requirements: 6.1, 6.4, 6.5_
 
-  - [ ]* 2.4 Write unit tests for updated `/chat` music response
+  - [x] 2.4 Write unit tests for updated `/chat` music response
     - Test music request returns `play_music_embed` action with track object
     - Test no results case returns error message in reply
     - _Requirements: 1.1, 1.2, 1.3, 1.4_
@@ -120,27 +120,27 @@ This plan implements an embedded music player for the Jarvis AI Assistant, repla
     - Disable next/prev when at queue boundaries
     - _Requirements: 3.1, 3.2, 3.3, 3.4, 3.5, 3.6, 3.7_
 
-  - [ ]* 5.5 Write property tests for queue navigation (JavaScript/fast-check)
+  - [x] 5.5 Write property tests for queue navigation (JavaScript/fast-check)
     - **Property 7: Queue Navigation Correctness**
     - **Validates: Requirements 3.4, 3.5, 3.6, 3.7, 5.3**
 
-  - [ ]* 5.6 Write property tests for queue replacement (JavaScript/fast-check)
+  - [x] 5.6 Write property tests for queue replacement (JavaScript/fast-check)
     - **Property 8: Queue Replacement on New Load**
     - **Validates: Requirements 7.1, 7.2, 7.4**
 
-  - [ ]* 5.7 Write property test for queue index invariant (JavaScript/fast-check)
+  - [x] 5.7 Write property test for queue index invariant (JavaScript/fast-check)
     - **Property 9: Queue Index Invariant**
     - **Validates: Requirements 7.3**
 
-  - [ ]* 5.8 Write property test for togglePlayPause involution (JavaScript/fast-check)
+  - [x] 5.8 Write property test for togglePlayPause involution (JavaScript/fast-check)
     - **Property 6: Play/Pause Toggle is Its Own Inverse**
     - **Validates: Requirements 3.2, 3.3**
 
-  - [ ]* 5.9 Write property test for progress bar calculation (JavaScript/fast-check)
+  - [x] 5.9 Write property test for progress bar calculation (JavaScript/fast-check)
     - **Property 5: Progress Bar Calculation**
     - **Validates: Requirements 2.2**
 
-  - [ ]* 5.10 Write property test for search selection populating queue (JavaScript/fast-check)
+  - [x] 5.10 Write property test for search selection populating queue (JavaScript/fast-check)
     - **Property 10: Search Selection Populates Queue**
     - **Validates: Requirements 4.5**
 
@@ -172,13 +172,13 @@ This plan implements an embedded music player for the Jarvis AI Assistant, repla
     - Show "Search failed" message on network errors during search
     - _Requirements: 5.5, 1.4_
 
-  - [ ]* 7.5 Write integration tests for end-to-end chat → playback flow
+  - [x] 7.5 Write integration tests for end-to-end chat → playback flow
     - Send "play bohemian rhapsody" via `/chat`, verify response structure
     - Test search → select → play flow
     - Test auth enforcement on music endpoints
     - _Requirements: 1.1, 1.2, 4.4, 6.5_
 
-  - [ ]* 7.6 Write property test for Now Playing rendering (JavaScript/fast-check)
+  - [x] 7.6 Write property test for Now Playing rendering (JavaScript/fast-check)
     - **Property 4: Now Playing Renders All Track Fields**
     - **Validates: Requirements 1.3, 2.1**
 

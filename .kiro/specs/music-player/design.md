@@ -2,7 +2,7 @@
 
 ## Overview
 
-This design adds an embedded music player to the Jarvis AI Assistant, replacing the current behavior of opening YouTube search URLs in new tabs. The player uses the YouTube IFrame Player API for in-browser audio/video playback and presents an Apple Music-inspired "Now Playing" UI with playback controls, search, and queue management.
+This design adds an embedded music player to the Friday AI Assistant, replacing the current behavior of opening YouTube search URLs in new tabs. The player uses the YouTube IFrame Player API for in-browser audio/video playback and presents an Apple Music-inspired "Now Playing" UI with playback controls, search, and queue management.
 
 The implementation spans two layers:
 - **Backend**: A new `/music/search` Flask endpoint that queries YouTube and returns structured track metadata (video IDs, titles, artists, thumbnails).
@@ -48,7 +48,7 @@ flowchart TD
 
 ### Backend Components
 
-#### `jarvis/modules/music.py` (Enhanced)
+#### `friday/modules/music.py` (Enhanced)
 
 ```python
 # Existing functions remain (is_music_request, extract_song_from_reply)

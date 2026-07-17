@@ -2,24 +2,24 @@
 
 ## Introduction
 
-This feature adds a fully functional, embedded music player to the Jarvis AI Assistant. Currently, the music module detects play requests and returns YouTube search URLs that open in a new tab — the song never actually plays within Jarvis. This feature replaces that behavior with an in-app music player featuring an Apple Music-inspired "Now Playing" UI, functional playback controls, search capability, and embedded audio/video playback via the YouTube IFrame API. The player is accessible from the chat interface and operates within the existing Flask + vanilla JS frontend deployed on Vercel.
+This feature adds a fully functional, embedded music player to the Friday AI Assistant. Currently, the music module detects play requests and returns YouTube search URLs that open in a new tab — the song never actually plays within Friday. This feature replaces that behavior with an in-app music player featuring an Apple Music-inspired "Now Playing" UI, functional playback controls, search capability, and embedded audio/video playback via the YouTube IFrame API. The player is accessible from the chat interface and operates within the existing Flask + vanilla JS frontend deployed on Vercel.
 
 ## Glossary
 
-- **Music_Player**: The embedded frontend component responsible for rendering the Now Playing screen, playback controls, and search interface within the Jarvis UI
+- **Music_Player**: The embedded frontend component responsible for rendering the Now Playing screen, playback controls, and search interface within the Friday UI
 - **YouTube_IFrame_Player**: The YouTube IFrame Player API instance that handles actual audio/video playback within the browser
 - **Now_Playing_Screen**: The visual panel displaying album art, track title, artist name, and playback progress for the currently playing track
 - **Playback_Controls**: The set of interactive buttons providing play/pause, previous track, and next track functionality
 - **Search_Interface**: The UI component allowing users to type a query and browse matching song results before selecting one to play
 - **Music_Backend**: The Flask backend endpoints responsible for searching songs and returning playable track metadata (video IDs, titles, thumbnails)
 - **Track_Queue**: An ordered list of tracks maintained by the Music_Player for sequential playback and previous/next navigation
-- **Chat_Interface**: The existing Jarvis chat input and message area where users issue natural language commands
+- **Chat_Interface**: The existing Friday chat input and message area where users issue natural language commands
 
 ## Requirements
 
 ### Requirement 1: Chat-Triggered Music Playback
 
-**User Story:** As a user, I want to ask Jarvis to play a song via the chat interface, so that music starts playing directly within the app without opening external tabs.
+**User Story:** As a user, I want to ask Friday to play a song via the chat interface, so that music starts playing directly within the app without opening external tabs.
 
 #### Acceptance Criteria
 
@@ -36,7 +36,7 @@ This feature adds a fully functional, embedded music player to the Jarvis AI Ass
 
 1. WHILE a track is playing, THE Now_Playing_Screen SHALL display the track thumbnail as album art, the track title, and the artist name
 2. WHILE a track is playing, THE Now_Playing_Screen SHALL display a progress bar indicating current playback position relative to total track duration
-3. THE Now_Playing_Screen SHALL use an Apple Music-inspired aesthetic with smooth animations, blurred background derived from album art, rounded corners, and a dark translucent panel consistent with the existing Jarvis HUD theme
+3. THE Now_Playing_Screen SHALL use an Apple Music-inspired aesthetic with smooth animations, blurred background derived from album art, rounded corners, and a dark translucent panel consistent with the existing Friday HUD theme
 4. WHEN no track is loaded, THE Now_Playing_Screen SHALL remain hidden and not occupy screen space
 
 ### Requirement 3: Playback Controls
@@ -68,7 +68,7 @@ This feature adds a fully functional, embedded music player to the Jarvis AI Ass
 
 ### Requirement 5: Embedded Audio Playback via YouTube
 
-**User Story:** As a user, I want the music to actually play within the Jarvis app, so that I do not need to leave the interface or open new browser tabs.
+**User Story:** As a user, I want the music to actually play within the Friday app, so that I do not need to leave the interface or open new browser tabs.
 
 #### Acceptance Criteria
 
@@ -88,7 +88,7 @@ This feature adds a fully functional, embedded music player to the Jarvis AI Ass
 2. WHEN the /music/search endpoint receives a valid query, THE Music_Backend SHALL return a JSON array of track objects each containing video_id, title, artist, and thumbnail_url fields
 3. THE Music_Backend SHALL return a maximum of 10 results per search query
 4. IF the /music/search endpoint receives an empty query, THEN THE Music_Backend SHALL return a 400 status code with an error message
-5. THE /music/search endpoint SHALL require authentication consistent with other Jarvis API endpoints
+5. THE /music/search endpoint SHALL require authentication consistent with other Friday API endpoints
 
 ### Requirement 7: Track Queue Management
 
@@ -103,7 +103,7 @@ This feature adds a fully functional, embedded music player to the Jarvis AI Ass
 
 ### Requirement 8: Responsive Layout and Integration
 
-**User Story:** As a user, I want the music player to fit within the existing Jarvis UI without breaking the layout, so that I can use chat and music features simultaneously.
+**User Story:** As a user, I want the music player to fit within the existing Friday UI without breaking the layout, so that I can use chat and music features simultaneously.
 
 #### Acceptance Criteria
 

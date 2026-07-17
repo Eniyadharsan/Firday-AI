@@ -1,10 +1,10 @@
 node_modules/
 dist/
-.jarvis-data/
+.friday-data/
 audio-output/
 *.mp3
 .env
-jarvis-mobile/node_modules/
+friday-mobile/node_modules/
 desktop-app/node_modules/
 desktop-app/dist/
 cloudflared.exe

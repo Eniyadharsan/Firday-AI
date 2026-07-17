@@ -4,13 +4,13 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from jarvis.modules.music_models import (
+from friday.modules.music_models import (
     AggregatedResult,
     SearchContext,
     Suggestion,
     TrackResult,
 )
-from jarvis.modules.music_search_engine import SearchEngine
+from friday.modules.music_search_engine import SearchEngine
 
 
 def _make_track(

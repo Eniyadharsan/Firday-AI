@@ -1,9 +1,9 @@
 /**
- * Service Worker for JARVIS PWA
+ * Service Worker for FRIDAY PWA
  * Enables offline shell caching and app-like behavior
  */
 
-const CACHE_NAME = 'jarvis-v1';
+const CACHE_NAME = 'friday-v1';
 const SHELL_FILES = [
   '/',
   '/manifest.json',

@@ -2,7 +2,7 @@
 
 ## Overview
 
-This design replaces the current molecular/orbiting-electron orb in the JARVIS interface with a neural-core aesthetic. The new design centers on a large fiery blue plasma sphere surrounded by neural network connections, cosmic particle systems, and synapse firing effects. The orb maintains all existing interactive states (idle, speaking, listening) and the tap-to-talk interaction via the same `handleOrb()` JavaScript function.
+This design replaces the current molecular/orbiting-electron orb in the FRIDAY interface with a neural-core aesthetic. The new design centers on a large fiery blue plasma sphere surrounded by neural network connections, cosmic particle systems, and synapse firing effects. The orb maintains all existing interactive states (idle, speaking, listening) and the tap-to-talk interaction via the same `handleOrb()` JavaScript function.
 
 The implementation is purely front-end: CSS animations, HTML structure changes within the `.center` container, and minimal JavaScript adjustments for state class management. The backend remains untouched.
 
@@ -21,7 +21,7 @@ The neural orb is implemented as a self-contained CSS animation system within th
 ```mermaid
 graph TD
     A[.center Container] --> B[#reactor - Neural Orb Core]
-    A --> C[.label - JARVIS]
+    A --> C[.label - FRIDAY]
     A --> D[.sub-label - TAP TO TALK]
     B --> E[.neural-orb - Plasma Sphere]
     B --> F[.neural-connections - Synapse Lines]

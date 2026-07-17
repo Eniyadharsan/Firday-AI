@@ -2,9 +2,9 @@
 
 ## Overview
 
-This design replaces the current database module (`jarvis/db.py`) with an improved implementation that communicates with Turso's cloud-hosted libSQL database via the HTTP Pipeline API (`/v2/pipeline`). The module uses only Python's `requests` library — no native binary dependencies — making it fully compatible with Vercel's serverless Python runtime.
+This design replaces the current database module (`friday/db.py`) with an improved implementation that communicates with Turso's cloud-hosted libSQL database via the HTTP Pipeline API (`/v2/pipeline`). The module uses only Python's `requests` library — no native binary dependencies — making it fully compatible with Vercel's serverless Python runtime.
 
-The architecture follows a primary/fallback pattern: Turso is the primary store for persistent data across deployments, while local SQLite at `/tmp/jarvis-data/jarvis.db` provides resilience when Turso is unreachable. All existing callers (`memory`, `auth`, `long_memory`, `rag`, `planner`) continue using the same `execute()` and `execute_insert()` API surface with no changes required.
+The architecture follows a primary/fallback pattern: Turso is the primary store for persistent data across deployments, while local SQLite at `/tmp/friday-data/friday.db` provides resilience when Turso is unreachable. All existing callers (`memory`, `auth`, `long_memory`, `rag`, `planner`) continue using the same `execute()` and `execute_insert()` API surface with no changes required.
 
 ### Key Design Decisions
 
@@ -17,13 +17,13 @@ The architecture follows a primary/fallback pattern: Turso is the primary store 
 
 ```mermaid
 graph TD
-    A[Flask Routes] --> B[jarvis/db.py]
+    A[Flask Routes] --> B[friday/db.py]
     B --> C{TURSO_DATABASE_URL & TURSO_AUTH_TOKEN set?}
     C -->|Yes| D[Turso HTTP Client]
     C -->|No| E[Local SQLite]
     D -->|POST /v2/pipeline| F[Turso Cloud Database]
     D -->|Error/Timeout| E
-    E --> G[/tmp/jarvis-data/jarvis.db]
+    E --> G[/tmp/friday-data/friday.db]
     
     H[config.py] -->|env vars| B
     I[Schema Initializer] -->|CREATE TABLE IF NOT EXISTS| B
@@ -59,7 +59,7 @@ sequenceDiagram
 
 ## Components and Interfaces
 
-### 1. Configuration (`jarvis/config.py`)
+### 1. Configuration (`friday/config.py`)
 
 Reads environment variables at import time. Already implemented — no changes needed.
 
@@ -68,7 +68,7 @@ Reads environment variables at import time. Already implemented — no changes n
 | `TURSO_DATABASE_URL` | str | `""` | Turso database URL (libsql:// or https://) |
 | `TURSO_AUTH_TOKEN` | str | `""` | Bearer token for Turso API authentication |
 
-### 2. Database Module (`jarvis/db.py`)
+### 2. Database Module (`friday/db.py`)
 
 The single module that owns all database I/O. Provides two public functions:
 
@@ -104,7 +104,7 @@ def _serialize_param(value: Any) -> dict:
 Handles local SQLite fallback operations.
 
 ```python
-LOCAL_DB: Path = Path("/tmp/jarvis-data/jarvis.db")
+LOCAL_DB: Path = Path("/tmp/friday-data/friday.db")
 
 def _local_execute(sql: str, params: list) -> list[dict]:
     """Execute query against local SQLite with parameterized execution."""
@@ -126,7 +126,7 @@ The existing `/health` route is updated to include database backend status:
 ```python
 @app.route("/health")
 def health():
-    from jarvis.db import USE_TURSO
+    from friday.db import USE_TURSO
     return jsonify({
         "status": "running",
         "version": "2.1",
