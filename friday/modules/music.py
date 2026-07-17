@@ -48,8 +48,15 @@ def detect_playback_control(message: str) -> str | None:
     if re.search(r"\b(pause|hold)\b", lower) and not re.search(r"\bplay\b", lower):
         return "pause"
 
-    # Stop: "stop music", "stop the song", "stop playing", "turn off the music"
-    if re.search(r"\b(stop|turn off|shut off|kill)\b", lower) and re.search(r"\b(music|song|track|playback|playing|it|tune)\b", lower):
+    # Stop: "stop", "stop music", "stop playing", "turn off the music", "shut it off"
+    if lower in ("stop", "stop it", "stop please", "please stop"):
+        return "stop"
+    if re.search(r"\bstop\b", lower) and re.search(r"\b(music|song|track|playback|playing|it|tune|this|that)\b", lower):
+        return "stop"
+    if re.search(r"\b(turn off|shut off|shut down|kill|switch off)\b", lower) and re.search(r"\b(music|song|track|playback|playing|it|tune|this|that)\b", lower):
+        return "stop"
+    # Split forms: "turn it off", "shut it off", "switch the music off"
+    if re.search(r"\b(turn|shut|switch)\b.*\boff\b", lower):
         return "stop"
 
     # Next: "next", "next song", "skip", "skip this", "play next"
