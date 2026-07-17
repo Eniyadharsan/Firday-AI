@@ -183,6 +183,25 @@ def chat():
         memory.save_message(user_id, session_id, "user", message)
         return jsonify(resp)
 
+    # --- Music playback control (pause/resume/stop/next/previous) ---
+    # Must be checked BEFORE is_music_request so "play"/"resume" aren't treated as new searches
+    _control = music.detect_playback_control(message)
+    if _control:
+        _control_replies = {
+            "pause": "Music paused, Sir. Standing by.",
+            "resume": "Resuming playback, Sir.",
+            "stop": "Playback stopped, Sir.",
+            "next": "Skipping to the next track, Sir.",
+            "previous": "Going back to the previous track, Sir.",
+        }
+        memory.save_message(user_id, session_id, "user", message)
+        return jsonify({
+            "reply": _control_replies[_control],
+            "sessionId": session_id,
+            "action": "control_music",
+            "control": _control,
+        })
+
     # --- Music ---
     if music.is_music_request(message):
         history.append({"role": "user", "content": message})

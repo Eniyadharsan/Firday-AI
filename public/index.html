@@ -865,6 +865,19 @@
             }
           }
           else if(d.action==='play_music'&&d.musicUrl)window.open(d.musicUrl,'_blank');
+          else if(d.action==='control_music'&&d.control){
+            const mp=window.musicPlayer;
+            if(mp){
+              switch(d.control){
+                case 'pause': mp.pause(); break;
+                case 'resume': mp.play(); break;
+                case 'stop': if(mp.pause)mp.pause(); if(mp.hide)mp.hide(); break;
+                case 'next': if(mp.next)mp.next(); break;
+                case 'previous': if(mp.previous)mp.previous(); break;
+              }
+            }
+            speak(reply.slice(0,120));
+          }
           else if(d.action==='show_image'&&d.imageUrl){
             openDet('<img src="'+d.imageUrl+'" style="width:100%;border-radius:8px;margin-bottom:10px"/><p style="color:rgba(0,229,255,.5);font-size:11px">'+d.imagePrompt+'</p>');
             speak("Here's your image, Sir.");

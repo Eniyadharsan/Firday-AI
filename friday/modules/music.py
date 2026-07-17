@@ -35,6 +35,40 @@ def is_music_request(message: str) -> bool:
     return False
 
 
+def detect_playback_control(message: str) -> str | None:
+    """Detect playback control commands (pause, resume, stop, next, previous).
+
+    Returns one of: 'pause', 'resume', 'stop', 'next', 'previous', or None.
+    These control an already-playing track and must be checked BEFORE
+    is_music_request so "play" for resume isn't treated as a new search.
+    """
+    lower = message.lower().strip()
+
+    # Pause: "pause", "pause music", "pause the song", "hold on"
+    if re.search(r"\b(pause|hold)\b", lower) and not re.search(r"\bplay\b", lower):
+        return "pause"
+
+    # Stop: "stop music", "stop the song", "stop playing", "turn off the music"
+    if re.search(r"\b(stop|turn off|shut off|kill)\b", lower) and re.search(r"\b(music|song|track|playback|playing|it|tune)\b", lower):
+        return "stop"
+
+    # Next: "next", "next song", "skip", "skip this", "play next"
+    if re.search(r"\b(next|skip)\b", lower) and not re.search(r"\bplay\s+\w+\s+\w", lower):
+        return "next"
+
+    # Previous: "previous", "go back", "last song", "previous track"
+    if re.search(r"\b(previous|prev|go back|last song|last track)\b", lower):
+        return "previous"
+
+    # Resume: "resume", "resume music", "continue", "unpause", "play" (bare)
+    if re.search(r"\b(resume|unpause|continue)\b", lower):
+        return "resume"
+    if lower in ("play", "play it", "play music", "play the music", "continue playing", "keep playing"):
+        return "resume"
+
+    return None
+
+
 def get_youtube_url(song_query: str) -> str:
     """Generate YouTube search URL for a song."""
     return f"https://www.youtube.com/results?search_query={quote(song_query)}"
