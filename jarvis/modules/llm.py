@@ -38,6 +38,8 @@ def generate(messages: list[dict[str, str]], max_tokens: int = None) -> str:
     """
     if not CEREBRAS_API_KEY:
         return "JARVIS needs CEREBRAS_API_KEY to function."
+    if CEREBRAS_API_KEY == "your-cerebras-api-key":
+        return "JARVIS needs a valid CEREBRAS_API_KEY. Get one from cloud.cerebras.ai"
 
     tokens = max_tokens or LLM_MAX_TOKENS
 
@@ -51,7 +53,7 @@ def generate(messages: list[dict[str, str]], max_tokens: int = None) -> str:
                     "max_tokens": tokens,
                     "temperature": LLM_TEMPERATURE,
                 },
-                timeout=12,
+                timeout=8,
             )
             if response.status_code == 429:
                 logger.warning(f"Rate limited on {model}, trying fallback...")
