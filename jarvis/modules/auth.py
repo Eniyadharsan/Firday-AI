@@ -212,5 +212,15 @@ def signin(email: str, password: str) -> dict:
     if not verify_password(password, row["password_hash"]):
         return {"error": "Invalid password."}
 
-    db.execute("UPDATE users SET last_login = ? WHERE id = ?", [time.strftime("%Y-%m-%dT%H:%M:%SZ"), row["id"]])
-    return {"token": make_token(row["id"], row["email"], row["name"]), "user": {"id": row["id"], "email": row["email"], "name": row["name"]}}
+    # Get clean display name — never expose sensitive data
+    user_name = row["name"] or ""
+    # Fix corrupted name: if name equals the password, or looks like a hash, reset it
+    if user_name == password or user_name.startswith("sha256:") or len(user_name) > 50:
+        user_name = email.split("@")[0]
+        # Fix in DB too
+        db.execute("UPDATE users SET name = ?, last_login = ? WHERE id = ?",
+                   [user_name, time.strftime("%Y-%m-%dT%H:%M:%SZ"), row["id"]])
+    else:
+        db.execute("UPDATE users SET last_login = ? WHERE id = ?", [time.strftime("%Y-%m-%dT%H:%M:%SZ"), row["id"]])
+
+    return {"token": make_token(row["id"], row["email"], user_name), "user": {"id": row["id"], "email": row["email"], "name": user_name}}
