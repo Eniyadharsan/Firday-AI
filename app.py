@@ -5,7 +5,6 @@ Main application with proper security, rate limiting, and observability.
 
 import re
 import time
-import threading
 from flask import Flask, request, jsonify, send_from_directory, Response
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
@@ -253,12 +252,8 @@ def chat():
     if len(history) > 60:
         history[:] = [history[0]] + history[-58:]
 
-    # Persist in background (don't block the response)
-    threading.Thread(
-        target=_background_save,
-        args=(user_id, session_id, message, reply),
-        daemon=True,
-    ).start()
+    # Persist synchronously — background threads don't survive on serverless (Vercel)
+    _background_save(user_id, session_id, message, reply)
 
     return jsonify({"reply": reply, "sessionId": session_id, "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ")})
 
