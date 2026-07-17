@@ -23,12 +23,43 @@ def get_history(user_id: str, session_id: str, limit: int = 50) -> list[dict[str
 
 
 def get_all_sessions(user_id: str) -> list[dict]:
-    """Get all conversation sessions for a user."""
+    """Get all conversation sessions for a user, most recently active first.
+
+    Each session includes a title (first user message) and last-activity time
+    so recent conversations surface at the top of the history list.
+    """
     rows = execute(
-        "SELECT DISTINCT session_id, MIN(timestamp) as started FROM conversations WHERE user_id = ? GROUP BY session_id ORDER BY started DESC LIMIT 20",
+        """SELECT session_id,
+                  MIN(timestamp) as started,
+                  MAX(timestamp) as last_active,
+                  COUNT(*) as msg_count
+           FROM conversations
+           WHERE user_id = ?
+           GROUP BY session_id
+           ORDER BY last_active DESC
+           LIMIT 50""",
         [user_id],
     )
-    return [{"session_id": r["session_id"], "started": r["started"]} for r in rows]
+
+    sessions = []
+    for r in rows:
+        session_id = r["session_id"]
+        # Fetch the first user message as a readable title
+        title_rows = execute(
+            "SELECT content FROM conversations WHERE user_id = ? AND session_id = ? AND role = 'user' ORDER BY id ASC LIMIT 1",
+            [user_id, session_id],
+        )
+        title = title_rows[0]["content"] if title_rows else "New conversation"
+        if len(title) > 40:
+            title = title[:40].rstrip() + "…"
+        sessions.append({
+            "session_id": session_id,
+            "started": r["started"],
+            "last_active": r["last_active"],
+            "title": title,
+            "msg_count": r["msg_count"],
+        })
+    return sessions
 
 
 def add_memory(user_id: str, content: str, category: str = "general") -> dict:
