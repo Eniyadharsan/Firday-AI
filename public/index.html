@@ -756,7 +756,8 @@
           if(!r.ok&&r.status===500){err.textContent='Server error. Check deployment logs.';return}
           const d=await r.json();
           if(d.token){window.jt=d.token;localStorage.setItem('jt',d.token);window.jm='chat';document.getElementById('loginOverlay').remove();
-            msg('Welcome'+(d.user&&d.user.name?', '+d.user.name:'')+'. Online.','a');speak("Systems online. Ready.");statusEl.textContent='OPERATIONAL';orbSub.textContent='TAP TO TALK';showProfile()}
+            const uname=d.user&&d.user.name?d.user.name:'';
+            msg('Welcome'+(uname?', '+uname:'')+'. Online.','a');speak("Welcome"+(uname?", "+uname:"")+". Systems online.");statusEl.textContent='OPERATIONAL';orbSub.textContent='TAP TO TALK';showProfile()}
           else{err.textContent=d.error||'Invalid email or password.'}}catch(e){err.textContent='Server unavailable. Please try again.'}
       } else {
         // Sign up — sends OTP first
