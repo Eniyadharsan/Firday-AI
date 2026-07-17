@@ -3,7 +3,7 @@
  * Enables offline shell caching and app-like behavior
  */
 
-const CACHE_NAME = 'friday-v1';
+const CACHE_NAME = 'friday-v2';
 const SHELL_FILES = [
   '/',
   '/manifest.json',
@@ -17,6 +17,11 @@ self.addEventListener('install', (event) => {
     caches.open(CACHE_NAME).then((cache) => cache.addAll(SHELL_FILES))
   );
   self.skipWaiting();
+});
+
+// Allow the page to tell a waiting worker to activate immediately
+self.addEventListener('message', (event) => {
+  if (event.data === 'skipWaiting') self.skipWaiting();
 });
 
 // Activate — clean old caches
