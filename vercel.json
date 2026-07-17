@@ -1,9 +1,4 @@
 {
-  "functions": {
-    "app.py": {
-      "maxDuration": 30
-    }
-  },
   "builds": [
     {
       "src": "app.py",
