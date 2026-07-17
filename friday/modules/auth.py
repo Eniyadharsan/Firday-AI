@@ -54,10 +54,6 @@ def get_user_from_request() -> dict | None:
 def require_auth(f: Callable) -> Callable:
     @wraps(f)
     def decorated(*args, **kwargs):
-        host = request.host or ""
-        if "vercel.app" in host:
-            request.user = {"sub": "owner", "email": "owner@friday"}
-            return f(*args, **kwargs)
         user = get_user_from_request()
         if not user:
             return jsonify({"error": "Authentication required."}), 401
