@@ -31,7 +31,6 @@
       width: 300px;
       height: 300px;
       margin: 0 auto;
-      transition: width .5s cubic-bezier(.4,0,.2,1), height .5s cubic-bezier(.4,0,.2,1);
     }
 
     #orbCanvas {
@@ -163,9 +162,9 @@
     .hud-top .right{font-size:10px;color:rgba(0,229,255,.25);letter-spacing:1px}
 
     /* Center orb */
-    .center{position:fixed;top:45%;left:50%;transform:translate(-50%,-50%);text-align:center;z-index:10;transition:top .5s cubic-bezier(.4,0,.2,1),left .5s cubic-bezier(.4,0,.2,1),right .5s cubic-bezier(.4,0,.2,1),transform .5s cubic-bezier(.4,0,.2,1)}
-    .label{margin-top:20px;font-size:18px;letter-spacing:6px;color:rgba(0,229,255,.6);font-weight:bold;transition:opacity .3s ease,font-size .4s ease,margin .4s ease}
-    .sub-label{font-size:10px;color:rgba(0,229,255,.3);letter-spacing:2px;margin-top:4px;transition:opacity .3s ease,font-size .4s ease}
+    .center{position:fixed;top:45%;left:50%;transform:translate(-50%,-50%);text-align:center;z-index:10}
+    .label{margin-top:20px;font-size:18px;letter-spacing:6px;color:rgba(0,229,255,.6);font-weight:bold}
+    .sub-label{font-size:10px;color:rgba(0,229,255,.3);letter-spacing:2px;margin-top:4px}
     .wake-indicator{display:none}
 
     /* Bottom-left chat — space glass */
@@ -363,19 +362,6 @@
       .mp-artist{font-size:10px}
       /* Ensure chat remains at the bottom and accessible */
       .chat{bottom:16px;z-index:160}
-
-      /* ── Chat-mode: dock the orb to the top-right so it doesn't overlap the chat ── */
-      body.chat-mode .center{
-        top:52px; left:auto; right:14px;
-        transform:none;
-        z-index:170;
-      }
-      body.chat-mode #reactor{ width:56px; height:56px; }
-      body.chat-mode .label{ display:none; }
-      body.chat-mode .sub-label{ display:none; }
-      /* Expand the chat to fill the space freed by the docked orb */
-      body.chat-mode .chat{ top:120px; max-height:none; }
-      body.chat-mode .chat .chat-msgs{ max-height:none; flex:1 }
     }
   </style>
 </head>
@@ -568,13 +554,10 @@
     let ow,oh;
     function orbResize(){
       const rect=orbCvs.parentElement.getBoundingClientRect();
-      ow=orbCvs.width=Math.max(2,rect.width*2);oh=orbCvs.height=Math.max(2,rect.height*2);
-      // Fill the parent (#reactor) so the canvas scales smoothly with its CSS size transition
-      orbCvs.style.width='100%';orbCvs.style.height='100%';
+      ow=orbCvs.width=rect.width*2;oh=orbCvs.height=rect.height*2;
+      orbCvs.style.width=rect.width+'px';orbCvs.style.height=rect.height+'px';
     }
     orbResize();addEventListener('resize',orbResize);
-    // Recompute backing resolution after the orb docks/undocks (chat-mode transition ~0.5s)
-    window.reorbForDock=function(){setTimeout(orbResize,550)};
 
     // Sphere points
     const POINTS=1800;const spherePoints=[];
@@ -966,13 +949,7 @@
       }catch{reactor.classList.remove('speaking');statusEl.textContent='OPERATIONAL';msg('Upload failed','a')}
       input.value='';
     }
-    function msg(t,c){const d=document.createElement('div');d.className='m '+c;d.textContent=t;msgs.appendChild(d);msgs.scrollTop=msgs.scrollHeight;
-      // Once a real conversation message appears, dock the orb (mobile chat-mode)
-      if((c==='u'||c==='a')&&!document.body.classList.contains('chat-mode')){
-        document.body.classList.add('chat-mode');
-        if(window.reorbForDock)window.reorbForDock();
-      }
-      return d}
+    function msg(t,c){const d=document.createElement('div');d.className='m '+c;d.textContent=t;msgs.appendChild(d);msgs.scrollTop=msgs.scrollHeight;return d}
     function openDet(t){document.getElementById('detBody').innerHTML=t.replace(/\n/g,'<br>').replace(/\*\*(.*?)\*\*/g,'<strong style="color:#00e5ff">$1</strong>');document.getElementById('det').classList.add('open')}
     function closeDet(){document.getElementById('det').classList.remove('open')}
 
