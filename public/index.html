@@ -20,6 +20,7 @@
       /* Font system — sans for reading/writing surfaces, monospace for HUD chrome + code */
       --font-ui: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Inter', Roboto, 'Helvetica Neue', Arial, sans-serif;
       --font-mono: 'JetBrains Mono', 'SF Mono', ui-monospace, 'Courier New', monospace;
+      --noise: none; /* set to a procedural grain data-URL at runtime */
     }
 
     @keyframes scanLine {
@@ -497,8 +498,18 @@
     ═══════════════════════════════════════════════════════════════ */
     /* Console conversation header */
     .chat-head-main{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px}
-    .chat-sub{font-family:var(--font-mono);font-size:10.5px;letter-spacing:.4px;color:rgba(0,229,255,.42);padding:0 6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-    .chat-sub b{color:rgba(0,255,136,.75);font-weight:600}
+    /* Live model + AI status badge (no added header height) */
+    .chat-sub{display:flex;align-items:center;gap:5px;font-family:var(--font-mono);font-size:10.5px;letter-spacing:.8px;text-transform:uppercase;color:rgba(0,229,255,.5);padding:0 6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .chat-sub .ai-model{color:rgba(0,229,255,.88);text-shadow:0 0 8px rgba(0,229,255,.35)}
+    .chat-sub .ai-stat{font-weight:600}
+    .chat-sub .ai-lat{color:rgba(0,229,255,.34)}
+    .ai-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;background:currentColor;box-shadow:0 0 8px currentColor;animation:aiPulse 2s ease-in-out infinite}
+    .ai-dot.ready{color:#00ff88}
+    .ai-dot.thinking{color:#ffd479;animation-duration:.85s}
+    .ai-dot.speaking{color:#00e5ff;animation-duration:1.2s}
+    .ai-dot.listening{color:#b085ff;animation-duration:1s}
+    .ai-dot.offline{color:#ff5a5a;animation:none}
+    @keyframes aiPulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.4;transform:scale(.75)}}
 
     /* Message actions overflow (⋯) menu */
     .msg-tools{position:relative}
@@ -525,6 +536,13 @@
     .mp-collapse:hover{background:rgba(255,255,255,.12)}
     .music-panel.mp-min .mp-search-section,.music-panel.mp-min .mp-progress-section,.music-panel.mp-min .mp-album-art{display:none}
     .music-panel.mp-min .mp-now-playing{padding-bottom:4px}
+
+    /* Procedural frosted-glass grain — fixed to the UI, GPU-friendly, subtle */
+    .chat::after,.ctx-panel::after,.music-panel::after,.hud-top::after,.detail::after,
+    .plus-menu::after,.msg-more::after,.cmd-menu::after,.export-menu::after{
+      content:'';position:absolute;inset:0;pointer-events:none;border-radius:inherit;
+      background-image:var(--noise);background-size:150px 150px;background-repeat:repeat;
+      mix-blend-mode:overlay;opacity:.05;z-index:3}
 
     /* ── iPhone (≤600px): native spacing, safe areas, touch targets ── */
     @media (max-width:600px){
@@ -2544,11 +2562,51 @@
       if(cb)cb.onclick=()=>{const min=p.classList.toggle('mp-min');cb.textContent=min?'▴':'▾';hap();};
       if(window.matchMedia('(max-width:600px)').matches){p.classList.add('mp-min');if(cb)cb.textContent='▴';}
     })();
-    // Console-style session substatus
-    (function initSessionStatus(){
+    // ===== Live model badge + AI status (drives the console header) =====
+    function prettyModel(id){
+      if(!id)return 'AUTO';
+      const map={'gpt-oss-120b':'GPT-OSS 120B','gpt-oss-20b':'GPT-OSS 20B','gemma-4-31b':'Gemma 4 31B',
+        'gemma2-9b':'Gemma2 9B','zai-glm-4.7':'GLM 4.7','zai-glm-4.6':'GLM 4.6','llama-3.3-70b':'Llama 3.3 70B',
+        'llama3.1-8b':'Llama 3.1 8B','qwen-3-32b':'Qwen 3 32B','qwen-3-235b':'Qwen 3 235B',
+        'deepseek-r1-distill-llama-70b':'DeepSeek R1 70B'};
+      const k=id.toLowerCase();
+      return map[k]||id.replace(/[-_]/g,' ');
+    }
+    function aiState(){
+      if(typeof navigator!=='undefined'&&navigator.onLine===false)return ['offline','Offline'];
+      if(isListening)return ['listening','Listening'];
+      if(isThinking)return ['thinking','Thinking…'];
+      if(isSpeaking)return ['speaking','Speaking'];
+      return ['ready','Operational'];
+    }
+    let _memActive=false,_lastBadge='';
+    function updateAIBadge(){
       const s=document.getElementById('chatSub'); if(!s)return;
-      const t=new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'});
-      s.innerHTML='Started '+t+' · <b>Operational</b>';
+      const ms=document.getElementById('cx-model');
+      const model=prettyModel(ms&&ms.value?ms.value:(window._devCfg?window._devCfg().model:''));
+      const st=aiState();
+      const lat=(lastLatency>0)?(lastLatency.toFixed(1)+'s'):'';
+      const key=model+'|'+st[0]+'|'+lat+'|'+_memActive;
+      if(key===_lastBadge)return; _lastBadge=key;
+      s.innerHTML='<span class="ai-dot '+st[0]+'"></span><span class="ai-model">'+model+'</span> · '+
+        '<span class="ai-stat">'+st[1]+'</span>'+
+        (lat?'<span class="ai-lat"> · '+lat+'</span>':'')+
+        (_memActive?'<span class="ai-lat"> · Memory</span>':'');
+    }
+    setInterval(updateAIBadge,500); updateAIBadge();
+    window.addEventListener('online',updateAIBadge); window.addEventListener('offline',updateAIBadge);
+    fetch('/memory',{headers:{'Authorization':'Bearer '+(window.jt||'')}}).then(r=>r.ok?r.json():null)
+      .then(d=>{if(d&&d.memories&&d.memories.length){_memActive=true;updateAIBadge();}}).catch(()=>{});
+
+    // ===== Procedural frosted-glass grain (monochrome, resolution-independent) =====
+    (function genNoise(){
+      try{
+        const s=150,c=document.createElement('canvas');c.width=c.height=s;const x=c.getContext('2d');
+        const img=x.createImageData(s,s),d=img.data;
+        for(let i=0;i<d.length;i+=4){const v=100+Math.floor(Math.random()*120);d[i]=d[i+1]=d[i+2]=v;d[i+3]=255;}
+        x.putImageData(img,0,0);
+        document.documentElement.style.setProperty('--noise','url('+c.toDataURL('image/png')+')');
+      }catch(e){}
     })();
 
     // --- History & New Chat ---
