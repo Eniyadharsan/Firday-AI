@@ -664,36 +664,33 @@
     }
     orbResize();addEventListener('resize',orbResize);
 
-    // Digital-neuron orb — a 3D sphere of binary digits with radiating data arms
-    const DIGITS=460;
-    const dparts=[];
-    // a few "arm" directions where digits stream outward like axons
-    const arms=[];for(let a=0;a<6;a++){const u=Math.random()*2-1,t=Math.random()*Math.PI*2,rxy=Math.sqrt(1-u*u);arms.push([rxy*Math.cos(t),u,rxy*Math.sin(t)]);}
-    for(let i=0;i<DIGITS;i++){
-      let dx,dy,dz,rr;
-      if(Math.random()<0.28){
-        // arm particle — stretch along a random arm direction, with jitter
-        const arm=arms[(Math.random()*arms.length)|0];
-        rr=0.4+Math.random()*1.05;
-        dx=arm[0]+(Math.random()-0.5)*0.35;
-        dy=arm[1]+(Math.random()-0.5)*0.35;
-        dz=arm[2]+(Math.random()-0.5)*0.35;
-        const m=Math.hypot(dx,dy,dz)||1;dx/=m;dy/=m;dz/=m;
-      }else{
-        // volume particle — denser toward the core
-        const u=Math.random()*2-1,t=Math.random()*Math.PI*2,rxy=Math.sqrt(1-u*u);
-        dx=rxy*Math.cos(t);dy=u;dz=rxy*Math.sin(t);
-        rr=Math.pow(Math.random(),0.7)*0.95;
-      }
-      dparts.push({
-        x:dx*rr,y:dy*rr,z:dz*rr,
-        ch:Math.random()<0.5?'0':'1',
-        ph:Math.random()*Math.PI*2,
-        flip:0.004+Math.random()*0.02   // chance per frame to flip 0<->1 (digital life)
+    // Wired neural-network orb — nodes on a 3D sphere linked by glowing wires
+    const NODES=200;
+    const nodePos=[];
+    for(let i=0;i<NODES;i++){
+      const phi=Math.acos(1-2*(i+0.5)/NODES);
+      const theta=Math.PI*(1+Math.sqrt(5))*i;
+      // slight radius variation gives the shell organic depth
+      const rr=0.9+Math.random()*0.12;
+      nodePos.push({
+        x:Math.sin(phi)*Math.cos(theta)*rr,
+        y:Math.cos(phi)*rr,
+        z:Math.sin(phi)*Math.sin(theta)*rr,
+        pulse:Math.random()*Math.PI*2
       });
     }
-    // faint data-rain streaks behind the orb
-    const rain=[];for(let i=0;i<26;i++)rain.push({x:(Math.random()-0.5)*1.9,y0:Math.random(),len:0.3+Math.random()*0.6,sp:0.002+Math.random()*0.004,ph:Math.random()});
+    // Precompute neural wires (each node -> nearest K neighbours)
+    const edges=[];{
+      const seen=new Set();const K=3;
+      for(let i=0;i<NODES;i++){
+        const d=[];
+        for(let j=0;j<NODES;j++){if(j===i)continue;const a=nodePos[i],b=nodePos[j];const dd=(a.x-b.x)**2+(a.y-b.y)**2+(a.z-b.z)**2;d.push([dd,j]);}
+        d.sort((p,q)=>p[0]-q[0]);
+        for(let k=0;k<K;k++){const j=d[k][1];const key=i<j?i+'-'+j:j+'-'+i;if(!seen.has(key)){seen.add(key);edges.push([i,j]);}}
+      }
+    }
+    // travelling signal pulses along random wires
+    const signals=[];for(let i=0;i<18;i++)signals.push({e:(Math.random()*edges.length)|0,t:Math.random(),sp:0.006+Math.random()*0.012});
 
     let orbPulse=1;let orbTargetPulse=1;let orbTime=0;let orbRot=0;let isSpeaking=false;let isListening=false;
 
@@ -725,72 +722,72 @@
 
       octx.globalCompositeOperation='lighter';
 
-      // Faint vertical data-rain streaks behind the orb
-      for(const rn of rain){
-        rn.ph+=rn.sp*(active?1.8:1);const yy=(rn.ph%1);
-        const rx=cx+rn.x*radius*1.6;
-        const ry0=cy-radius*1.4+yy*radius*2.8;
-        const rg=octx.createLinearGradient(rx,ry0,rx,ry0+radius*rn.len);
-        rg.addColorStop(0,'transparent');
-        rg.addColorStop(0.5,`rgba(90,170,255,0.10)`);
-        rg.addColorStop(1,'transparent');
-        octx.strokeStyle=rg;octx.lineWidth=1;
-        octx.beginPath();octx.moveTo(rx,ry0);octx.lineTo(rx,ry0+radius*rn.len);octx.stroke();
-      }
-
       // Living pulsating core — breathes continuously; flares when speaking/listening
-      const beat=0.5+0.5*Math.sin(orbTime*(active?4.5:2.0));      // heartbeat
-      const flick=0.85+0.15*Math.sin(orbTime*13.0);              // subtle flicker
-      const coreR=radius*(0.30+0.10*beat)*flick;
-      const coreA=(active?0.85:0.6)+0.25*beat;
-      // wide soft bloom
-      const bloom=octx.createRadialGradient(cx,cy,0,cx,cy,radius*1.2);
-      bloom.addColorStop(0,`rgba(210,240,255,${(coreA*0.5).toFixed(2)})`);
-      bloom.addColorStop(0.25,`rgba(${r},${g},255,${(coreA*0.28).toFixed(2)})`);
+      const beat=0.5+0.5*Math.sin(orbTime*(active?4.5:2.0));
+      const flick=0.9+0.1*Math.sin(orbTime*13.0);
+      const coreR=radius*(0.22+0.07*beat)*flick;
+      const coreA=(active?0.7:0.5)+0.22*beat;
+      const bloom=octx.createRadialGradient(cx,cy,0,cx,cy,radius*1.05);
+      bloom.addColorStop(0,`rgba(200,238,255,${(coreA*0.45).toFixed(2)})`);
+      bloom.addColorStop(0.3,`rgba(${r},${g},255,${(coreA*0.22).toFixed(2)})`);
       bloom.addColorStop(1,'transparent');
-      octx.fillStyle=bloom;octx.beginPath();octx.arc(cx,cy,radius*1.2,0,Math.PI*2);octx.fill();
-      // white-hot center
+      octx.fillStyle=bloom;octx.beginPath();octx.arc(cx,cy,radius*1.05,0,Math.PI*2);octx.fill();
       const core=octx.createRadialGradient(cx,cy,0,cx,cy,coreR);
       core.addColorStop(0,`rgba(255,255,255,${coreA.toFixed(2)})`);
-      core.addColorStop(0.5,`rgba(200,238,255,${(coreA*0.7).toFixed(2)})`);
+      core.addColorStop(0.5,`rgba(190,235,255,${(coreA*0.65).toFixed(2)})`);
       core.addColorStop(1,'transparent');
       octx.fillStyle=core;octx.beginPath();octx.arc(cx,cy,coreR,0,Math.PI*2);octx.fill();
-      // horizontal lens-flare streak
-      const streakW=radius*(1.6+0.4*beat);
-      const streak=octx.createLinearGradient(cx-streakW,cy,cx+streakW,cy);
-      streak.addColorStop(0,'transparent');
-      streak.addColorStop(0.5,`rgba(220,244,255,${(coreA*0.5).toFixed(2)})`);
-      streak.addColorStop(1,'transparent');
-      octx.fillStyle=streak;octx.fillRect(cx-streakW,cy-Math.max(1,radius*0.012),streakW*2,Math.max(2,radius*0.024));
 
-      // Rotate + project all binary-digit particles
+      // Rotate + project all nodes
       const cosY=Math.cos(orbRot),sinY=Math.sin(orbRot),cosX=Math.cos(orbRot*0.4),sinX=Math.sin(orbRot*0.4);
-      const proj=new Array(DIGITS);
-      for(let i=0;i<DIGITS;i++){
-        const p=dparts[i];
+      const proj=new Array(NODES);
+      for(let i=0;i<NODES;i++){
+        const p=nodePos[i];
         const x1=p.x*cosY-p.z*sinY, z1=p.x*sinY+p.z*cosY;
         const y1=p.y*cosX-z1*sinX, z2=p.y*sinX+z1*cosX;
-        proj[i]={x:cx+x1*radius,y:cy+y1*radius,z:z2,depth:(z2+1)/2,idx:i};
+        proj[i]={x:cx+x1*radius,y:cy+y1*radius,z:z2,depth:(z2+1)/2};
       }
-      proj.sort((a,b)=>a.z-b.z); // back-to-front
 
-      // Draw the digits
-      octx.textAlign='center';octx.textBaseline='middle';
-      const baseFont=Math.max(6,radius*0.11);
-      for(let s=0;s<proj.length;s++){
-        const pr=proj[s];const p=dparts[pr.idx];const depth=pr.depth;
-        if(depth<0.08)continue;
-        // occasionally flip the bit — digital life
-        if(Math.random()<p.flip)p.ch=p.ch==='0'?'1':'0';
-        const twinkle=0.55+0.45*Math.sin(orbTime*(active?5:2.5)+p.ph);
-        const fs=baseFont*(0.45+depth*1.05);
-        const al=depth*(active?0.9:0.72)*twinkle;
-        octx.font=fs.toFixed(1)+"px 'Courier New',monospace";
-        // brighter/whiter near the front, bluer toward the back
-        const wr=Math.floor(120+depth*135), wg=Math.floor(190+depth*60);
-        octx.fillStyle=`rgba(${wr},${wg},255,${al.toFixed(2)})`;
-        octx.shadowColor='rgba(0,200,255,0.9)';octx.shadowBlur=depth*5*twinkle;
-        octx.fillText(p.ch,pr.x,pr.y);
+      // Neural wires (connections) — glow, brighter toward the front
+      octx.lineCap='round';
+      for(let e=0;e<edges.length;e++){
+        const a=proj[edges[e][0]],bb=proj[edges[e][1]];
+        const depth=(a.depth+bb.depth)/2;
+        if(depth<0.12)continue;
+        const shimmer=0.5+0.5*Math.sin(orbTime*(active?4:2)+e*0.7);
+        const al=depth*(active?0.42:0.3)*(0.35+shimmer*0.65);
+        octx.beginPath();octx.moveTo(a.x,a.y);octx.lineTo(bb.x,bb.y);
+        octx.strokeStyle=`rgba(${Math.min(255,r+60)},${g},255,${al.toFixed(2)})`;
+        octx.lineWidth=Math.max(0.4,depth*1.1);
+        octx.shadowColor='rgba(0,190,255,0.6)';octx.shadowBlur=depth*3;
+        octx.stroke();
+      }
+      octx.shadowBlur=0;
+
+      // Travelling signal pulses along wires
+      for(const sig of signals){
+        sig.t+=sig.sp*(active?2:1);
+        if(sig.t>=1){sig.t=0;sig.e=(Math.random()*edges.length)|0;sig.sp=0.006+Math.random()*0.012;}
+        const a=proj[edges[sig.e][0]],bb=proj[edges[sig.e][1]];
+        const depth=(a.depth+bb.depth)/2;if(depth<0.14)continue;
+        const sx=a.x+(bb.x-a.x)*sig.t, sy=a.y+(bb.y-a.y)*sig.t;
+        octx.beginPath();octx.arc(sx,sy,Math.max(1,depth*2.2),0,Math.PI*2);
+        octx.fillStyle=`rgba(235,250,255,${(depth*0.9).toFixed(2)})`;
+        octx.shadowColor='rgba(120,225,255,0.95)';octx.shadowBlur=depth*8;
+        octx.fill();
+      }
+      octx.shadowBlur=0;
+
+      // Glowing nodes (synapses) — depth-sorted feel via size/alpha
+      for(let i=0;i<NODES;i++){
+        const a=proj[i];if(a.depth<0.12)continue;
+        nodePos[i].pulse+=active?0.09:0.05;
+        const fire=0.5+0.5*Math.sin(nodePos[i].pulse);
+        const size=(0.5+a.depth*2.1)*(0.7+fire*0.5);
+        octx.beginPath();octx.arc(a.x,a.y,size,0,Math.PI*2);
+        octx.fillStyle=`rgba(${Math.floor(120+a.depth*120)},${Math.floor(200+a.depth*55)},255,${(a.depth*0.9).toFixed(2)})`;
+        octx.shadowColor='rgba(0,200,255,0.9)';octx.shadowBlur=a.depth*(active?9:6)*(0.6+fire);
+        octx.fill();
       }
       octx.shadowBlur=0;
       octx.globalCompositeOperation='source-over';
