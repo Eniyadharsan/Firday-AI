@@ -366,7 +366,6 @@
     .wave-canvas{position:absolute;inset:0;width:100%;height:100%;border-radius:22px;pointer-events:none;z-index:2}
     /* Input dock — floating glass */
     .chat-in{display:flex;gap:8px;align-items:center;padding:10px 12px;border-top:1px solid rgba(0,229,255,.1);background:rgba(0,229,255,.02)}
-    #slashBtn{font-size:15px;font-weight:bold}
     .chat-in input#inp{flex:1;padding:10px 14px;border-radius:22px;border:1px solid rgba(0,229,255,.14);background:rgba(0,20,40,.5);color:#dff4ff;font-family:inherit;font-size:12.5px;outline:none;transition:all .2s}
     .chat-in input#inp:focus{border-color:rgba(0,229,255,.4);box-shadow:0 0 16px rgba(0,229,255,.12)}
     .chat-in input#inp::placeholder{color:rgba(0,229,255,.3)}
@@ -737,10 +736,9 @@
     <div class="chat-in">
       <input type="file" id="fileInp" style="display:none" multiple accept=".pdf,.txt,.md,.html,.csv,.png,.jpg,.jpeg" onchange="handleFiles(this.files)"/>
       <button class="ib" onclick="document.getElementById('fileInp').click()" title="Upload files"><svg viewBox="0 0 24 24"><path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm4 18H6V4h7v5h5v11z" fill="#00e5ff"/></svg></button>
-      <button class="ib" id="slashBtn" title="Commands & templates">/</button>
       <div class="inp-wrap">
         <canvas id="waveCanvas" class="wave-canvas" style="display:none"></canvas>
-        <input id="inp" placeholder="Message FRIDAY…  (/ for commands, @ to mention files)" autocomplete="off"/>
+        <input id="inp" placeholder="Message FRIDAY…  (@ to mention files)" autocomplete="off"/>
       </div>
       <button class="ib" id="mic" onclick="toggleMic()"><svg viewBox="0 0 24 24"><path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/><path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/></svg></button>
       <button class="ib" id="stp" style="display:none" onclick="stopTTS()"><svg viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="2"/></svg></button>
@@ -1448,21 +1446,7 @@
     window._ragFiles=window._ragFiles||[];
     (function refreshRagFiles(){fetch('/rag/list',{headers:{'Authorization':'Bearer '+(window.jt||'')}}).then(r=>r.json()).then(d=>{if(d&&d.documents)window._ragFiles=d.documents.map(x=>x.filename||x.name||x);}).catch(()=>{});})();
 
-    // Prompt templates + slash commands + AI quick actions
-    const SLASH_CMDS=[
-      {c:'/summarize',ico:'📝',desc:'Summarize',tpl:'Summarize the following concisely:\n'},
-      {c:'/explain',ico:'💡',desc:'Explain simply',tpl:'Explain this in simple terms:\n'},
-      {c:'/code',ico:'⌨',desc:'Write code',tpl:'Write clean, well-commented code that: '},
-      {c:'/translate',ico:'🌐',desc:'Translate',tpl:'Translate the following to English:\n'},
-      {c:'/improve',ico:'✨',desc:'Improve writing',tpl:'Improve the clarity and tone of:\n'},
-      {c:'/table',ico:'▦',desc:'Make a table',tpl:'Present this as a markdown table:\n'},
-      {c:'/chart',ico:'📊',desc:'Create a chart',tpl:'Create a chart (respond with a ```chart Chart.js JSON spec) for: '},
-      {c:'/plan',ico:'🗂',desc:'Make a plan',tpl:'Create a step-by-step plan for: '},
-      {c:'/brainstorm',ico:'🧠',desc:'Brainstorm ideas',tpl:'Brainstorm creative ideas for: '},
-      {c:'/image',ico:'🖼',desc:'Generate image',tpl:'generate an image of '},
-      {c:'/map',ico:'🗺',desc:'Show a map',tpl:'show me a map of '},
-      {c:'/clear',ico:'🧹',desc:'New conversation',action:()=>newChat()}
-    ];
+    // @filename mentions (slash commands + prompt templates removed)
     const cmdMenu=document.getElementById('cmdMenu');
     let cmdMode=null,cmdActive=0,cmdItems=[];
 
@@ -1474,17 +1458,13 @@
     }
     function closeCmdMenu(){cmdMenu.style.display='none';cmdMode=null;cmdItems=[];}
     function applyCmd(i){const it=cmdItems[i];if(!it)return;
-      if(cmdMode==='slash'){ if(it.action){closeCmdMenu();inp.value='';it.action();return;} inp.value=it.tpl||''; }
-      else if(cmdMode==='mention'){ const v=inp.value; inp.value=v.replace(/@[^\s@]*$/, '@'+it.name+' '); }
+      if(cmdMode==='mention'){ const v=inp.value; inp.value=v.replace(/@[^\s@]*$/, '@'+it.name+' '); }
       closeCmdMenu();inp.focus();
     }
     function updateInputMenus(){
       const v=inp.value;
       const atM=v.match(/@([^\s@]*)$/);
-      if(v.startsWith('/')){
-        const q=v.slice(1).toLowerCase();
-        openCmdMenu(SLASH_CMDS.filter(c=>c.c.slice(1).startsWith(q)),'slash');
-      }else if(atM){
+      if(atM){
         const q=atM[1].toLowerCase();
         const files=(window._ragFiles||[]).filter(f=>f.toLowerCase().includes(q)).slice(0,8).map(f=>({name:f,label:'@'+f,ico:'📄',desc:'file'}));
         openCmdMenu(files,'mention');
@@ -1495,13 +1475,12 @@
       if(cmdMenu.style.display==='block'&&cmdItems.length){
         if(e.key==='ArrowDown'){e.preventDefault();cmdActive=(cmdActive+1)%cmdItems.length;}
         else if(e.key==='ArrowUp'){e.preventDefault();cmdActive=(cmdActive-1+cmdItems.length)%cmdItems.length;}
-        else if(e.key==='Tab'||(e.key==='Enter'&&cmdMode==='slash'&&cmdItems.length)){e.preventDefault();applyCmd(cmdActive);return;}
+        else if(e.key==='Tab'){e.preventDefault();applyCmd(cmdActive);return;}
         else if(e.key==='Escape'){closeCmdMenu();return;}
         else return;
         cmdMenu.querySelectorAll('.cmd-item').forEach((el,i)=>el.classList.toggle('active',i===cmdActive));
       }
     },true);
-    document.getElementById('slashBtn').onclick=()=>{inp.focus();if(cmdMenu.style.display==='block'){closeCmdMenu();}else{openCmdMenu(SLASH_CMDS,'slash');}};
 
     // Drag-and-drop uploads
     const chatEl=document.querySelector('.chat');
