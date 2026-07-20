@@ -149,14 +149,11 @@
     }
 
     *{margin:0;padding:0;box-sizing:border-box}
-    body{font-family:'Courier New',monospace;background:#05010f;color:var(--accent);height:100vh;overflow:hidden}
+    body{font-family:'Courier New',monospace;background:#000;color:var(--accent);height:100vh;overflow:hidden}
 
-    /* Cosmic neural-web background (the "backside of the orb") */
+    /* Deep space universe background */
     body::before{content:'';position:fixed;inset:0;background:
-      radial-gradient(ellipse at 70% 35%, rgba(123,47,247,0.22) 0%, transparent 55%),
-      radial-gradient(ellipse at 25% 70%, rgba(0,120,255,0.18) 0%, transparent 55%),
-      radial-gradient(ellipse at 50% 50%, rgba(180,60,220,0.10) 0%, transparent 60%),
-      radial-gradient(circle at 50% 50%, #0a0420 0%, #05010f 70%, #020008 100%);
+      radial-gradient(ellipse at 50% 50%, rgba(0,20,60,0.3) 0%, transparent 50%);
       pointer-events:none;z-index:0}
 
     /* No scan lines — pure cosmic void */
@@ -590,67 +587,17 @@
     const fxc=document.getElementById('fx'),fxctx=fxc.getContext('2d');
     let fw,fh;function fxResize(){fw=fxc.width=innerWidth;fh=fxc.height=innerHeight}addEventListener('resize',fxResize);fxResize();
 
-    // Cosmic neural web — drifting nodes connected by faint filaments (image 2 vibe)
-    let webNodes=[];
-    function initWeb(){
-      const count=Math.min(90,Math.floor((fw*fh)/22000));
-      webNodes=[];
-      for(let i=0;i<count;i++){
-        webNodes.push({
-          x:Math.random()*fw,y:Math.random()*fh,
-          vx:(Math.random()-0.5)*0.12,vy:(Math.random()-0.5)*0.12,
-          s:Math.random()*1.6+0.6,
-          hue:Math.random()<0.5?285:(Math.random()<0.5?315:210), // violet / pink / blue
-          tw:Math.random()*Math.PI*2
-        });
-      }
-    }
-    initWeb();addEventListener('resize',initWeb);
-    // faint background dust stars
-    const dustStars=[];for(let i=0;i<160;i++)dustStars.push({x:Math.random()*fw,y:Math.random()*fh,s:Math.random()*1.2+0.2,a:Math.random()});
-
+    // Generate stars
+    const stars=[];for(let i=0;i<300;i++)stars.push({x:Math.random()*2000-500,y:Math.random()*2000-500,s:Math.random()*1.5+0.3,a:Math.random()});
     function fxDraw(){
       fxctx.clearRect(0,0,fw,fh);
-
-      // dust stars
-      for(const st of dustStars){
-        st.a+=0.004;if(st.a>1)st.a=0;
-        const al=Math.sin(st.a*Math.PI)*0.5+0.05;
-        fxctx.beginPath();fxctx.arc(st.x,st.y,st.s,0,Math.PI*2);
-        fxctx.fillStyle=`rgba(200,180,255,${al})`;fxctx.fill();
+      // Stars
+      for(const st of stars){
+        st.a+=0.003;if(st.a>1)st.a=0;
+        const alpha=Math.sin(st.a*Math.PI)*0.6+0.1;
+        fxctx.beginPath();fxctx.arc(st.x%fw,st.y%fh,st.s,0,Math.PI*2);
+        fxctx.fillStyle=`rgba(150,180,255,${alpha})`;fxctx.fill();
       }
-
-      // move nodes
-      for(const n of webNodes){
-        n.x+=n.vx;n.y+=n.vy;n.tw+=0.02;
-        if(n.x<0)n.x=fw;if(n.x>fw)n.x=0;if(n.y<0)n.y=fh;if(n.y>fh)n.y=0;
-      }
-
-      // filaments between nearby nodes
-      const maxD=170,maxD2=maxD*maxD;
-      for(let i=0;i<webNodes.length;i++){
-        const a=webNodes[i];
-        for(let j=i+1;j<webNodes.length;j++){
-          const b=webNodes[j];
-          const dx=a.x-b.x,dy=a.y-b.y,d2=dx*dx+dy*dy;
-          if(d2<maxD2){
-            const t=1-Math.sqrt(d2)/maxD;
-            fxctx.beginPath();fxctx.moveTo(a.x,a.y);fxctx.lineTo(b.x,b.y);
-            fxctx.strokeStyle=`hsla(${(a.hue+b.hue)/2},80%,70%,${(t*0.14).toFixed(3)})`;
-            fxctx.lineWidth=t*0.9;fxctx.stroke();
-          }
-        }
-      }
-
-      // glowing nodes
-      for(const n of webNodes){
-        const glow=0.35+Math.sin(n.tw)*0.25;
-        fxctx.beginPath();fxctx.arc(n.x,n.y,n.s,0,Math.PI*2);
-        fxctx.fillStyle=`hsla(${n.hue},90%,72%,${glow.toFixed(2)})`;
-        fxctx.shadowColor=`hsla(${n.hue},90%,65%,0.8)`;fxctx.shadowBlur=8;
-        fxctx.fill();fxctx.shadowBlur=0;
-      }
-
       requestAnimationFrame(fxDraw)}fxDraw();
 
     // --- Orb Canvas Renderer (particle sphere like the reference image) ---
@@ -664,249 +611,124 @@
     }
     orbResize();addEventListener('resize',orbResize);
 
-    // Wired neural-network orb — nodes on a 3D sphere linked by glowing wires
-    const NODES=200;
-    const nodePos=[];
-    for(let i=0;i<NODES;i++){
-      const phi=Math.acos(1-2*(i+0.5)/NODES);
+    // Sphere points
+    const POINTS=1800;const spherePoints=[];
+    for(let i=0;i<POINTS;i++){
+      const phi=Math.acos(1-2*(i+0.5)/POINTS);
       const theta=Math.PI*(1+Math.sqrt(5))*i;
-      // slight radius variation gives the shell organic depth
-      const rr=0.9+Math.random()*0.12;
-      nodePos.push({
-        x:Math.sin(phi)*Math.cos(theta)*rr,
-        y:Math.cos(phi)*rr,
-        z:Math.sin(phi)*Math.sin(theta)*rr,
-        pulse:Math.random()*Math.PI*2
-      });
+      spherePoints.push({phi,theta,baseR:1});
     }
-    // Precompute neural wires (each node -> nearest K neighbours)
-    const edges=[];{
-      const seen=new Set();const K=3;
-      for(let i=0;i<NODES;i++){
-        const d=[];
-        for(let j=0;j<NODES;j++){if(j===i)continue;const a=nodePos[i],b=nodePos[j];const dd=(a.x-b.x)**2+(a.y-b.y)**2+(a.z-b.z)**2;d.push([dd,j]);}
-        d.sort((p,q)=>p[0]-q[0]);
-        for(let k=0;k<K;k++){const j=d[k][1];const key=i<j?i+'-'+j:j+'-'+i;if(!seen.has(key)){seen.add(key);edges.push([i,j]);}}
-      }
-    }
-    // travelling signal pulses along random wires
-    const signals=[];for(let i=0;i<18;i++)signals.push({e:(Math.random()*edges.length)|0,t:Math.random(),sp:0.006+Math.random()*0.012});
+    // Dust cloud
+    const dust=[];for(let i=0;i<200;i++)dust.push({a:Math.random()*Math.PI*2,r:0.55+Math.random()*0.35,s:Math.random()*1.5+0.5,speed:0.0005+Math.random()*0.001,phase:Math.random()*Math.PI*2});
 
-    // Orbiting concentric rings (tilted 3D ellipses slowly orbiting the sphere)
-    const rings=[];for(let i=0;i<3;i++)rings.push({rf:1.28+i*0.18,tiltX:0.5+i*0.5,tiltZ:i*0.7,rot:Math.random()*Math.PI*2,sp:(0.002+i*0.001)*(i%2?-1:1)});
-    // Holographic hexagons orbiting at tilts
-    const hexes=[];for(let i=0;i<2;i++)hexes.push({rf:1.15+i*0.35,tilt:i*1.1,rot:Math.random()*Math.PI*2,sp:0.004*(i%2?-1:1),phase:Math.random()*Math.PI*2});
-    // Tiny orbiting particles around the sphere
-    const orbits=[];for(let i=0;i<70;i++)orbits.push({rf:1.05+Math.random()*0.7,tilt:Math.random()*Math.PI,asc:Math.random()*Math.PI*2,a:Math.random()*Math.PI*2,sp:0.004+Math.random()*0.012,s:Math.random()*1.4+0.4});
-    // Lightning arcs (jagged bright bolts between random nodes, flashing briefly)
-    const bolts=[];for(let i=0;i<4;i++)bolts.push({i:0,j:0,life:0,seed:Math.random()*1000});
-    // Expanding energy ripples emitted rhythmically
-    const ripples=[];let rippleT=0;
-
-    let orbPulse=1;let orbTargetPulse=1;let orbTime=0;let orbRot=0;let isSpeaking=false;let isListening=false;
+    let orbPulse=1;let orbTargetPulse=1;let orbTime=0;let isSpeaking=false;let isListening=false;
 
     function drawOrb(){
       octx.clearRect(0,0,ow,oh);
       const cx=ow/2,cy=oh/2;
-      const baseRadius=Math.min(ow,oh)*0.30;
-
-      // Active = interacting (speaking/listening) → spin faster + pulse harder
-      const active=isSpeaking||isListening;
-      const idleBreathe=1+Math.sin(orbTime*1.4)*0.035;      // gentle idle breathing
-      const target=active?orbTargetPulse:idleBreathe;
-      orbPulse+=(target-orbPulse)*0.12;
+      const baseRadius=Math.min(ow,oh)*0.28;
+      orbPulse+=(orbTargetPulse-orbPulse)*0.15;
       const radius=baseRadius*orbPulse;
-      const rotSpeed=active?0.030:0.011;                    // faster spin when active
-      orbRot+=rotSpeed;
-      orbTime+=0.02;
+      orbTime+=0.008;
 
-      // Color by state (blue idle/speaking, green listening)
-      let r=40,g=180,b=255;
-      if(isListening){r=0;g=255;b=150;}
+      // Determine color based on state
+      let r=0,g=180,b=255; // blue
+      if(isListening){r=0;g=255;b=136;} // green
 
-      // Volumetric fog glow (soft wide bloom around the sphere)
-      const fog=octx.createRadialGradient(cx,cy,radius*0.2,cx,cy,radius*2.2);
-      fog.addColorStop(0,`rgba(${r},${g},${b},${(0.18+(active?0.1:0)).toFixed(2)})`);
-      fog.addColorStop(0.45,`rgba(${r},${g},${b},0.06)`);
-      fog.addColorStop(1,'transparent');
-      octx.fillStyle=fog;octx.fillRect(0,0,ow,oh);
+      // Glow background
+      const glowGrad=octx.createRadialGradient(cx,cy,radius*0.3,cx,cy,radius*1.8);
+      glowGrad.addColorStop(0,`rgba(${r},${g},${b},0.15)`);
+      glowGrad.addColorStop(0.5,`rgba(${r},${g},${b},0.04)`);
+      glowGrad.addColorStop(1,'transparent');
+      octx.fillStyle=glowGrad;octx.fillRect(0,0,ow,oh);
 
-      // Expanding energy ripples radiating outward
-      octx.globalCompositeOperation='lighter';
-      rippleT+=1;
-      if(rippleT>(active?38:70)){rippleT=0;ripples.push({r:radius*0.6,life:1});}
-      for(let i=ripples.length-1;i>=0;i--){
-        const rp=ripples[i];rp.r+=radius*0.012;rp.life-=0.012;
-        if(rp.life<=0){ripples.splice(i,1);continue;}
-        octx.beginPath();octx.arc(cx,cy,rp.r,0,Math.PI*2);
-        octx.strokeStyle=`rgba(${r},${g},255,${(rp.life*0.18).toFixed(2)})`;
-        octx.lineWidth=1.4;octx.stroke();
-      }
-      octx.globalCompositeOperation='source-over';
+      // Draw sphere points
+      const rotY=orbTime*0.4;const rotX=orbTime*0.2;
+      const cosY=Math.cos(rotY),sinY=Math.sin(rotY),cosX=Math.cos(rotX),sinX=Math.sin(rotX);
 
-      octx.globalCompositeOperation='lighter';
+      for(const p of spherePoints){
+        const x0=Math.sin(p.phi)*Math.cos(p.theta);
+        const y0=Math.cos(p.phi);
+        const z0=Math.sin(p.phi)*Math.sin(p.theta);
 
-      // Living pulsating core — breathes continuously; flares when speaking/listening
-      const beat=0.5+0.5*Math.sin(orbTime*(active?4.5:2.0));
-      const flick=0.9+0.1*Math.sin(orbTime*13.0);
-      const coreR=radius*(0.22+0.07*beat)*flick;
-      const coreA=(active?0.7:0.5)+0.22*beat;
-      const bloom=octx.createRadialGradient(cx,cy,0,cx,cy,radius*1.05);
-      bloom.addColorStop(0,`rgba(200,238,255,${(coreA*0.45).toFixed(2)})`);
-      bloom.addColorStop(0.3,`rgba(${r},${g},255,${(coreA*0.22).toFixed(2)})`);
-      bloom.addColorStop(1,'transparent');
-      octx.fillStyle=bloom;octx.beginPath();octx.arc(cx,cy,radius*1.05,0,Math.PI*2);octx.fill();
-      const core=octx.createRadialGradient(cx,cy,0,cx,cy,coreR);
-      core.addColorStop(0,`rgba(255,255,255,${coreA.toFixed(2)})`);
-      core.addColorStop(0.5,`rgba(190,235,255,${(coreA*0.65).toFixed(2)})`);
-      core.addColorStop(1,'transparent');
-      octx.fillStyle=core;octx.beginPath();octx.arc(cx,cy,coreR,0,Math.PI*2);octx.fill();
+        // Rotate Y
+        const x1=x0*cosY-z0*sinY;const z1=x0*sinY+z0*cosY;
+        // Rotate X
+        const y1=y0*cosX-z1*sinX;const z2=y0*sinX+z1*cosX;
 
-      // Rotate + project all nodes with organic JELLY deformation (soft wobbling membrane)
-      const cosY=Math.cos(orbRot),sinY=Math.sin(orbRot),cosX=Math.cos(orbRot*0.4),sinX=Math.sin(orbRot*0.4);
-      const jAmp=active?0.16:0.10;                 // jiggle harder when interacting
-      const jT=orbTime*(active?2.4:1.5);
-      const proj=new Array(NODES);
-      for(let i=0;i<NODES;i++){
-        const p=nodePos[i];
-        // layered sine waves across the surface => jelly wobble
-        const wob=1+jAmp*(
-          0.5*Math.sin(p.x*3.0+jT)+
-          0.4*Math.sin(p.y*3.7+jT*1.3+1.7)+
-          0.35*Math.sin(p.z*3.3+jT*0.8+3.1)+
-          0.25*Math.sin((p.x+p.y+p.z)*2.4+jT*1.7)
-        );
-        const wx=p.x*wob, wy=p.y*wob, wz=p.z*wob;
-        const x1=wx*cosY-wz*sinY, z1=wx*sinY+wz*cosY;
-        const y1=wy*cosX-z1*sinX, z2=wy*sinX+z1*cosX;
-        proj[i]={x:cx+x1*radius,y:cy+y1*radius,z:z2,depth:(z2+1)/2};
+        // Surface distortion (organic pulsating)
+        const distort=1+0.06*Math.sin(p.phi*8+orbTime*3)*Math.cos(p.theta*6+orbTime*2);
+        const pr=radius*distort;
+
+        const px=cx+x1*pr;const py=cy+y1*pr;
+        const depth=(z2+1)/2; // 0=back, 1=front
+
+        if(depth<0.2)continue; // cull back-facing
+
+        const alpha=depth*0.8;
+        const size=0.8+depth*1.8;
+
+        // Brighter at front, energy flow effect
+        const energy=Math.sin(p.phi*4+p.theta*3+orbTime*5)*0.5+0.5;
+        const bright=Math.floor(100+energy*155);
+
+        octx.beginPath();octx.arc(px,py,size,0,Math.PI*2);
+        octx.fillStyle=`rgba(${Math.floor(r*0.3+bright*0.1)},${Math.floor(g*0.6+bright*0.4)},${Math.floor(b*0.5+bright*0.5)},${alpha.toFixed(2)})`;
+        octx.fill();
       }
 
-      // Neural wires (connections) — glow, brighter toward the front
-      octx.lineCap='round';
-      for(let e=0;e<edges.length;e++){
-        const a=proj[edges[e][0]],bb=proj[edges[e][1]];
-        const depth=(a.depth+bb.depth)/2;
-        if(depth<0.12)continue;
-        const shimmer=0.5+0.5*Math.sin(orbTime*(active?4:2)+e*0.7);
-        const al=depth*(active?0.42:0.3)*(0.35+shimmer*0.65);
-        octx.beginPath();octx.moveTo(a.x,a.y);octx.lineTo(bb.x,bb.y);
-        octx.strokeStyle=`rgba(${Math.min(255,r+60)},${g},255,${al.toFixed(2)})`;
-        octx.lineWidth=Math.max(0.4,depth*1.1);
-        octx.shadowColor='rgba(0,190,255,0.6)';octx.shadowBlur=depth*3;
+      // Inner core glow
+      const coreGrad=octx.createRadialGradient(cx,cy,0,cx,cy,radius*0.5);
+      coreGrad.addColorStop(0,`rgba(${r+100>255?255:r+100},${g+50>255?255:g+50},${b},0.3)`);
+      coreGrad.addColorStop(1,'transparent');
+      octx.fillStyle=coreGrad;octx.beginPath();octx.arc(cx,cy,radius*0.5,0,Math.PI*2);octx.fill();
+
+      // Fiery energy rays ΓÇö shoot outward, glow with phase
+      const rayCount = 16;
+      for (let i = 0; i < rayCount; i++) {
+        const angle = (i / rayCount) * Math.PI * 2 + orbTime * 0.3;
+        const rayLen = radius * (0.6 + 0.5 * Math.sin(angle * 3 + orbTime * 4) * orbPulse);
+        const rayWidth = 1.5 + Math.sin(angle * 2 + orbTime * 5) * 1;
+        const intensity = 0.3 + 0.5 * Math.sin(i * 1.7 + orbTime * 3);
+
+        const x1 = cx + Math.cos(angle) * radius * 0.9;
+        const y1 = cy + Math.sin(angle) * radius * 0.9;
+        const x2 = cx + Math.cos(angle) * (radius + rayLen);
+        const y2 = cy + Math.sin(angle) * (radius + rayLen);
+
+        const rayGrad = octx.createLinearGradient(x1, y1, x2, y2);
+        rayGrad.addColorStop(0, `rgba(${r + 80 > 255 ? 255 : r + 80},${g},${b},${(intensity * 0.8).toFixed(2)})`);
+        rayGrad.addColorStop(0.4, `rgba(${r},${g},${b},${(intensity * 0.5).toFixed(2)})`);
+        rayGrad.addColorStop(1, 'transparent');
+
+        octx.beginPath();
+        octx.moveTo(x1, y1);
+        octx.lineTo(x2, y2);
+        octx.strokeStyle = rayGrad;
+        octx.lineWidth = rayWidth;
+        octx.shadowColor = `rgba(${r},${g},${b},0.6)`;
+        octx.shadowBlur = 8;
         octx.stroke();
+        octx.shadowBlur = 0;
       }
-      octx.shadowBlur=0;
 
-      // Travelling signal pulses along wires
-      for(const sig of signals){
-        sig.t+=sig.sp*(active?2:1);
-        if(sig.t>=1){sig.t=0;sig.e=(Math.random()*edges.length)|0;sig.sp=0.006+Math.random()*0.012;}
-        const a=proj[edges[sig.e][0]],bb=proj[edges[sig.e][1]];
-        const depth=(a.depth+bb.depth)/2;if(depth<0.14)continue;
-        const sx=a.x+(bb.x-a.x)*sig.t, sy=a.y+(bb.y-a.y)*sig.t;
-        octx.beginPath();octx.arc(sx,sy,Math.max(1,depth*2.2),0,Math.PI*2);
-        octx.fillStyle=`rgba(235,250,255,${(depth*0.9).toFixed(2)})`;
-        octx.shadowColor='rgba(120,225,255,0.95)';octx.shadowBlur=depth*8;
+      // Secondary fiery glow halo around the orb
+      const haloGrad = octx.createRadialGradient(cx, cy, radius * 0.85, cx, cy, radius * 1.3);
+      haloGrad.addColorStop(0, `rgba(${r},${g},${b},${(0.1 + 0.1 * orbPulse).toFixed(2)})`);
+      haloGrad.addColorStop(0.5, `rgba(${r},${g},${b},${(0.04 * orbPulse).toFixed(2)})`);
+      haloGrad.addColorStop(1, 'transparent');
+      octx.fillStyle = haloGrad;
+      octx.beginPath(); octx.arc(cx, cy, radius * 1.3, 0, Math.PI * 2); octx.fill();
+
+      // Dust cloud ring
+      for(const d of dust){
+        d.a+=d.speed;
+        const dx=cx+Math.cos(d.a+d.phase)*radius*d.r*1.6;
+        const dy=cy+Math.sin(d.a+d.phase)*radius*d.r*1.6;
+        octx.beginPath();octx.arc(dx,dy,d.s,0,Math.PI*2);
+        octx.fillStyle=`rgba(${r*0.5},${g*0.6},${b},${0.15+Math.sin(d.phase+orbTime)*0.1})`;
         octx.fill();
       }
-      octx.shadowBlur=0;
-
-      // Glowing nodes (synapses) — depth-sorted feel via size/alpha
-      for(let i=0;i<NODES;i++){
-        const a=proj[i];if(a.depth<0.12)continue;
-        nodePos[i].pulse+=active?0.09:0.05;
-        const fire=0.5+0.5*Math.sin(nodePos[i].pulse);
-        const size=(0.5+a.depth*2.1)*(0.7+fire*0.5);
-        octx.beginPath();octx.arc(a.x,a.y,size,0,Math.PI*2);
-        octx.fillStyle=`rgba(${Math.floor(120+a.depth*120)},${Math.floor(200+a.depth*55)},255,${(a.depth*0.9).toFixed(2)})`;
-        octx.shadowColor='rgba(0,200,255,0.9)';octx.shadowBlur=a.depth*(active?9:6)*(0.6+fire);
-        octx.fill();
-      }
-      octx.shadowBlur=0;
-
-      // Random blue lightning arcs between neural pathways (jagged bolts, flashing)
-      for(const bolt of bolts){
-        bolt.life-=0.05;
-        if(bolt.life<=0){
-          if(Math.random()<(active?0.14:0.06)){bolt.i=(Math.random()*NODES)|0;bolt.j=(Math.random()*NODES)|0;bolt.life=1;bolt.seed=Math.random()*1000;}
-          else continue;
-        }
-        const a=proj[bolt.i],b2=proj[bolt.j];if(!a||!b2)continue;
-        const depth=(a.depth+b2.depth)/2;if(depth<0.14)continue;
-        const segs=6;octx.beginPath();octx.moveTo(a.x,a.y);
-        for(let s=1;s<segs;s++){
-          const t=s/segs;
-          const jx=(Math.sin(bolt.seed+s*12.9)*0.5)*radius*0.12;
-          const jy=(Math.cos(bolt.seed+s*7.3)*0.5)*radius*0.12;
-          octx.lineTo(a.x+(b2.x-a.x)*t+jx, a.y+(b2.y-a.y)*t+jy);
-        }
-        octx.lineTo(b2.x,b2.y);
-        octx.strokeStyle=`rgba(210,245,255,${(bolt.life*0.8*depth).toFixed(2)})`;
-        octx.lineWidth=1.3;octx.shadowColor='rgba(120,220,255,0.95)';octx.shadowBlur=10;octx.stroke();
-      }
-      octx.shadowBlur=0;
-
-      // Holographic hexagons orbiting the sphere
-      for(const hx of hexes){
-        hx.rot+=hx.sp*(active?1.6:1);
-        const ct=Math.cos(hx.tilt),stt=Math.sin(hx.tilt);
-        octx.beginPath();
-        for(let k=0;k<=6;k++){
-          const ang=hx.rot+k*Math.PI/3;
-          let px=Math.cos(ang)*hx.rf, py=Math.sin(ang)*hx.rf*0.42, pz=Math.sin(ang)*hx.rf;
-          // tilt then world spin
-          const yy=py*ct-pz*stt, zz=py*stt+pz*ct;
-          const x1=px*cosY-zz*sinY;
-          const sx=cx+x1*radius, sy=cy+yy*radius;
-          if(k===0)octx.moveTo(sx,sy);else octx.lineTo(sx,sy);
-        }
-        octx.strokeStyle=`rgba(120,220,255,${(0.16+0.1*beat).toFixed(2)})`;
-        octx.lineWidth=1;octx.shadowColor='rgba(0,200,255,0.5)';octx.shadowBlur=6;octx.stroke();
-      }
-      octx.shadowBlur=0;
-
-      // Transparent concentric orbiting rings
-      for(const rg of rings){
-        rg.rot+=rg.sp*(active?1.5:1);
-        const ctX=Math.cos(rg.tiltX),stX=Math.sin(rg.tiltX);
-        octx.beginPath();
-        for(let k=0;k<=48;k++){
-          const ang=(k/48)*Math.PI*2;
-          let px=Math.cos(ang)*rg.rf, py=0, pz=Math.sin(ang)*rg.rf;
-          // tilt around X
-          let y1=py*ctX-pz*stX, z1=py*stX+pz*ctX;
-          // world spin around Y + ring's own rotation
-          const a2=rg.rot;
-          const x1=px*Math.cos(a2)-z1*Math.sin(a2), z2=px*Math.sin(a2)+z1*Math.cos(a2);
-          const x3=x1*cosY-z2*sinY;
-          const sx=cx+x3*radius, sy=cy+y1*radius;
-          if(k===0)octx.moveTo(sx,sy);else octx.lineTo(sx,sy);
-        }
-        octx.strokeStyle=`rgba(90,190,255,0.14)`;octx.lineWidth=1;octx.stroke();
-      }
-
-      // Tiny orbiting particles
-      for(const o of orbits){
-        o.a+=o.sp*(active?1.6:1);
-        const ct=Math.cos(o.tilt),st=Math.sin(o.tilt);
-        const ca=Math.cos(o.asc),sa=Math.sin(o.asc);
-        let px=Math.cos(o.a)*o.rf, pz=Math.sin(o.a)*o.rf, py=0;
-        // tilt
-        let y1=py*ct-pz*st, z1=py*st+pz*ct;
-        // ascending node rotation
-        let x2=px*ca-z1*sa, z2=px*sa+z1*ca;
-        // world spin
-        const x3=x2*cosY-z2*sinY, z3=x2*sinY+z2*cosY;
-        const depth=(z3+1)/2;
-        const sx=cx+x3*radius, sy=cy+y1*radius;
-        octx.beginPath();octx.arc(sx,sy,o.s*(0.5+depth),0,Math.PI*2);
-        octx.fillStyle=`rgba(180,230,255,${(depth*0.6).toFixed(2)})`;
-        octx.shadowColor='rgba(0,200,255,0.7)';octx.shadowBlur=depth*4;octx.fill();
-      }
-      octx.shadowBlur=0;
-
-      octx.globalCompositeOperation='source-over';
 
       requestAnimationFrame(drawOrb);
     }
