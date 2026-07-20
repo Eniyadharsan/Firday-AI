@@ -151,10 +151,10 @@
     *{margin:0;padding:0;box-sizing:border-box}
     body{font-family:'Courier New',monospace;background:#000;color:var(--accent);height:100vh;overflow:hidden}
 
-    /* Black-hole void — darkest possible with a faint gravitational halo */
+    /* Infinite deep-space — black to deep navy with a faint central glow */
     body::before{content:'';position:fixed;inset:0;background:
-      radial-gradient(circle at 50% 45%, rgba(20,40,80,0.12) 0%, rgba(0,0,0,0) 38%),
-      radial-gradient(circle at 50% 50%, #000208 0%, #000 60%);
+      radial-gradient(circle at 50% 45%, rgba(10,40,90,0.28) 0%, rgba(4,12,32,0.5) 34%, transparent 60%),
+      radial-gradient(circle at 50% 50%, #050a1c 0%, #030713 55%, #01030a 100%);
       pointer-events:none;z-index:0}
 
     /* No scan lines — pure cosmic void */
@@ -588,16 +588,112 @@
     const fxc=document.getElementById('fx'),fxctx=fxc.getContext('2d');
     let fw,fh;function fxResize(){fw=fxc.width=innerWidth;fh=fxc.height=innerHeight}addEventListener('resize',fxResize);fxResize();
 
-    // Sparse, dim starfield for the black-hole void
-    const stars=[];for(let i=0;i<160;i++)stars.push({x:Math.random()*2000-500,y:Math.random()*2000-500,s:Math.random()*1.3+0.2,a:Math.random()});
+    // ===== Cinematic deep-space environment around the orb (orb itself untouched) =====
+    const nebulae=[];for(let i=0;i<5;i++)nebulae.push({x:Math.random(),y:Math.random(),r:0.32+Math.random()*0.4,hue:200+Math.random()*70,a:0.05+Math.random()*0.06,dx:(Math.random()-0.5)*0.00003,dy:(Math.random()-0.5)*0.00003,ph:Math.random()*6.28});
+    const estars=[];for(let i=0;i<440;i++)estars.push({x:Math.random(),y:Math.random(),s:Math.random()*1.4+0.2,a:Math.random(),layer:Math.random(),tw:0.002+Math.random()*0.006});
+    const edust=[];for(let i=0;i<80;i++)edust.push({x:Math.random(),y:Math.random(),s:Math.random()*1.2+0.3,vx:(Math.random()-0.5)*0.0005,vy:(Math.random()-0.5)*0.0005,a:0.08+Math.random()*0.28});
+    const envWaves=[];let envWaveT=0;
+    const hudRings=[{rf:1.7,sp:0.0016,ticks:72,dash:false,rot:0},{rf:2.15,sp:-0.0011,ticks:36,dash:true,rot:0},{rf:2.7,sp:0.0007,ticks:140,dash:false,rot:0}];
+    const glyphChars='0123456789ABCDEF∑∆ΩΨφλπµ∞⟨⟩</>=';
+    const hudGlyphs=[];for(let i=0;i<44;i++)hudGlyphs.push({ring:(Math.random()*3)|0,a:Math.random()*6.28,ch:glyphChars[(Math.random()*glyphChars.length)|0],flip:0.008+Math.random()*0.03,sp:(Math.random()-0.5)*0.002});
+    let hudRot=0,camPh=0;
+
     function fxDraw(){
       fxctx.clearRect(0,0,fw,fh);
-      for(const st of stars){
-        st.a+=0.003;if(st.a>1)st.a=0;
-        const alpha=Math.sin(st.a*Math.PI)*0.4+0.04;
-        fxctx.beginPath();fxctx.arc(st.x%fw,st.y%fh,st.s,0,Math.PI*2);
-        fxctx.fillStyle=`rgba(170,195,255,${alpha})`;fxctx.fill();
+      const ocx=fw/2, ocy=fh*0.45, orbR=Math.min(fw,fh)*0.15;
+      camPh+=0.005;
+      const camX=Math.sin(camPh)*7, camY=Math.cos(camPh*0.7)*5;   // subtle camera breathing/drift
+
+      // Nebula clouds (slow drift, soft)
+      for(const n of nebulae){n.x+=n.dx;n.y+=n.dy;n.ph+=0.003;
+        if(n.x<-0.3)n.x=1.3;if(n.x>1.3)n.x=-0.3;if(n.y<-0.3)n.y=1.3;if(n.y>1.3)n.y=-0.3;
+        const gx=n.x*fw+camX*2,gy=n.y*fh+camY*2,gr=n.r*Math.max(fw,fh);
+        const g=fxctx.createRadialGradient(gx,gy,0,gx,gy,gr);
+        const a=n.a*(0.7+0.3*Math.sin(n.ph));
+        g.addColorStop(0,`hsla(${n.hue},80%,55%,${a.toFixed(3)})`);
+        g.addColorStop(1,'transparent');
+        fxctx.fillStyle=g;fxctx.fillRect(0,0,fw,fh);
       }
+
+      // Volumetric blue fog around the center region
+      const fog=fxctx.createRadialGradient(ocx,ocy,0,ocx,ocy,orbR*4.5);
+      fog.addColorStop(0,'rgba(0,120,255,0.10)');
+      fog.addColorStop(0.5,'rgba(0,70,190,0.045)');
+      fog.addColorStop(1,'transparent');
+      fxctx.fillStyle=fog;fxctx.fillRect(0,0,fw,fh);
+
+      // Twinkling stars with depth + parallax
+      for(const st of estars){st.a+=st.tw;if(st.a>1)st.a=0;
+        const px=(st.x*fw+camX*(0.3+st.layer*1.6))%fw, py=(st.y*fh+camY*(0.3+st.layer*1.6))%fh;
+        const al=(Math.sin(st.a*Math.PI)*0.6+0.08)*(0.35+st.layer*0.65);
+        fxctx.beginPath();fxctx.arc(px,py,st.s*(0.5+st.layer),0,6.283);
+        fxctx.fillStyle=`rgba(205,228,255,${al.toFixed(2)})`;fxctx.fill();
+      }
+
+      // Drifting cosmic dust
+      for(const d of edust){d.x+=d.vx;d.y+=d.vy;if(d.x<0)d.x=1;if(d.x>1)d.x=0;if(d.y<0)d.y=1;if(d.y>1)d.y=0;
+        fxctx.beginPath();fxctx.arc(d.x*fw,d.y*fh,d.s,0,6.283);
+        fxctx.fillStyle=`rgba(120,180,255,${d.a.toFixed(2)})`;fxctx.fill();
+      }
+
+      fxctx.globalCompositeOperation='lighter';
+
+      // Soft light rays extending from the center into space
+      for(let i=0;i<6;i++){const ang=hudRot*0.3+i*(Math.PI/3);
+        const ex=ocx+Math.cos(ang)*orbR*7, ey=ocy+Math.sin(ang)*orbR*7;
+        const g=fxctx.createLinearGradient(ocx,ocy,ex,ey);
+        g.addColorStop(0,'rgba(0,170,255,0.05)');g.addColorStop(1,'transparent');
+        fxctx.strokeStyle=g;fxctx.lineWidth=orbR*0.5;
+        fxctx.beginPath();fxctx.moveTo(ocx,ocy);fxctx.lineTo(ex,ey);fxctx.stroke();
+      }
+
+      // Concentric pulse waves travelling outward every few seconds
+      envWaveT++;if(envWaveT>170){envWaveT=0;envWaves.push({r:orbR*1.3,life:1});}
+      for(let i=envWaves.length-1;i>=0;i--){const w=envWaves[i];w.r+=1.5;w.life-=0.0045;if(w.life<=0){envWaves.splice(i,1);continue;}
+        fxctx.beginPath();fxctx.arc(ocx,ocy,w.r,0,6.283);
+        fxctx.strokeStyle=`rgba(0,205,255,${(w.life*0.16).toFixed(2)})`;fxctx.lineWidth=1.3;fxctx.stroke();
+      }
+      fxctx.globalCompositeOperation='source-over';
+
+      // ── Holographic HUD layers floating around the orb ──
+      hudRot+=0.004;
+      fxctx.save();fxctx.translate(ocx+camX,ocy+camY);
+      fxctx.strokeStyle='rgba(0,200,255,0.22)';
+      hudRings.forEach((ring,ri)=>{
+        ring.rot+=ring.sp;const rr=orbR*ring.rf;
+        // base ring
+        fxctx.save();fxctx.rotate(ring.rot);
+        fxctx.globalAlpha=0.5;
+        fxctx.beginPath();fxctx.arc(0,0,rr,0,6.283);
+        fxctx.lineWidth=1;fxctx.setLineDash(ring.dash?[6,10]:[]);fxctx.stroke();fxctx.setLineDash([]);
+        // rotating technical tick marks
+        for(let t=0;t<ring.ticks;t++){const ta=(t/ring.ticks)*6.283;
+          const tl=(t%5===0)?orbR*0.08:orbR*0.035;
+          const x1=Math.cos(ta)*rr, y1=Math.sin(ta)*rr;
+          const x2=Math.cos(ta)*(rr+tl), y2=Math.sin(ta)*(rr+tl);
+          fxctx.globalAlpha=(t%5===0)?0.5:0.25;
+          fxctx.beginPath();fxctx.moveTo(x1,y1);fxctx.lineTo(x2,y2);fxctx.lineWidth=1;fxctx.stroke();
+        }
+        // blueprint arc segments (brighter accent)
+        fxctx.globalAlpha=0.6;fxctx.strokeStyle='rgba(120,225,255,0.5)';
+        fxctx.beginPath();fxctx.arc(0,0,rr,ring.rot*2,ring.rot*2+0.6);fxctx.lineWidth=2;fxctx.stroke();
+        fxctx.beginPath();fxctx.arc(0,0,rr,ring.rot*2+3.14,ring.rot*2+3.4);fxctx.stroke();
+        fxctx.strokeStyle='rgba(0,200,255,0.22)';
+        fxctx.restore();
+      });
+      // Floating digital glyphs / hex fragments on the rings
+      fxctx.font=(Math.max(8,orbR*0.11))+"px 'Courier New',monospace";
+      fxctx.textAlign='center';fxctx.textBaseline='middle';
+      for(const gl of hudGlyphs){gl.a+=gl.sp;if(Math.random()<gl.flip)gl.ch=glyphChars[(Math.random()*glyphChars.length)|0];
+        const rr=orbR*hudRings[gl.ring].rf*1.04;
+        const gx=Math.cos(gl.a)*rr, gy=Math.sin(gl.a)*rr;
+        fxctx.globalAlpha=0.35+0.25*Math.sin(hudRot*3+gl.a*4);
+        fxctx.fillStyle='rgba(150,225,255,0.9)';
+        fxctx.fillText(gl.ch,gx,gy);
+      }
+      fxctx.globalAlpha=1;
+      fxctx.restore();
+
       requestAnimationFrame(fxDraw)}fxDraw();
 
     // --- Orb Canvas Renderer (particle sphere like the reference image) ---
