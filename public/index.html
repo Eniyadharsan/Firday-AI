@@ -151,9 +151,10 @@
     *{margin:0;padding:0;box-sizing:border-box}
     body{font-family:'Courier New',monospace;background:#000;color:var(--accent);height:100vh;overflow:hidden}
 
-    /* Deep space universe background */
+    /* Black-hole void — darkest possible with a faint gravitational halo */
     body::before{content:'';position:fixed;inset:0;background:
-      radial-gradient(ellipse at 50% 50%, rgba(0,20,60,0.3) 0%, transparent 50%);
+      radial-gradient(circle at 50% 45%, rgba(20,40,80,0.12) 0%, rgba(0,0,0,0) 38%),
+      radial-gradient(circle at 50% 50%, #000208 0%, #000 60%);
       pointer-events:none;z-index:0}
 
     /* No scan lines — pure cosmic void */
@@ -587,16 +588,15 @@
     const fxc=document.getElementById('fx'),fxctx=fxc.getContext('2d');
     let fw,fh;function fxResize(){fw=fxc.width=innerWidth;fh=fxc.height=innerHeight}addEventListener('resize',fxResize);fxResize();
 
-    // Generate stars
-    const stars=[];for(let i=0;i<300;i++)stars.push({x:Math.random()*2000-500,y:Math.random()*2000-500,s:Math.random()*1.5+0.3,a:Math.random()});
+    // Sparse, dim starfield for the black-hole void
+    const stars=[];for(let i=0;i<160;i++)stars.push({x:Math.random()*2000-500,y:Math.random()*2000-500,s:Math.random()*1.3+0.2,a:Math.random()});
     function fxDraw(){
       fxctx.clearRect(0,0,fw,fh);
-      // Stars
       for(const st of stars){
         st.a+=0.003;if(st.a>1)st.a=0;
-        const alpha=Math.sin(st.a*Math.PI)*0.6+0.1;
+        const alpha=Math.sin(st.a*Math.PI)*0.4+0.04;
         fxctx.beginPath();fxctx.arc(st.x%fw,st.y%fh,st.s,0,Math.PI*2);
-        fxctx.fillStyle=`rgba(150,180,255,${alpha})`;fxctx.fill();
+        fxctx.fillStyle=`rgba(170,195,255,${alpha})`;fxctx.fill();
       }
       requestAnimationFrame(fxDraw)}fxDraw();
 
@@ -611,124 +611,104 @@
     }
     orbResize();addEventListener('resize',orbResize);
 
-    // Sphere points
-    const POINTS=1800;const spherePoints=[];
-    for(let i=0;i<POINTS;i++){
-      const phi=Math.acos(1-2*(i+0.5)/POINTS);
-      const theta=Math.PI*(1+Math.sqrt(5))*i;
-      spherePoints.push({phi,theta,baseR:1});
+    // Black-hole accretion particles (spiral inward, get sucked into the core)
+    const PCOUNT=360;
+    const parts=[];
+    function spawnPart(p){
+      p.r=0.8+Math.random()*0.8;              // start far out
+      p.a=Math.random()*Math.PI*2;
+      p.speed=0.6+Math.random()*0.9;          // orbital speed factor
+      p.pull=0.0016+Math.random()*0.0032;     // inward pull
+      p.s=Math.random()*1.6+0.5;
+      p.z=Math.random();                      // disk thickness
     }
-    // Dust cloud
-    const dust=[];for(let i=0;i<200;i++)dust.push({a:Math.random()*Math.PI*2,r:0.55+Math.random()*0.35,s:Math.random()*1.5+0.5,speed:0.0005+Math.random()*0.001,phase:Math.random()*Math.PI*2});
+    for(let i=0;i<PCOUNT;i++){const p={};spawnPart(p);p.r=0.05+Math.random()*1.55;parts.push(p);}
+
+    // Lightning bolts that occasionally erupt from the core
+    const bolts=[];for(let i=0;i<3;i++)bolts.push({life:0,ang:0,seed:0});
 
     let orbPulse=1;let orbTargetPulse=1;let orbTime=0;let isSpeaking=false;let isListening=false;
 
     function drawOrb(){
       octx.clearRect(0,0,ow,oh);
       const cx=ow/2,cy=oh/2;
-      const baseRadius=Math.min(ow,oh)*0.28;
+      const baseRadius=Math.min(ow,oh)*0.30;
       orbPulse+=(orbTargetPulse-orbPulse)*0.15;
       const radius=baseRadius*orbPulse;
-      orbTime+=0.008;
+      orbTime+=0.01;
+      const active=isSpeaking||isListening;
+      const beat=0.5+0.5*Math.sin(orbTime*(active?4.5:2.2));
 
-      // Determine color based on state
-      let r=0,g=180,b=255; // blue
-      if(isListening){r=0;g=255;b=136;} // green
+      // Plasma tint: blue normally, green-cyan when listening
+      let pr0=110,pg0=195,pb0=255;
+      if(isListening){pr0=90;pg0=255;pb0=190;}
 
-      // Glow background
-      const glowGrad=octx.createRadialGradient(cx,cy,radius*0.3,cx,cy,radius*1.8);
-      glowGrad.addColorStop(0,`rgba(${r},${g},${b},0.15)`);
-      glowGrad.addColorStop(0.5,`rgba(${r},${g},${b},0.04)`);
-      glowGrad.addColorStop(1,'transparent');
-      octx.fillStyle=glowGrad;octx.fillRect(0,0,ow,oh);
+      octx.globalCompositeOperation='lighter';
 
-      // Draw sphere points
-      const rotY=orbTime*0.4;const rotX=orbTime*0.2;
-      const cosY=Math.cos(rotY),sinY=Math.sin(rotY),cosX=Math.cos(rotX),sinX=Math.sin(rotX);
-
-      for(const p of spherePoints){
-        const x0=Math.sin(p.phi)*Math.cos(p.theta);
-        const y0=Math.cos(p.phi);
-        const z0=Math.sin(p.phi)*Math.sin(p.theta);
-
-        // Rotate Y
-        const x1=x0*cosY-z0*sinY;const z1=x0*sinY+z0*cosY;
-        // Rotate X
-        const y1=y0*cosX-z1*sinX;const z2=y0*sinX+z1*cosX;
-
-        // Surface distortion (organic pulsating)
-        const distort=1+0.06*Math.sin(p.phi*8+orbTime*3)*Math.cos(p.theta*6+orbTime*2);
-        const pr=radius*distort;
-
-        const px=cx+x1*pr;const py=cy+y1*pr;
-        const depth=(z2+1)/2; // 0=back, 1=front
-
-        if(depth<0.2)continue; // cull back-facing
-
-        const alpha=depth*0.8;
-        const size=0.8+depth*1.8;
-
-        // Brighter at front, energy flow effect
-        const energy=Math.sin(p.phi*4+p.theta*3+orbTime*5)*0.5+0.5;
-        const bright=Math.floor(100+energy*155);
-
-        octx.beginPath();octx.arc(px,py,size,0,Math.PI*2);
-        octx.fillStyle=`rgba(${Math.floor(r*0.3+bright*0.1)},${Math.floor(g*0.6+bright*0.4)},${Math.floor(b*0.5+bright*0.5)},${alpha.toFixed(2)})`;
+      // Accretion disk — particles spiral inward with a tilt (light bends around the core)
+      const tilt=0.42;
+      for(const p of parts){
+        // gravitational acceleration: orbit + pull increase as radius shrinks
+        p.a+=(p.speed*(active?0.95:0.62))*(0.02/(p.r+0.05));
+        p.r-=p.pull*(active?1.7:1)*(0.6+0.5/(p.r+0.1));
+        if(p.r<=0.045)spawnPart(p);          // swallowed → respawn far out
+        const rr=p.r*radius*1.5;
+        const px=cx+Math.cos(p.a)*rr;
+        const py=cy+Math.sin(p.a)*rr*tilt+(p.z-0.5)*radius*0.10;
+        const t=Math.min(1,p.r);             // 0=center .. 1=outer
+        let cr,cg,cb,al;
+        if(t<0.28){cr=255;cg=255;cb=255;al=0.9;}                                   // white
+        else if(t<0.7){const k=(t-0.28)/0.42;cr=255-(255-pr0)*k;cg=255-(255-pg0)*k;cb=255-(255-pb0)*k;al=0.85-0.35*k;} // blue plasma
+        else{const k=(t-0.7)/0.3;cr=pr0*(1-k)*0.5;cg=pg0*(1-k)*0.55;cb=pb0*(1-k);al=0.4*(1-k);}                        // dark matter → space
+        const sz=p.s*(0.6+(1-t)*1.7);
+        octx.beginPath();octx.arc(px,py,Math.max(0.4,sz),0,Math.PI*2);
+        octx.fillStyle=`rgba(${cr|0},${cg|0},${cb|0},${al.toFixed(2)})`;
         octx.fill();
       }
 
-      // Inner core glow
-      const coreGrad=octx.createRadialGradient(cx,cy,0,cx,cy,radius*0.5);
-      coreGrad.addColorStop(0,`rgba(${r+100>255?255:r+100},${g+50>255?255:g+50},${b},0.3)`);
-      coreGrad.addColorStop(1,'transparent');
-      octx.fillStyle=coreGrad;octx.beginPath();octx.arc(cx,cy,radius*0.5,0,Math.PI*2);octx.fill();
+      // Photon ring — light bending around the AI core
+      octx.beginPath();octx.arc(cx,cy,radius*0.34,0,Math.PI*2);
+      octx.strokeStyle=`rgba(210,238,255,${(0.45+0.35*beat).toFixed(2)})`;
+      octx.lineWidth=Math.max(1.5,radius*0.02);
+      octx.shadowColor='rgba(150,220,255,0.9)';octx.shadowBlur=radius*0.14;octx.stroke();
+      octx.shadowBlur=0;
 
-      // Fiery energy rays ΓÇö shoot outward, glow with phase
-      const rayCount = 16;
-      for (let i = 0; i < rayCount; i++) {
-        const angle = (i / rayCount) * Math.PI * 2 + orbTime * 0.3;
-        const rayLen = radius * (0.6 + 0.5 * Math.sin(angle * 3 + orbTime * 4) * orbPulse);
-        const rayWidth = 1.5 + Math.sin(angle * 2 + orbTime * 5) * 1;
-        const intensity = 0.3 + 0.5 * Math.sin(i * 1.7 + orbTime * 3);
+      // Absolute-white core → blue plasma bloom
+      const bloom=octx.createRadialGradient(cx,cy,0,cx,cy,radius*0.95);
+      bloom.addColorStop(0,'rgba(255,255,255,0.95)');
+      bloom.addColorStop(0.16,'rgba(225,242,255,0.8)');
+      bloom.addColorStop(0.42,`rgba(${pr0},${pg0},${pb0},0.22)`);
+      bloom.addColorStop(1,'transparent');
+      octx.fillStyle=bloom;octx.beginPath();octx.arc(cx,cy,radius*0.95,0,Math.PI*2);octx.fill();
+      const coreR=radius*(0.20+0.05*beat);
+      const core=octx.createRadialGradient(cx,cy,0,cx,cy,coreR);
+      core.addColorStop(0,'rgba(255,255,255,1)');
+      core.addColorStop(0.6,'rgba(238,249,255,0.9)');
+      core.addColorStop(1,'transparent');
+      octx.fillStyle=core;octx.beginPath();octx.arc(cx,cy,coreR,0,Math.PI*2);octx.fill();
 
-        const x1 = cx + Math.cos(angle) * radius * 0.9;
-        const y1 = cy + Math.sin(angle) * radius * 0.9;
-        const x2 = cx + Math.cos(angle) * (radius + rayLen);
-        const y2 = cy + Math.sin(angle) * (radius + rayLen);
-
-        const rayGrad = octx.createLinearGradient(x1, y1, x2, y2);
-        rayGrad.addColorStop(0, `rgba(${r + 80 > 255 ? 255 : r + 80},${g},${b},${(intensity * 0.8).toFixed(2)})`);
-        rayGrad.addColorStop(0.4, `rgba(${r},${g},${b},${(intensity * 0.5).toFixed(2)})`);
-        rayGrad.addColorStop(1, 'transparent');
-
-        octx.beginPath();
-        octx.moveTo(x1, y1);
-        octx.lineTo(x2, y2);
-        octx.strokeStyle = rayGrad;
-        octx.lineWidth = rayWidth;
-        octx.shadowColor = `rgba(${r},${g},${b},0.6)`;
-        octx.shadowBlur = 8;
-        octx.stroke();
-        octx.shadowBlur = 0;
+      // Occasional lightning erupting from the core
+      for(const bolt of bolts){
+        bolt.life-=0.06;
+        if(bolt.life<=0){
+          if(Math.random()<(active?0.09:0.035)){bolt.life=1;bolt.ang=Math.random()*Math.PI*2;bolt.seed=Math.random()*1000;}
+          else continue;
+        }
+        const segs=7;const len=radius*1.15;
+        octx.beginPath();octx.moveTo(cx,cy);
+        for(let s=1;s<=segs;s++){
+          const t=s/segs;const base=len*t;
+          const perp=(Math.sin(bolt.seed+s*11.3)*0.5)*radius*0.16*(1-t);
+          const x2=cx+Math.cos(bolt.ang)*base+Math.cos(bolt.ang+1.5708)*perp;
+          const y2=cy+Math.sin(bolt.ang)*base+Math.sin(bolt.ang+1.5708)*perp;
+          octx.lineTo(x2,y2);
+        }
+        octx.strokeStyle=`rgba(220,245,255,${(bolt.life*0.85).toFixed(2)})`;
+        octx.lineWidth=1.6;octx.shadowColor='rgba(150,220,255,0.95)';octx.shadowBlur=12;octx.stroke();
+        octx.shadowBlur=0;
       }
 
-      // Secondary fiery glow halo around the orb
-      const haloGrad = octx.createRadialGradient(cx, cy, radius * 0.85, cx, cy, radius * 1.3);
-      haloGrad.addColorStop(0, `rgba(${r},${g},${b},${(0.1 + 0.1 * orbPulse).toFixed(2)})`);
-      haloGrad.addColorStop(0.5, `rgba(${r},${g},${b},${(0.04 * orbPulse).toFixed(2)})`);
-      haloGrad.addColorStop(1, 'transparent');
-      octx.fillStyle = haloGrad;
-      octx.beginPath(); octx.arc(cx, cy, radius * 1.3, 0, Math.PI * 2); octx.fill();
-
-      // Dust cloud ring
-      for(const d of dust){
-        d.a+=d.speed;
-        const dx=cx+Math.cos(d.a+d.phase)*radius*d.r*1.6;
-        const dy=cy+Math.sin(d.a+d.phase)*radius*d.r*1.6;
-        octx.beginPath();octx.arc(dx,dy,d.s,0,Math.PI*2);
-        octx.fillStyle=`rgba(${r*0.5},${g*0.6},${b},${0.15+Math.sin(d.phase+orbTime)*0.1})`;
-        octx.fill();
-      }
+      octx.globalCompositeOperation='source-over';
 
       requestAnimationFrame(drawOrb);
     }
