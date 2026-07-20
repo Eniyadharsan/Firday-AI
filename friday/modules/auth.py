@@ -12,7 +12,7 @@ from typing import Callable
 import jwt
 from flask import request, jsonify
 from loguru import logger
-from friday.config import JWT_SECRET, RESEND_API_KEY
+from friday.config import JWT_SECRET, RESEND_API_KEY, DEV_AUTO_LOGIN, DEV_EMAIL, DEV_PASSWORD
 from friday import db
 
 # In-memory OTP store: {email: {"code": "123456", "expires": timestamp, "password": ..., "name": ...}}
@@ -194,6 +194,34 @@ def _complete_signup(email: str, password: str = None, name: str = None) -> dict
                [user_id, email, user_name, pw_hash, now, now])
     logger.info(f"User registered: {email}")
     return {"token": make_token(user_id, email, user_name), "user": {"id": user_id, "email": email, "name": user_name}}
+
+
+def dev_login() -> dict:
+    """Development-only auto-login. Signs in (or creates) the configured dev
+    account without OTP. Gated by DEV_AUTO_LOGIN; credentials come from env vars.
+    """
+    if not DEV_AUTO_LOGIN or not DEV_EMAIL or not DEV_PASSWORD:
+        return {"error": "Dev auto-login is disabled."}
+
+    rows = db.execute("SELECT id, email, name, password_hash FROM users WHERE email = ?", [DEV_EMAIL])
+    if not rows:
+        # Create the dev account (no OTP required)
+        user_id = secrets.token_hex(16)
+        pw_hash = hash_password(DEV_PASSWORD)
+        name = DEV_EMAIL.split("@")[0]
+        now = time.strftime("%Y-%m-%dT%H:%M:%SZ")
+        db.execute("INSERT INTO users (id, email, name, password_hash, created_at, last_login) VALUES (?, ?, ?, ?, ?, ?)",
+                   [user_id, DEV_EMAIL, name, pw_hash, now, now])
+        logger.info(f"Dev account created: {DEV_EMAIL}")
+        return {"token": make_token(user_id, DEV_EMAIL, name), "user": {"id": user_id, "email": DEV_EMAIL, "name": name}}
+
+    row = rows[0]
+    if not verify_password(DEV_PASSWORD, row["password_hash"]):
+        return {"error": "Dev credentials do not match the stored account."}
+
+    db.execute("UPDATE users SET last_login = ? WHERE id = ?", [time.strftime("%Y-%m-%dT%H:%M:%SZ"), row["id"]])
+    return {"token": make_token(row["id"], row["email"], row["name"]),
+            "user": {"id": row["id"], "email": row["email"], "name": row["name"]}}
 
 
 def signin(email: str, password: str) -> dict:

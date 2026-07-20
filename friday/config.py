@@ -31,6 +31,14 @@ DB_PATH: Path = DATA_DIR / "friday.db"
 # --- Auth ---
 JWT_SECRET: str = os.getenv("JWT_SECRET", "friday-secret-change-in-prod")
 
+# --- Dev auto-login (development only) ---
+# When DEV_AUTO_LOGIN=true, the /auth/dev-login endpoint signs in the configured
+# dev account automatically so you don't have to log in after every deployment.
+# Credentials live in env vars (never committed). Disable in real production.
+DEV_AUTO_LOGIN: bool = os.getenv("DEV_AUTO_LOGIN", "false").lower() == "true"
+DEV_EMAIL: str = os.getenv("DEV_EMAIL", "")
+DEV_PASSWORD: str = os.getenv("DEV_PASSWORD", "")
+
 # --- External ---
 RESEND_API_KEY: str = os.getenv("RESEND_API_KEY", "")
 NEWS_REFRESH_INTERVAL: int = 300

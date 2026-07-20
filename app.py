@@ -144,6 +144,13 @@ def signin():
         return jsonify(result), 401
     return jsonify({"success": True, **result})
 
+@app.route("/auth/dev-login", methods=["POST"])
+def dev_login():
+    result = auth.dev_login()
+    if "error" in result:
+        return jsonify(result), 403
+    return jsonify({"success": True, **result})
+
 @app.route("/login", methods=["POST"])
 def login_alias():
     return signin()

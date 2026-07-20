@@ -747,6 +747,14 @@
           if(vr.ok){window.jt=stored;window.jm='chat';statusEl.textContent='OPERATIONAL';orbSub.textContent='TAP TO TALK';showProfile();return}
           else{localStorage.removeItem('jt')}
         }
+        // No stored token — try dev auto-login (only works when enabled server-side)
+        try{
+          const dr=await fetch('/auth/dev-login',{method:'POST'});
+          if(dr.ok){
+            const dd=await dr.json();
+            if(dd.token){window.jt=dd.token;localStorage.setItem('jt',dd.token);window.jm='chat';statusEl.textContent='OPERATIONAL';orbSub.textContent='TAP TO TALK';showProfile();return}
+          }
+        }catch{}
         showLoginScreen();
       }catch{showLoginScreen()}
     })();
