@@ -215,10 +215,12 @@ def dev_login() -> dict:
         logger.info(f"Dev account created: {DEV_EMAIL}")
         return {"token": make_token(user_id, DEV_EMAIL, name), "user": {"id": user_id, "email": DEV_EMAIL, "name": name}}
 
+    # Account exists — the DEV_AUTO_LOGIN env flag is the authorization here, so we
+    # issue a token directly (no password check). Keep the stored password in sync
+    # with DEV_PASSWORD so normal sign-in with these creds also works.
     row = rows[0]
     if not verify_password(DEV_PASSWORD, row["password_hash"]):
-        return {"error": "Dev credentials do not match the stored account."}
-
+        db.execute("UPDATE users SET password_hash = ? WHERE id = ?", [hash_password(DEV_PASSWORD), row["id"]])
     db.execute("UPDATE users SET last_login = ? WHERE id = ?", [time.strftime("%Y-%m-%dT%H:%M:%SZ"), row["id"]])
     return {"token": make_token(row["id"], row["email"], row["name"]),
             "user": {"id": row["id"], "email": row["email"], "name": row["name"]}}
