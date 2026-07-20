@@ -17,6 +17,9 @@
       --accent: #00e5ff;
       --accent-dim: rgba(0, 229, 255, 0.4);
       --listening: #00ff88;
+      /* Font system — sans for reading/writing surfaces, monospace for HUD chrome + code */
+      --font-ui: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Inter', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      --font-mono: 'JetBrains Mono', 'SF Mono', ui-monospace, 'Courier New', monospace;
     }
 
     @keyframes scanLine {
@@ -174,11 +177,12 @@
     .wake-indicator{display:none}
 
     /* ── Holographic AI console (chat) ── */
-    .chat{position:fixed;bottom:18px;left:18px;width:420px;max-height:60vh;z-index:100;border-radius:18px;
+    .chat{position:fixed;bottom:18px;left:18px;width:428px;max-height:62vh;z-index:100;border-radius:20px;
+      font-family:var(--font-ui);-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-rendering:optimizeLegibility;
       background:linear-gradient(160deg,rgba(8,20,40,.62),rgba(4,10,26,.72));
-      backdrop-filter:blur(26px) saturate(1.2);-webkit-backdrop-filter:blur(26px) saturate(1.2);
+      backdrop-filter:blur(30px) saturate(1.3);-webkit-backdrop-filter:blur(30px) saturate(1.3);
       border:1px solid rgba(0,229,255,.18);
-      box-shadow:0 0 0 1px rgba(0,229,255,.04) inset,0 8px 40px rgba(0,0,0,.5),0 0 40px rgba(0,150,255,.06);
+      box-shadow:0 0 0 1px rgba(0,229,255,.05) inset,0 1px 0 rgba(255,255,255,.05) inset,0 12px 48px rgba(0,0,0,.55),0 0 48px rgba(0,150,255,.07);
       display:flex;flex-direction:column;overflow:hidden}
     .chat::before{content:'';position:absolute;inset:0;border-radius:18px;padding:1px;pointer-events:none;
       background:linear-gradient(180deg,rgba(0,229,255,.35),transparent 40%,transparent 70%,rgba(0,150,255,.15));
@@ -200,46 +204,48 @@
     .m mark{background:rgba(255,212,121,.35);color:#fff;border-radius:2px}
     .m.pinned{border-left-color:#ffd479!important;box-shadow:0 0 0 1px rgba(255,212,121,.2)}
     .m.bookmarked::after{content:'🔖';position:absolute;top:8px;right:10px;font-size:10px;opacity:.7}
-    .chat-msgs{flex:1;overflow-y:auto;padding:14px 14px 6px;font-size:12.5px;scroll-behavior:smooth}
+    .chat-msgs{flex:1;overflow-y:auto;padding:16px 16px 8px;font-size:13.5px;scroll-behavior:smooth}
     .chat-msgs::-webkit-scrollbar{width:3px}
     .chat-msgs::-webkit-scrollbar-thumb{background:rgba(0,229,255,.25);border-radius:2px}
 
     /* Message modules */
-    .m{margin:10px 0;line-height:1.55;animation:msgIn .45s cubic-bezier(.2,.7,.3,1) both}
+    .m{margin:14px 0;line-height:1.68;letter-spacing:.1px;animation:msgIn .45s cubic-bezier(.2,.7,.3,1) both}
     @keyframes msgIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
-    .m.u{max-width:88%;margin-left:auto;padding:9px 13px;border-radius:14px 14px 4px 14px;
+    .m.u{max-width:88%;margin-left:auto;padding:10px 15px;border-radius:16px 16px 5px 16px;line-height:1.55;
       background:linear-gradient(160deg,rgba(0,229,255,.12),rgba(0,150,255,.06));
-      border:1px solid rgba(0,229,255,.2);color:#c8f3ff;box-shadow:0 2px 12px rgba(0,120,255,.08)}
+      border:1px solid rgba(0,229,255,.2);color:#d3f5ff;box-shadow:0 2px 12px rgba(0,120,255,.08)}
     /* FRIDAY response module */
-    .m.a{position:relative;max-width:96%;padding:12px 14px 12px;border-radius:4px 14px 14px 14px;
+    .m.a{position:relative;max-width:97%;padding:13px 16px;border-radius:5px 16px 16px 16px;
       background:linear-gradient(160deg,rgba(6,18,38,.6),rgba(4,12,28,.5));
       border:1px solid rgba(0,229,255,.12);border-left:2px solid rgba(0,229,255,.5);
-      color:#cfe9f2;box-shadow:0 4px 20px rgba(0,0,0,.3)}
-    .m.a::before{content:'◈ FRIDAY';display:block;font-size:9px;letter-spacing:2px;color:rgba(0,229,255,.55);margin-bottom:6px;font-weight:bold}
+      color:#d5ecf4;box-shadow:0 4px 20px rgba(0,0,0,.3)}
+    .m.a::before{content:'◈ FRIDAY';display:block;font-family:var(--font-mono);font-size:9px;letter-spacing:2px;color:rgba(0,229,255,.55);margin-bottom:8px;font-weight:bold}
     .m.t{color:rgba(0,229,255,.4);background:none;border:none;font-size:11px}
 
     /* Markdown content inside response modules */
-    .m.a h1,.m.a h2,.m.a h3{color:#7fe4ff;margin:10px 0 6px;letter-spacing:.5px;line-height:1.3}
-    .m.a h1{font-size:16px}.m.a h2{font-size:14px}.m.a h3{font-size:13px}
-    .m.a p{margin:6px 0}
-    .m.a ul,.m.a ol{margin:6px 0 6px 18px}
-    .m.a li{margin:3px 0}
+    .m.a h1,.m.a h2,.m.a h3{color:#8fe8ff;margin:14px 0 7px;letter-spacing:.2px;line-height:1.35;font-weight:600}
+    .m.a h1{font-size:17px}.m.a h2{font-size:15px}.m.a h3{font-size:13.5px}
+    .m.a h1:first-child,.m.a h2:first-child,.m.a h3:first-child,.m.a p:first-child{margin-top:0}
+    .m.a p{margin:8px 0}
+    .m.a ul,.m.a ol{margin:8px 0 8px 20px}
+    .m.a li{margin:4px 0}
     .m.a a{color:#4fd6ff;text-decoration:underline}
     .m.a strong{color:#e6f7ff}
     .m.a em{color:#9fdcff}
     .m.a blockquote{border-left:2px solid rgba(0,229,255,.4);margin:6px 0;padding:2px 10px;color:rgba(0,229,255,.7);background:rgba(0,229,255,.03)}
-    .m.a table{border-collapse:collapse;margin:8px 0;width:100%;font-size:11.5px}
-    .m.a th,.m.a td{border:1px solid rgba(0,229,255,.15);padding:5px 8px;text-align:left}
-    .m.a th{background:rgba(0,229,255,.08);color:#8fe8ff}
-    .m.a code.inline{background:rgba(0,229,255,.1);padding:1px 5px;border-radius:4px;font-family:'Courier New',monospace;color:#8fe8ff;font-size:11.5px}
+    .m.a table{border-collapse:collapse;margin:10px 0;width:100%;font-size:12.5px;border-radius:8px;overflow:hidden}
+    .m.a th,.m.a td{border:1px solid rgba(0,229,255,.12);padding:7px 11px;text-align:left}
+    .m.a th{background:rgba(0,229,255,.1);color:#9be9ff;font-weight:600;letter-spacing:.2px}
+    .m.a tbody tr:nth-child(even){background:rgba(0,229,255,.03)}
+    .m.a code.inline{background:rgba(0,229,255,.1);padding:1.5px 6px;border-radius:5px;font-family:var(--font-mono);color:#8fe8ff;font-size:12px}
     /* Code blocks */
     .codeblock{margin:8px 0;border-radius:10px;overflow:hidden;border:1px solid rgba(0,229,255,.14);background:rgba(2,8,20,.8)}
-    .codeblock-head{display:flex;align-items:center;justify-content:space-between;padding:5px 10px;background:rgba(0,229,255,.06);font-size:10px;letter-spacing:1px}
+    .codeblock-head{display:flex;align-items:center;justify-content:space-between;padding:6px 11px;background:rgba(0,229,255,.06);font-family:var(--font-mono);font-size:10px;letter-spacing:1px}
     .codeblock-lang{color:rgba(0,229,255,.6);text-transform:uppercase}
     .codeblock-btns{display:flex;gap:6px}
     .codeblock-btns button{background:none;border:1px solid rgba(0,229,255,.2);color:rgba(0,229,255,.7);border-radius:5px;font-size:9px;padding:2px 7px;cursor:pointer;font-family:inherit;letter-spacing:.5px;transition:all .15s}
     .codeblock-btns button:hover{background:rgba(0,229,255,.12);color:#00e5ff}
-    .codeblock pre{margin:0;padding:10px 12px;overflow-x:auto;font-family:'Courier New',monospace;font-size:11.5px;line-height:1.5;color:#cfe0ea}
+    .codeblock pre{margin:0;padding:11px 13px;overflow-x:auto;font-family:var(--font-mono);font-size:12px;line-height:1.55;color:#cfe0ea}
     .codeblock pre::-webkit-scrollbar{height:4px}
     .codeblock pre::-webkit-scrollbar-thumb{background:rgba(0,229,255,.2)}
     /* Inline markdown image */
@@ -366,7 +372,7 @@
     .wave-canvas{position:absolute;inset:0;width:100%;height:100%;border-radius:22px;pointer-events:none;z-index:2}
     /* Input dock — floating glass */
     .chat-in{display:flex;gap:8px;align-items:center;padding:10px 12px;border-top:1px solid rgba(0,229,255,.1);background:rgba(0,229,255,.02)}
-    .chat-in input#inp{flex:1;padding:10px 14px;border-radius:22px;border:1px solid rgba(0,229,255,.14);background:rgba(0,20,40,.5);color:#dff4ff;font-family:inherit;font-size:12.5px;outline:none;transition:all .2s}
+    .chat-in input#inp{flex:1;padding:11px 15px;border-radius:22px;border:1px solid rgba(0,229,255,.14);background:rgba(0,20,40,.5);color:#dff4ff;font-family:inherit;font-size:13px;outline:none;transition:all .2s}
     .chat-in input#inp:focus{border-color:rgba(0,229,255,.4);box-shadow:0 0 16px rgba(0,229,255,.12)}
     .chat-in input#inp::placeholder{color:rgba(0,229,255,.3)}
     .ib{width:32px;height:32px;border-radius:50%;border:1px solid rgba(0,229,255,.18);background:rgba(0,229,255,.04);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .18s;flex-shrink:0}
