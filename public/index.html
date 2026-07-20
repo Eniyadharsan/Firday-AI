@@ -727,33 +727,55 @@
         proj[i]={x:cx+x1*radius,y:cy+y1*radius,z:z2,depth};
       }
 
-      // Synapse edges (neural connections) with travelling energy pulses
+      // Synapse edges — bright electric-blue "lightning" filaments (image-1 look)
       octx.lineCap='round';
+      octx.globalCompositeOperation='lighter';   // additive glow like electric arcs
       for(let e=0;e<edges.length;e++){
         const a=proj[edges[e][0]],bb=proj[edges[e][1]];
         const depth=(a.depth+bb.depth)/2;
         if(depth<0.14)continue;
         const fire=Math.sin(orbTime*(active?6:3)+e*0.9)*0.5+0.5;
-        const al=depth*(active?0.42:0.28)*(0.35+fire*0.65);
+        // occasional bright "firing" arcs
+        const arc=(Math.sin(e*2.3+orbTime*(active?5:2.2))>0.72)?1:0;
+        const al=depth*(active?0.5:0.34)*(0.3+fire*0.7);
+        // soft blue base stroke
         octx.beginPath();octx.moveTo(a.x,a.y);octx.lineTo(bb.x,bb.y);
-        octx.strokeStyle=`rgba(${Math.min(255,r+70)},${g},${b},${al.toFixed(2)})`;
-        octx.lineWidth=depth*1.1;
+        octx.strokeStyle=`rgba(80,${g},255,${al.toFixed(2)})`;
+        octx.lineWidth=depth*1.2;
+        octx.shadowColor='rgba(0,200,255,0.7)';octx.shadowBlur=depth*4;
         octx.stroke();
+        // bright white-cyan lightning core on firing arcs
+        if(arc){
+          octx.beginPath();octx.moveTo(a.x,a.y);octx.lineTo(bb.x,bb.y);
+          octx.strokeStyle=`rgba(220,250,255,${(depth*0.85).toFixed(2)})`;
+          octx.lineWidth=depth*0.7;
+          octx.shadowColor='rgba(180,240,255,0.95)';octx.shadowBlur=depth*10;
+          octx.stroke();
+        }
       }
+      octx.shadowBlur=0;
 
-      // Glowing synapse nodes (brighter/larger toward the front for 3D depth)
+      // Glowing synapse nodes — white-hot cores with cyan bloom (image-1 look)
       for(let i=0;i<NODES;i++){
         const a=proj[i];if(a.depth<0.12)continue;
         nodePos[i].pulse+=active?0.09:0.05;
         const fire=Math.sin(nodePos[i].pulse)*0.5+0.5;
-        const size=(0.5+a.depth*2.4)*(0.7+fire*0.6);
-        const bright=Math.floor(150+fire*105);
+        const isHub=(i%6===0);                    // bright hub nodes like the image
+        const size=(0.5+a.depth*(isHub?3.6:2.2))*(0.7+fire*0.6);
+        // outer cyan bloom
         octx.beginPath();octx.arc(a.x,a.y,size,0,Math.PI*2);
-        octx.fillStyle=`rgba(${Math.floor(r*0.25+bright*0.35)},${Math.floor(g*0.5+bright*0.5)},255,${(a.depth*0.95).toFixed(2)})`;
-        octx.shadowColor=`rgba(${r},${g},${b},0.9)`;
-        octx.shadowBlur=a.depth*(active?9:6)*(0.5+fire);
-        octx.fill();octx.shadowBlur=0;
+        octx.fillStyle=`rgba(60,${g},255,${(a.depth*0.9).toFixed(2)})`;
+        octx.shadowColor='rgba(0,210,255,0.95)';
+        octx.shadowBlur=a.depth*(active?14:10)*(0.6+fire)*(isHub?1.6:1);
+        octx.fill();
+        // white-hot center
+        octx.beginPath();octx.arc(a.x,a.y,size*0.5,0,Math.PI*2);
+        octx.fillStyle=`rgba(235,250,255,${(a.depth*0.95).toFixed(2)})`;
+        octx.shadowBlur=a.depth*6;
+        octx.fill();
       }
+      octx.shadowBlur=0;
+      octx.globalCompositeOperation='source-over';
 
       // Bright core
       const coreGrad=octx.createRadialGradient(cx,cy,0,cx,cy,radius*0.55);
