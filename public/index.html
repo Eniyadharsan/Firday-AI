@@ -196,6 +196,33 @@
     .detail-body{flex:1;overflow-y:auto;padding:14px 16px;font-size:12px;line-height:1.7;color:rgba(0,229,255,.7)}
     .detail-body::-webkit-scrollbar{width:2px}
 
+    /* ── Full-screen 3D Map overlay ── */
+    .map-overlay{position:fixed;inset:0;z-index:5000;background:#000;display:none;opacity:0;transition:opacity .35s ease}
+    .map-overlay.open{display:block;opacity:1}
+    .map-gl{position:absolute;inset:0;width:100%;height:100%}
+    .map-topbar{position:absolute;top:0;left:0;right:0;height:52px;display:flex;align-items:center;justify-content:space-between;padding:0 16px;z-index:10;background:linear-gradient(180deg,rgba(0,10,25,.85),transparent);pointer-events:none}
+    .map-title{font-size:13px;letter-spacing:3px;color:#00e5ff;font-weight:bold;text-shadow:0 0 12px rgba(0,229,255,.5);pointer-events:auto}
+    .map-close{pointer-events:auto;width:34px;height:34px;border-radius:50%;border:1px solid rgba(0,229,255,.25);background:rgba(0,10,25,.6);backdrop-filter:blur(10px);color:#00e5ff;font-size:15px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .2s}
+    .map-close:hover{background:rgba(255,60,60,.15);border-color:rgba(255,60,60,.4);color:#ff6666}
+    .map-search-bar{position:absolute;top:60px;left:16px;right:16px;z-index:10;display:flex;gap:8px;flex-wrap:wrap;max-width:520px}
+    .map-search-input{flex:1;min-width:160px;padding:11px 14px;border-radius:12px;border:1px solid rgba(0,229,255,.18);background:rgba(0,10,25,.7);backdrop-filter:blur(14px);color:#e0f7ff;font-family:inherit;font-size:13px;outline:none}
+    .map-search-input::placeholder{color:rgba(0,229,255,.4)}
+    .map-search-input:focus{border-color:rgba(0,229,255,.45)}
+    .map-go{padding:11px 16px;border-radius:12px;border:1px solid rgba(0,229,255,.25);background:rgba(0,229,255,.1);backdrop-filter:blur(14px);color:#00e5ff;font-family:inherit;font-size:12px;letter-spacing:1px;cursor:pointer;transition:all .2s}
+    .map-go:hover{background:rgba(0,229,255,.2)}
+    .map-go.alt{background:rgba(123,47,247,.12);border-color:rgba(123,47,247,.3);color:#b085ff}
+    .map-route-info{position:absolute;bottom:16px;left:16px;right:16px;z-index:10;max-width:520px;padding:12px 16px;border-radius:12px;background:rgba(0,10,25,.8);backdrop-filter:blur(14px);border:1px solid rgba(0,229,255,.15);color:#e0f7ff;font-size:12px;line-height:1.6}
+    .map-route-info .rt-summary{color:#00e5ff;font-weight:bold;margin-bottom:6px;font-size:13px}
+    .map-route-info .rt-steps{max-height:22vh;overflow-y:auto;font-size:11px;color:rgba(224,247,255,.8)}
+    .map-route-info .rt-steps div{padding:3px 0;border-bottom:1px solid rgba(0,229,255,.06)}
+    .map-layer-toggle{position:absolute;bottom:16px;right:16px;z-index:11;display:flex;flex-direction:column;gap:6px}
+    .map-lyr{padding:8px 12px;border-radius:10px;border:1px solid rgba(0,229,255,.2);background:rgba(0,10,25,.7);backdrop-filter:blur(10px);color:rgba(0,229,255,.7);font-family:inherit;font-size:11px;cursor:pointer;transition:all .2s;text-align:center}
+    .map-lyr.active,.map-lyr:hover{background:rgba(0,229,255,.18);color:#00e5ff;border-color:rgba(0,229,255,.4)}
+    @media(max-width:500px){
+      .map-layer-toggle{flex-direction:row;bottom:auto;top:104px;right:16px;left:16px;justify-content:flex-end}
+      .map-route-info{max-height:32vh}
+    }
+
     /* Watery mouse effect canvas */
     .fx{position:fixed;inset:0;pointer-events:none;z-index:5}
 
@@ -452,6 +479,27 @@
   <div class="detail" id="det">
     <div class="detail-head"><h4>ANALYSIS</h4><div class="detail-close" onclick="closeDet()">✕</div></div>
     <div class="detail-body" id="detBody"></div>
+  </div>
+
+  <!-- Full-screen 3D Map (its own dedicated space) -->
+  <div id="mapOverlay" class="map-overlay">
+    <div id="mapGL" class="map-gl"></div>
+    <div class="map-topbar">
+      <div class="map-title">◍ F.R.I.D.A.Y MAPS</div>
+      <button class="map-close" onclick="closeMap()" aria-label="Close map">✕</button>
+    </div>
+    <div class="map-search-bar">
+      <input id="mapSearchInput" class="map-search-input" placeholder="Search a place…" autocomplete="off"/>
+      <input id="mapDestInput" class="map-search-input" placeholder="Directions to… (optional)" autocomplete="off" style="display:none"/>
+      <button id="mapGoBtn" class="map-go" onclick="mapDoSearch()">Go</button>
+      <button id="mapDirBtn" class="map-go alt" onclick="mapToggleDirections()">Directions</button>
+    </div>
+    <div id="mapRouteInfo" class="map-route-info" style="display:none"></div>
+    <div class="map-layer-toggle">
+      <button id="mapLyrStreets" class="map-lyr active" onclick="mapSetStyle('streets')">Streets</button>
+      <button id="mapLyrSat" class="map-lyr" onclick="mapSetStyle('satellite')">Satellite</button>
+      <button id="mapLyr3d" class="map-lyr" onclick="mapToggle3D()">3D Terrain</button>
+    </div>
   </div>
 
   <!-- Music Player Mini Indicator (shown when player is hidden but still playing) -->
@@ -879,7 +927,7 @@
             speak(reply.slice(0,120));
           }
           else if(d.action==='show_map'){
-            showMap(d.place||'');
+            showMap({mode:d.mode||'view',place:d.place||'',origin:d.origin||'',destination:d.destination||''});
             speak(reply.slice(0,120));
           }
           else if(d.action==='show_image'&&d.imageUrl){
@@ -955,72 +1003,186 @@
     }
     function msg(t,c){const d=document.createElement('div');d.className='m '+c;d.textContent=t;msgs.appendChild(d);msgs.scrollTop=msgs.scrollHeight;return d}
     function openDet(t){document.getElementById('detBody').innerHTML=t.replace(/\n/g,'<br>').replace(/\*\*(.*?)\*\*/g,'<strong style="color:#00e5ff">$1</strong>');document.getElementById('det').classList.add('open')}
-    function closeDet(){document.getElementById('det').classList.remove('open');if(window._friMap){try{window._friMap.remove()}catch{}window._friMap=null}}
+    function closeDet(){document.getElementById('det').classList.remove('open')}
 
-    // --- Real interactive map (Leaflet + OpenStreetMap / satellite tiles) ---
-    let _leafletLoading=null;
-    function loadLeaflet(){
-      if(window.L&&window.L.terminator)return Promise.resolve();
-      if(_leafletLoading)return _leafletLoading;
-      _leafletLoading=new Promise((resolve)=>{
-        // CSS
-        if(!document.getElementById('leaflet-css')){
-          const link=document.createElement('link');link.id='leaflet-css';link.rel='stylesheet';
-          link.href='https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+    // ===== F.R.I.D.A.Y MAPS — 3D globe (MapLibre GL) + OSRM directions =====
+    const MAP_STYLES={
+      streets:'https://tiles.openfreemap.org/styles/liberty',
+      satellite:{
+        version:8,
+        sources:{
+          sat:{type:'raster',tiles:['https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'],tileSize:256,attribution:'© Esri'},
+          labels:{type:'raster',tiles:['https://basemaps.cartocdn.com/rastertiles/voyager_only_labels/{z}/{x}/{y}.png'],tileSize:256,attribution:'© CARTO'}
+        },
+        layers:[{id:'sat',type:'raster',source:'sat'},{id:'labels',type:'raster',source:'labels'}]
+      }
+    };
+    let _mlLoading=null, friMap=null, _mapReady=false, _map3d=false, _pendingRoute=null, _pendingPlace=null;
+
+    function loadMapLibre(){
+      if(window.maplibregl)return Promise.resolve();
+      if(_mlLoading)return _mlLoading;
+      _mlLoading=new Promise(resolve=>{
+        if(!document.getElementById('maplibre-css')){
+          const link=document.createElement('link');link.id='maplibre-css';link.rel='stylesheet';
+          link.href='https://unpkg.com/maplibre-gl@5.1.0/dist/maplibre-gl.css';
           document.head.appendChild(link);
         }
-        const loadScript=(src)=>new Promise(res=>{const s=document.createElement('script');s.src=src;s.onload=res;s.onerror=res;document.head.appendChild(s)});
-        loadScript('https://unpkg.com/leaflet@1.9.4/dist/leaflet.js')
-          .then(()=>loadScript('https://unpkg.com/@joergdietrich/leaflet.terminator@1.1.0/L.Terminator.js'))
-          .then(resolve);
+        const s=document.createElement('script');s.src='https://unpkg.com/maplibre-gl@5.1.0/dist/maplibre-gl.js';
+        s.onload=resolve;s.onerror=resolve;document.head.appendChild(s);
       });
-      return _leafletLoading;
+      return _mlLoading;
     }
 
-    async function showMap(place){
-      openDet('<div id="friMapBox" style="width:100%;height:70vh;min-height:320px;border-radius:8px;overflow:hidden;background:#0a1628"></div><div id="friMapInfo" style="font-size:11px;color:rgba(0,229,255,.5);margin-top:8px">Locating…</div>');
-      await loadLeaflet();
-      if(!window.L){document.getElementById('friMapInfo').textContent='Map failed to load. Check your connection.';return}
-
-      let lat=20,lon=0,zoom=2,label='World view';
-      if(place){
-        try{
-          const r=await fetch('https://nominatim.openstreetmap.org/search?format=json&limit=1&q='+encodeURIComponent(place),{headers:{'Accept':'application/json'}});
-          const arr=await r.json();
-          if(arr&&arr.length){lat=+arr[0].lat;lon=+arr[0].lon;zoom=13;label=arr[0].display_name}
-          else{label='Could not find "'+place+'". Showing world view.'}
-        }catch{label='Location lookup failed. Showing world view.'}
-      }
-
-      // Clean up any previous map instance
-      if(window._friMap){try{window._friMap.remove()}catch{}window._friMap=null}
-      const map=L.map('friMapBox',{zoomControl:true,attributionControl:true}).setView([lat,lon],zoom);
-      window._friMap=map;
-
-      const street=L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap'});
-      const sat=L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{maxZoom:19,attribution:'© Esri'});
-      const labelsOverlay=L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager_only_labels/{z}/{x}/{y}{r}.png',{maxZoom:19,attribution:'© CARTO'});
-      street.addTo(map);
-      L.control.layers({'Streets':street,'Satellite':sat},{'Place labels':labelsOverlay}).addTo(map);
-
-      if(place&&label&&!label.startsWith('Could')&&!label.startsWith('Location')){
-        L.marker([lat,lon]).addTo(map).bindPopup(place).openPopup();
-      }
-
-      // Real-time day/night terminator overlay
-      if(L.terminator){
-        try{
-          const term=L.terminator({fillOpacity:0.28,color:'#001a33',fillColor:'#001a33'});
-          term.addTo(map);
-          // Keep the day/night line updated every minute
-          if(window._friTermTimer)clearInterval(window._friTermTimer);
-          window._friTermTimer=setInterval(()=>{try{term.setTime(new Date())}catch{}},60000);
-        }catch{}
-      }
-
-      document.getElementById('friMapInfo').textContent=label;
-      setTimeout(()=>{try{map.invalidateSize()}catch{}},250);
+    async function geocode(q){
+      try{
+        const r=await fetch('https://nominatim.openstreetmap.org/search?format=json&limit=1&q='+encodeURIComponent(q),{headers:{'Accept':'application/json'}});
+        const a=await r.json();
+        if(a&&a.length)return{lat:+a[0].lat,lon:+a[0].lon,label:a[0].display_name};
+      }catch{}
+      return null;
     }
+
+    function openMapOverlay(){document.getElementById('mapOverlay').classList.add('open')}
+    function closeMap(){
+      document.getElementById('mapOverlay').classList.remove('open');
+      if(friMap){try{friMap.remove()}catch{}friMap=null;_mapReady=false;_map3d=false}
+    }
+
+    async function showMap(opts){
+      // opts: {mode:'view'|'directions', place, origin, destination}
+      openMapOverlay();
+      await loadMapLibre();
+      if(!window.maplibregl){document.getElementById('mapRouteInfo').style.display='block';document.getElementById('mapRouteInfo').innerHTML='Map failed to load. Check your connection.';return}
+
+      if(!friMap){
+        friMap=new maplibregl.Map({
+          container:'mapGL',
+          style:MAP_STYLES.streets,
+          center:[0,20],zoom:2,pitch:0,
+          attributionControl:true
+        });
+        friMap.addControl(new maplibregl.NavigationControl({visualizePitch:true}),'bottom-left');
+        friMap.on('style.load',()=>{try{friMap.setProjection({type:'globe'})}catch(e){}});
+        friMap.on('load',()=>{_mapReady=true; if(_pendingRoute){const p=_pendingRoute;_pendingRoute=null;runDirections(p.origin,p.destination)} else if(_pendingPlace!=null){const pl=_pendingPlace;_pendingPlace=null;flyToPlace(pl)}});
+      }
+
+      if(opts.mode==='directions'&&opts.destination){
+        document.getElementById('mapDestInput').style.display='block';
+        document.getElementById('mapSearchInput').value=opts.origin||'My location';
+        document.getElementById('mapDestInput').value=opts.destination;
+        if(_mapReady)runDirections(opts.origin,opts.destination); else _pendingRoute={origin:opts.origin,destination:opts.destination};
+      } else {
+        document.getElementById('mapSearchInput').value=opts.place||'';
+        if(_mapReady)flyToPlace(opts.place||''); else _pendingPlace=opts.place||'';
+      }
+    }
+
+    async function flyToPlace(place){
+      clearRoute();
+      if(!place){friMap.flyTo({center:[0,20],zoom:2,pitch:0});return}
+      const g=await geocode(place);
+      if(!g){showRouteInfo('Could not find “'+place+'”.');return}
+      friMap.flyTo({center:[g.lon,g.lat],zoom:14,pitch:_map3d?60:0,speed:1.2,curve:1.4,essential:true});
+      addMarker(g.lon,g.lat,place);
+      hideRouteInfo();
+    }
+
+    let _markers=[];
+    function clearMarkers(){_markers.forEach(m=>{try{m.remove()}catch{}});_markers=[]}
+    function addMarker(lon,lat,text){
+      const m=new maplibregl.Marker({color:'#00e5ff'}).setLngLat([lon,lat]);
+      if(text)m.setPopup(new maplibregl.Popup({offset:24}).setText(text));
+      m.addTo(friMap);_markers.push(m);return m;
+    }
+
+    function clearRoute(){
+      clearMarkers();
+      if(friMap&&friMap.getLayer&&friMap.getLayer('fri-route')){try{friMap.removeLayer('fri-route');friMap.removeSource('fri-route')}catch{}}
+    }
+
+    async function runDirections(origin,destination){
+      showRouteInfo('Calculating route…');
+      clearRoute();
+      let o=null;
+      if(origin&&origin.toLowerCase()!=='my location'){o=await geocode(origin);}
+      else if(navigator.geolocation){
+        o=await new Promise(res=>navigator.geolocation.getCurrentPosition(
+          p=>res({lat:p.coords.latitude,lon:p.coords.longitude,label:'My location'}),
+          ()=>res(null),{timeout:6000}));
+      }
+      const d=await geocode(destination);
+      if(!d){showRouteInfo('Could not find destination “'+destination+'”.');return}
+      if(!o){
+        // No origin — just show the destination
+        friMap.flyTo({center:[d.lon,d.lat],zoom:14,pitch:_map3d?60:0});
+        addMarker(d.lon,d.lat,destination);
+        showRouteInfo('Showing '+destination+'. (Allow location access for turn-by-turn directions.)');
+        return;
+      }
+      try{
+        const url='https://router.project-osrm.org/route/v1/driving/'+o.lon+','+o.lat+';'+d.lon+','+d.lat+'?overview=full&geometries=geojson&steps=true';
+        const r=await fetch(url);const j=await r.json();
+        if(!j.routes||!j.routes.length){showRouteInfo('No route found.');return}
+        const route=j.routes[0];
+        // Draw route line
+        friMap.addSource('fri-route',{type:'geojson',data:{type:'Feature',geometry:route.geometry}});
+        friMap.addLayer({id:'fri-route',type:'line',source:'fri-route',
+          layout:{'line-join':'round','line-cap':'round'},
+          paint:{'line-color':'#00e5ff','line-width':5,'line-opacity':0.85}});
+        addMarker(o.lon,o.lat,origin||'Start');
+        addMarker(d.lon,d.lat,destination);
+        // Fit bounds
+        const coords=route.geometry.coordinates;
+        const b=coords.reduce((bb,c)=>bb.extend(c),new maplibregl.LngLatBounds(coords[0],coords[0]));
+        friMap.fitBounds(b,{padding:80,pitch:_map3d?55:0});
+        // Summary + steps
+        const km=(route.distance/1000).toFixed(1);
+        const mins=Math.round(route.duration/60);
+        const steps=(route.legs&&route.legs[0]&&route.legs[0].steps)||[];
+        let html='<div class="rt-summary">'+km+' km · '+mins+' min drive</div><div class="rt-steps">';
+        steps.forEach(s=>{const nm=s.name||'';const man=s.maneuver&&s.maneuver.type?s.maneuver.type:'';const mod=s.maneuver&&s.maneuver.modifier?s.maneuver.modifier:'';
+          html+='<div>'+(man+' '+mod).trim()+(nm?' onto '+nm:'')+'</div>';});
+        html+='</div>';
+        showRouteInfo(html);
+      }catch(e){showRouteInfo('Routing failed. Try again.');}
+    }
+
+    function showRouteInfo(html){const el=document.getElementById('mapRouteInfo');el.style.display='block';el.innerHTML=html}
+    function hideRouteInfo(){document.getElementById('mapRouteInfo').style.display='none'}
+
+    function mapDoSearch(){
+      const dest=document.getElementById('mapDestInput');
+      if(dest.style.display!=='none'&&dest.value.trim()){
+        runDirections(document.getElementById('mapSearchInput').value.trim(),dest.value.trim());
+      }else{
+        flyToPlace(document.getElementById('mapSearchInput').value.trim());
+      }
+    }
+    function mapToggleDirections(){
+      const dest=document.getElementById('mapDestInput');
+      dest.style.display=dest.style.display==='none'?'block':'none';
+      if(dest.style.display==='block')dest.focus();
+    }
+    function mapSetStyle(which){
+      if(!friMap)return;
+      document.getElementById('mapLyrStreets').classList.toggle('active',which==='streets');
+      document.getElementById('mapLyrSat').classList.toggle('active',which==='satellite');
+      friMap.setStyle(MAP_STYLES[which]);
+      friMap.once('style.load',()=>{try{friMap.setProjection({type:'globe'})}catch{}});
+    }
+    function mapToggle3D(){
+      if(!friMap)return;
+      _map3d=!_map3d;
+      document.getElementById('mapLyr3d').classList.toggle('active',_map3d);
+      friMap.easeTo({pitch:_map3d?60:0,bearing:_map3d?-20:0,duration:800});
+    }
+    // Enter key triggers search
+    document.addEventListener('keydown',e=>{
+      if(e.key==='Enter'&&document.getElementById('mapOverlay').classList.contains('open')){
+        if(document.activeElement&&document.activeElement.classList.contains('map-search-input'))mapDoSearch();
+      }
+    });
 
     // --- History & New Chat ---
     function newChat(){

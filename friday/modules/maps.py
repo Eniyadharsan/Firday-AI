@@ -26,11 +26,56 @@ def is_map_request(message: str) -> bool:
     """Return True if the message is asking to see a real map / location."""
     lower = message.lower().strip()
 
-    # Questions about an existing map are not new map requests
+    # A directions request is always a map request (even if phrased as "how do I...")
+    if is_directions_request(message):
+        return True
+
+    # Otherwise, questions about an existing map are not new map requests
     if _QUESTION.match(lower) or _REFERENCE.search(lower):
         return False
 
     return bool(_MAP_INTENT.search(lower))
+
+
+def extract_route(message: str) -> tuple[str, str]:
+    """Extract (origin, destination) for a directions request.
+
+    Returns ('', '') if this isn't a from/to routing request. Origin may be
+    empty when the user only gives a destination (e.g. 'directions to X').
+    """
+    text = message.strip()
+
+    # "from A to B" / "directions from A to B" / "route from A to B"
+    m = re.search(r"\bfrom\s+(.+?)\s+to\s+(.+)", text, re.IGNORECASE)
+    if m:
+        return (_clean_place(m.group(1)), _clean_place(m.group(2)))
+
+    # "how do I get from A to B"
+    m = re.search(r"\bget\s+from\s+(.+?)\s+to\s+(.+)", text, re.IGNORECASE)
+    if m:
+        return (_clean_place(m.group(1)), _clean_place(m.group(2)))
+
+    # Destination-only: "directions to B", "navigate to B", "route to B", "how to get to B"
+    m = re.search(r"\b(?:directions?|navigate|route|way|get)\s+to\s+(.+)", text, re.IGNORECASE)
+    if m:
+        return ("", _clean_place(m.group(1)))
+
+    return ("", "")
+
+
+def is_directions_request(message: str) -> bool:
+    """True if the user wants routing/directions (not just a static map view)."""
+    lower = message.lower().strip()
+    # Only exclude references to already-shown content (not general questions —
+    # "how do I get to X" legitimately starts with an interrogative)
+    if _REFERENCE.search(lower):
+        return False
+    if re.search(r"\b(directions?|navigate|navigation|route|how (do i|to) (get|reach)|show me the way)\b", lower):
+        return True
+    # "get/drive/travel from A to B"
+    if re.search(r"\bfrom\s+.+\s+to\s+.+", lower) and re.search(r"\b(get|go|drive|travel|reach|route|directions?|navigate)\b", lower):
+        return True
+    return False
 
 
 def extract_place(message: str) -> str:

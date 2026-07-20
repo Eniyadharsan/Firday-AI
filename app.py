@@ -227,15 +227,29 @@ def chat():
                 "sessionId": session_id
             })
 
-    # --- Map (real interactive map, checked before image so "map of X" isn't AI-painted) ---
+    # --- Map (real interactive 3D map, checked before image so "map of X" isn't AI-painted) ---
     if maps.is_map_request(message):
-        place = maps.extract_place(message)
         memory.save_message(user_id, session_id, "user", message)
+        if maps.is_directions_request(message):
+            origin, destination = maps.extract_route(message)
+            if destination:
+                reply = (f'Plotting a route from {origin} to {destination}, Sir.'
+                         if origin else f'Getting directions to {destination}, Sir.')
+                return jsonify({
+                    "reply": reply,
+                    "sessionId": session_id,
+                    "action": "show_map",
+                    "mode": "directions",
+                    "origin": origin,
+                    "destination": destination,
+                })
+        place = maps.extract_place(message)
         reply = f'Here is the map of {place}, Sir.' if place else "Here is the map, Sir."
         return jsonify({
             "reply": reply,
             "sessionId": session_id,
             "action": "show_map",
+            "mode": "view",
             "place": place,
         })
 
