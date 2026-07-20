@@ -2152,11 +2152,28 @@
     }
 
     let G=null;
-    const SUN=[5,3.2,5];
     function latLonToVec3(lat,lon,r){
       const phi=(90-lat)*Math.PI/180, theta=(lon+180)*Math.PI/180;
       return new THREE.Vector3(-r*Math.sin(phi)*Math.cos(theta), r*Math.cos(phi), r*Math.sin(phi)*Math.sin(theta));
     }
+    // Low-precision solar position — returns the subsolar point (lat/lon) for a
+    // given UTC Date. Accurate to well under 1°, which is plenty for a live
+    // terminator. Ref: NOAA / Astronomical Almanac approximation.
+    function subsolarPoint(date){
+      const rad=Math.PI/180, deg=180/Math.PI;
+      const jd=date.getTime()/86400000+2440587.5;
+      const n=jd-2451545.0;
+      let L=(280.460+0.9856474*n)%360; if(L<0)L+=360;
+      const g=((357.528+0.9856003*n)%360)*rad;
+      const lambda=(L+1.915*Math.sin(g)+0.020*Math.sin(2*g))*rad;
+      const eps=(23.439-0.0000004*n)*rad;
+      const dec=Math.asin(Math.sin(eps)*Math.sin(lambda))*deg;
+      const ra=Math.atan2(Math.cos(eps)*Math.sin(lambda),Math.cos(lambda))*deg;
+      let gmst=(280.46061837+360.98564736629*n)%360; if(gmst<0)gmst+=360;
+      let lon=ra-gmst; lon=((lon+180)%360+360)%360-180;
+      return {lat:dec, lon};
+    }
+    function sunLocalVec(){ const s=subsolarPoint(new Date()); return latLonToVec3(s.lat,s.lon,1).normalize(); }
     let _glowTex=null;
     function glowTexture(){
       if(_glowTex)return _glowTex;
@@ -2165,29 +2182,55 @@
       g.addColorStop(0,'rgba(200,245,255,1)');g.addColorStop(.35,'rgba(0,229,255,.7)');g.addColorStop(1,'rgba(0,229,255,0)');
       x.fillStyle=g;x.fillRect(0,0,64,64);_glowTex=new THREE.CanvasTexture(c);return _glowTex;
     }
+    let _ringTex=null;
+    function ringTexture(){
+      if(_ringTex)return _ringTex;
+      const c=document.createElement('canvas');c.width=c.height=64;const x=c.getContext('2d');
+      x.strokeStyle='rgba(0,229,255,0.95)';x.lineWidth=4;x.beginPath();x.arc(32,32,26,0,Math.PI*2);x.stroke();
+      _ringTex=new THREE.CanvasTexture(c);return _ringTex;
+    }
 
+    // Day/night lighting is computed in the Earth's LOCAL (geographic) frame so
+    // daylight stays correct no matter how the globe is focused/spun. The sun
+    // vector is the real subsolar point derived from UTC.
     const EARTH_VERT=`
-      varying vec2 vUv; varying vec3 vN; varying vec3 vView;
-      void main(){ vUv=uv; vN=normalize(mat3(modelMatrix)*normal);
+      varying vec2 vUv; varying vec3 vN; varying vec3 vView; varying vec3 vLocalN;
+      void main(){ vUv=uv; vLocalN=normalize(normal); vN=normalize(mat3(modelMatrix)*normal);
         vec4 wp=modelMatrix*vec4(position,1.0); vView=normalize(cameraPosition-wp.xyz);
         gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0); }`;
     const EARTH_FRAG=`
       precision highp float;
-      uniform sampler2D dayMap; uniform sampler2D nightMap; uniform vec3 sunDir; uniform float hasTex;
-      varying vec2 vUv; varying vec3 vN; varying vec3 vView;
+      uniform sampler2D dayMap; uniform sampler2D nightMap; uniform sampler2D cloudsMap;
+      uniform vec3 sunDirLocal; uniform float hasTex; uniform float hasClouds; uniform float uTime;
+      varying vec2 vUv; varying vec3 vN; varying vec3 vView; varying vec3 vLocalN;
       vec3 aces(vec3 x){ return clamp((x*(2.51*x+0.03))/(x*(2.43*x+0.59)+0.14),0.0,1.0); }
       void main(){
-        vec3 N=normalize(vN); float d=dot(N,normalize(sunDir)); float t=smoothstep(-0.12,0.22,d);
+        vec3 Nl=normalize(vLocalN);
+        float d=dot(Nl,normalize(sunDirLocal));
+        float day=smoothstep(-0.10,0.20,d);          // soft twilight band
         vec3 base;
         if(hasTex>0.5){
-          vec3 day=pow(texture2D(dayMap,vUv).rgb,vec3(2.2));
-          vec3 night=pow(texture2D(nightMap,vUv).rgb,vec3(2.2));
-          base=mix(night*1.6, day, t);
+          vec3 dayc=pow(texture2D(dayMap,vUv).rgb,vec3(2.2));
+          vec3 nightc=pow(texture2D(nightMap,vUv).rgb,vec3(2.2));
+          float cl=hasClouds>0.5?texture2D(cloudsMap,vUv).r:0.0;
+          dayc*=(1.0-cl*0.22*day);                    // soft cloud shadow on day side
+          base=mix(nightc*1.85, dayc, day);           // city lights only at night
         } else {
-          base=mix(vec3(0.0,0.03,0.06), vec3(0.0,0.13,0.22), t);
+          base=mix(vec3(0.0,0.03,0.06), vec3(0.0,0.13,0.22), day);
         }
-        float fres=pow(1.0-max(dot(N,normalize(vView)),0.0),3.0);
-        base+=vec3(0.0,0.55,1.0)*fres*0.5;
+        // warm sunrise/sunset band hugging the terminator
+        float band=exp(-pow(d*7.0,2.0));
+        base+=vec3(1.0,0.42,0.12)*band*0.30;
+        // aurora near the poles, night side only
+        float lat=abs(vUv.y-0.5)*2.0;
+        float pole=smoothstep(0.72,0.97,lat);
+        float night=1.0-day;
+        float wave=clamp(0.5+0.5*sin(vUv.x*24.0+uTime*1.5)+0.4*sin(vUv.x*11.0-uTime),0.0,1.0);
+        vec3 aur=mix(vec3(0.0,1.0,0.45),vec3(0.55,0.12,0.95),0.5+0.5*sin(vUv.x*8.0+uTime));
+        base+=aur*pole*night*wave*0.22;
+        // blue atmospheric rim on the visible edge
+        float fres=pow(1.0-max(dot(normalize(vN),normalize(vView)),0.0),3.0);
+        base+=vec3(0.0,0.55,1.0)*fres*0.45;
         vec3 col=aces(base*1.12); col=pow(col,vec3(1.0/2.2));
         gl_FragColor=vec4(col,1.0);
       }`;
@@ -2197,9 +2240,13 @@
       void main(){
         vec3 N=normalize(vN);
         float rim=pow(1.0-abs(dot(N,normalize(vView))),2.4);
-        float lit=clamp(dot(N,normalize(sunDir))*0.5+0.5,0.0,1.0);
-        vec3 col=vec3(0.1,0.6,1.0)*rim*(0.5+0.7*lit);
-        gl_FragColor=vec4(col,rim);
+        float lit=dot(N,normalize(sunDir));
+        float dayF=smoothstep(-0.1,0.45,lit);
+        float dusk=exp(-pow(lit*4.0,2.0));            // glow band at the terminator
+        vec3 dayC=vec3(0.10,0.60,1.0);
+        vec3 nightC=vec3(0.02,0.06,0.16);
+        vec3 col=mix(nightC,dayC,dayF)+vec3(1.0,0.45,0.15)*dusk*0.55;
+        gl_FragColor=vec4(col*rim, rim*(0.55+0.45*dayF));
       }`;
 
     function initGlobe(){
@@ -2212,7 +2259,7 @@
       if('outputEncoding' in renderer)renderer.outputEncoding=THREE.sRGBEncoding;
       const scene=new THREE.Scene();
       const camera=new THREE.PerspectiveCamera(45,w/h,0.1,100); camera.position.set(0,0,3.25);
-      const sun=new THREE.Vector3(SUN[0],SUN[1],SUN[2]).normalize();
+      const sun=sunLocalVec(); // subsolar direction in the Earth's local frame (real UTC)
 
       // Star field (procedural, dependency-free)
       const starGeo=new THREE.BufferGeometry(); const N=2600; const arr=new Float32Array(N*3);
@@ -2226,7 +2273,8 @@
 
       // Earth — custom day/night shader (fixes white hemisphere + PBR-style look)
       const earthMat=new THREE.ShaderMaterial({
-        uniforms:{dayMap:{value:null},nightMap:{value:null},sunDir:{value:sun},hasTex:{value:0}},
+        uniforms:{dayMap:{value:null},nightMap:{value:null},cloudsMap:{value:null},
+          sunDirLocal:{value:sun.clone()},hasTex:{value:0},hasClouds:{value:0},uTime:{value:0}},
         vertexShader:EARTH_VERT,fragmentShader:EARTH_FRAG});
       earthMat.toneMapped=false;
       const earth=new THREE.Mesh(new THREE.SphereGeometry(1,96,96),earthMat); earthGroup.add(earth);
@@ -2253,7 +2301,8 @@
         grat.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(p),gmat));}
       scene.add(grat);
 
-      G={renderer,scene,camera,earth,earthMat,clouds,atmo,grat,earthGroup,stars,
+      G={renderer,scene,camera,earth,earthMat,clouds,atmo,grat,earthGroup,stars,dir,
+         sunLocal:sun.clone(),sunTime:Date.now(),
          markers:[],arc:null,arcPts:null,arcPulse:null,arcT:0,
          autoRotate:true,focusing:false,targetQuat:null,raf:0,drag:null};
 
@@ -2261,7 +2310,8 @@
       const TL=new THREE.TextureLoader(); TL.crossOrigin='anonymous';
       TL.load(GLOBE_TEX.day,tex=>{earthMat.uniforms.dayMap.value=tex;if(earthMat.uniforms.nightMap.value)earthMat.uniforms.hasTex.value=1;});
       TL.load(GLOBE_TEX.night,tex=>{earthMat.uniforms.nightMap.value=tex;if(earthMat.uniforms.dayMap.value)earthMat.uniforms.hasTex.value=1;});
-      TL.load(GLOBE_TEX.clouds,tex=>{clouds.material.map=tex;clouds.material.needsUpdate=true;});
+      TL.load(GLOBE_TEX.clouds,tex=>{clouds.material.map=tex;clouds.material.needsUpdate=true;
+        earthMat.uniforms.cloudsMap.value=tex;earthMat.uniforms.hasClouds.value=1;});
 
       // Pointer drag to rotate
       canvas.onpointerdown=e=>{G.drag={x:e.clientX,y:e.clientY};G.autoRotate=false;G.focusing=false;canvas.setPointerCapture(e.pointerId);};
@@ -2278,11 +2328,13 @@
 
     function makeMarker(lat,lon){
       const grp=new THREE.Group();
+      const ring=new THREE.Sprite(new THREE.SpriteMaterial({map:ringTexture(),transparent:true,blending:THREE.AdditiveBlending,depthWrite:false,opacity:0.8}));
+      ring.scale.setScalar(0.16);
       const spr=new THREE.Sprite(new THREE.SpriteMaterial({map:glowTexture(),transparent:true,blending:THREE.AdditiveBlending,depthWrite:false}));
       spr.scale.setScalar(0.17);
       const dot=new THREE.Mesh(new THREE.SphereGeometry(0.013,12,12),new THREE.MeshBasicMaterial({color:0xcdefff}));
-      grp.add(spr);grp.add(dot); grp.position.copy(latLonToVec3(lat,lon,1.012));
-      G.earthGroup.add(grp); const m={grp,spr}; return m;
+      grp.add(ring);grp.add(spr);grp.add(dot); grp.position.copy(latLonToVec3(lat,lon,1.012));
+      G.earthGroup.add(grp); const m={grp,spr,ring}; return m;
     }
     function makeArc(a,b){
       const v1=a.clone().normalize(),v2=b.clone().normalize();
@@ -2340,8 +2392,18 @@
       if(G.clouds)G.clouds.rotation.y+=0.0004;
       if(G.grat)G.grat.rotation.y-=0.0003;
       if(G.stars)G.stars.rotation.y+=0.00006;
+      // Real-time solar model: refresh subsolar point every 5s; sun follows globe orientation
+      const now=Date.now();
+      if(now-G.sunTime>5000){ G.sunLocal=sunLocalVec(); G.sunTime=now; }
+      G.earthMat.uniforms.sunDirLocal.value.copy(G.sunLocal);
+      G.earthMat.uniforms.uTime.value=performance.now()*0.001;
+      const sunWorld=G.sunLocal.clone().applyQuaternion(e.quaternion);
+      if(G.dir)G.dir.position.copy(sunWorld.clone().multiplyScalar(10));
+      if(G.atmo)G.atmo.material.uniforms.sunDir.value.copy(sunWorld);
       const s=1+0.22*Math.sin(performance.now()*0.004);
-      G.markers.forEach(m=>m.spr.scale.setScalar(0.17*s));
+      const rt=(performance.now()*0.0006)%1;
+      G.markers.forEach(m=>{ m.spr.scale.setScalar(0.17*s);
+        if(m.ring){ m.ring.scale.setScalar(0.14+rt*0.26); m.ring.material.opacity=0.8*(1-rt); } });
       if(G.arcPts&&G.arcPulse){ G.arcT=(G.arcT+0.008)%1; const idx=Math.floor(G.arcT*(G.arcPts.length-1)); G.arcPulse.position.copy(G.arcPts[idx]); }
       G.renderer.render(G.scene,G.camera);
     }
