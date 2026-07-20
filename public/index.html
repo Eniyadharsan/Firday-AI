@@ -611,102 +611,120 @@
     }
     orbResize();addEventListener('resize',orbResize);
 
-    // Black-hole accretion particles (spiral inward, get sucked into the core)
-    const PCOUNT=360;
-    const parts=[];
-    function spawnPart(p){
-      p.r=0.8+Math.random()*0.8;              // start far out
-      p.a=Math.random()*Math.PI*2;
-      p.speed=0.6+Math.random()*0.9;          // orbital speed factor
-      p.pull=0.0016+Math.random()*0.0032;     // inward pull
-      p.s=Math.random()*1.6+0.5;
-      p.z=Math.random();                      // disk thickness
-    }
-    for(let i=0;i<PCOUNT;i++){const p={};spawnPart(p);p.r=0.05+Math.random()*1.55;parts.push(p);}
+    // ===== Quantum AI Core =====
+    // Internal galaxy — spiral points swirling inside the orb
+    const galaxy=[];for(let i=0;i<260;i++){const arm=i%3;galaxy.push({r:Math.random(),a:arm*(Math.PI*2/3)+Math.random()*0.6,arm,sp:0.004+Math.random()*0.006,s:Math.random()*1.3+0.3,tw:Math.random()*Math.PI*2});}
+    // Neural pathway nodes on a sphere (+ nearest-neighbour edges that light up when thinking)
+    const NODES=150;const nodePos=[];
+    for(let i=0;i<NODES;i++){const phi=Math.acos(1-2*(i+0.5)/NODES);const theta=Math.PI*(1+Math.sqrt(5))*i;nodePos.push({x:Math.sin(phi)*Math.cos(theta),y:Math.cos(phi),z:Math.sin(phi)*Math.sin(theta),pulse:Math.random()*Math.PI*2});}
+    const edges=[];{const seen=new Set();for(let i=0;i<NODES;i++){const d=[];for(let j=0;j<NODES;j++){if(j===i)continue;const a=nodePos[i],b=nodePos[j];d.push([(a.x-b.x)**2+(a.y-b.y)**2+(a.z-b.z)**2,j]);}d.sort((p,q)=>p[0]-q[0]);for(let k=0;k<2;k++){const j=d[k][1];const key=i<j?i+'-'+j:j+'-'+i;if(!seen.has(key)){seen.add(key);edges.push([i,j]);}}}}
+    // Floating particles / particle rain around the orb (drift; move inward when listening)
+    const floaters=[];for(let i=0;i<120;i++)floaters.push({a:Math.random()*Math.PI*2,r:1.05+Math.random()*0.7,tilt:Math.random()*Math.PI,sp:0.002+Math.random()*0.006,s:Math.random()*1.3+0.3});
+    // Rotating rings (tilted ellipses orbiting the orb)
+    const rings=[];for(let i=0;i<3;i++)rings.push({rf:1.16+i*0.16,tiltX:0.5+i*0.55,rot:Math.random()*Math.PI*2,sp:(0.003+i*0.0015)*(i%2?-1:1)});
+    // Expanding pulse waves (emitted outward when speaking)
+    const waves=[];let waveT=0;
 
-    // Lightning bolts that occasionally erupt from the core
-    const bolts=[];for(let i=0;i<3;i++)bolts.push({life:0,ang:0,seed:0});
-
-    let orbPulse=1;let orbTargetPulse=1;let orbTime=0;let isSpeaking=false;let isListening=false;
+    let orbPulse=1;let orbTargetPulse=1;let orbTime=0;let orbRot=0;let isSpeaking=false;let isListening=false;let isThinking=false;
 
     function drawOrb(){
       octx.clearRect(0,0,ow,oh);
       const cx=ow/2,cy=oh/2;
+      // Energy breathing (idle) — orbTargetPulse driven by TTS when speaking
+      const active=isSpeaking||isListening||isThinking;
+      const breathe=1+Math.sin(orbTime*1.5)*0.04;
+      orbPulse+=((active?orbTargetPulse:breathe)-orbPulse)*0.12;
       const baseRadius=Math.min(ow,oh)*0.30;
-      orbPulse+=(orbTargetPulse-orbPulse)*0.15;
       const radius=baseRadius*orbPulse;
-      orbTime+=0.01;
-      const active=isSpeaking||isListening;
+      orbTime+=0.01;orbRot+=isThinking?0.02:0.009;
       const beat=0.5+0.5*Math.sin(orbTime*(active?4.5:2.2));
 
-      // Plasma tint: blue normally, green-cyan when listening
+      // Plasma tint: blue idle/speaking, green-cyan listening, violet thinking
       let pr0=110,pg0=195,pb0=255;
       if(isListening){pr0=90;pg0=255;pb0=190;}
+      else if(isThinking){pr0=160;pg0=140;pb0=255;}
 
       octx.globalCompositeOperation='lighter';
 
-      // Accretion disk — particles spiral inward with a tilt (light bends around the core)
-      const tilt=0.42;
-      for(const p of parts){
-        // gravitational acceleration: orbit + pull increase as radius shrinks
-        p.a+=(p.speed*(active?0.95:0.62))*(0.02/(p.r+0.05));
-        p.r-=p.pull*(active?1.7:1)*(0.6+0.5/(p.r+0.1));
-        if(p.r<=0.045)spawnPart(p);          // swallowed → respawn far out
-        const rr=p.r*radius*1.5;
-        const px=cx+Math.cos(p.a)*rr;
-        const py=cy+Math.sin(p.a)*rr*tilt+(p.z-0.5)*radius*0.10;
-        const t=Math.min(1,p.r);             // 0=center .. 1=outer
-        let cr,cg,cb,al;
-        if(t<0.28){cr=255;cg=255;cb=255;al=0.9;}                                   // white
-        else if(t<0.7){const k=(t-0.28)/0.42;cr=255-(255-pr0)*k;cg=255-(255-pg0)*k;cb=255-(255-pb0)*k;al=0.85-0.35*k;} // blue plasma
-        else{const k=(t-0.7)/0.3;cr=pr0*(1-k)*0.5;cg=pg0*(1-k)*0.55;cb=pb0*(1-k);al=0.4*(1-k);}                        // dark matter → space
-        const sz=p.s*(0.6+(1-t)*1.7);
-        octx.beginPath();octx.arc(px,py,Math.max(0.4,sz),0,Math.PI*2);
-        octx.fillStyle=`rgba(${cr|0},${cg|0},${cb|0},${al.toFixed(2)})`;
+      // Outer energy halo
+      const halo=octx.createRadialGradient(cx,cy,radius*0.5,cx,cy,radius*1.7);
+      halo.addColorStop(0,`rgba(${pr0},${pg0},${pb0},${(0.12+0.08*beat).toFixed(2)})`);
+      halo.addColorStop(1,'transparent');
+      octx.fillStyle=halo;octx.fillRect(0,0,ow,oh);
+
+      // Speaking → emit expanding pulse waves outward
+      waveT++;
+      if(isSpeaking&&waveT>16){waveT=0;waves.push({r:radius*0.5,life:1});}
+      for(let i=waves.length-1;i>=0;i--){const w=waves[i];w.r+=radius*0.02;w.life-=0.015;if(w.life<=0){waves.splice(i,1);continue;}
+        octx.beginPath();octx.arc(cx,cy,w.r,0,Math.PI*2);
+        octx.strokeStyle=`rgba(${pr0},${pg0},255,${(w.life*0.3).toFixed(2)})`;octx.lineWidth=2;octx.stroke();}
+
+      // Floating particle rain — drift; move INWARD when listening
+      for(const f of floaters){
+        f.a+=f.sp;
+        if(isListening)f.r-=0.006; else f.r+=Math.sin(orbTime+f.a)*0.0008;
+        if(f.r<1.02)f.r=1.75;
+        const ct=Math.cos(f.tilt);
+        const px=cx+Math.cos(f.a)*f.r*radius;
+        const py=cy+Math.sin(f.a)*f.r*radius*ct;
+        octx.beginPath();octx.arc(px,py,f.s,0,Math.PI*2);
+        octx.fillStyle=`rgba(${pr0},${pg0},255,${(0.5+0.3*Math.sin(orbTime+f.a)).toFixed(2)})`;
         octx.fill();
       }
 
-      // Photon ring — light bending around the AI core
-      octx.beginPath();octx.arc(cx,cy,radius*0.34,0,Math.PI*2);
-      octx.strokeStyle=`rgba(210,238,255,${(0.45+0.35*beat).toFixed(2)})`;
-      octx.lineWidth=Math.max(1.5,radius*0.02);
-      octx.shadowColor='rgba(150,220,255,0.9)';octx.shadowBlur=radius*0.14;octx.stroke();
-      octx.shadowBlur=0;
-
-      // Absolute-white core → blue plasma bloom
-      const bloom=octx.createRadialGradient(cx,cy,0,cx,cy,radius*0.95);
-      bloom.addColorStop(0,'rgba(255,255,255,0.95)');
-      bloom.addColorStop(0.16,'rgba(225,242,255,0.8)');
-      bloom.addColorStop(0.42,`rgba(${pr0},${pg0},${pb0},0.22)`);
-      bloom.addColorStop(1,'transparent');
-      octx.fillStyle=bloom;octx.beginPath();octx.arc(cx,cy,radius*0.95,0,Math.PI*2);octx.fill();
-      const coreR=radius*(0.20+0.05*beat);
-      const core=octx.createRadialGradient(cx,cy,0,cx,cy,coreR);
-      core.addColorStop(0,'rgba(255,255,255,1)');
-      core.addColorStop(0.6,'rgba(238,249,255,0.9)');
-      core.addColorStop(1,'transparent');
-      octx.fillStyle=core;octx.beginPath();octx.arc(cx,cy,coreR,0,Math.PI*2);octx.fill();
-
-      // Occasional lightning erupting from the core
-      for(const bolt of bolts){
-        bolt.life-=0.06;
-        if(bolt.life<=0){
-          if(Math.random()<(active?0.09:0.035)){bolt.life=1;bolt.ang=Math.random()*Math.PI*2;bolt.seed=Math.random()*1000;}
-          else continue;
-        }
-        const segs=7;const len=radius*1.15;
-        octx.beginPath();octx.moveTo(cx,cy);
-        for(let s=1;s<=segs;s++){
-          const t=s/segs;const base=len*t;
-          const perp=(Math.sin(bolt.seed+s*11.3)*0.5)*radius*0.16*(1-t);
-          const x2=cx+Math.cos(bolt.ang)*base+Math.cos(bolt.ang+1.5708)*perp;
-          const y2=cy+Math.sin(bolt.ang)*base+Math.sin(bolt.ang+1.5708)*perp;
-          octx.lineTo(x2,y2);
-        }
-        octx.strokeStyle=`rgba(220,245,255,${(bolt.life*0.85).toFixed(2)})`;
-        octx.lineWidth=1.6;octx.shadowColor='rgba(150,220,255,0.95)';octx.shadowBlur=12;octx.stroke();
-        octx.shadowBlur=0;
+      // Rotating rings (tilted ellipses around the orb)
+      const cosY=Math.cos(orbRot),sinY=Math.sin(orbRot);
+      for(const rg of rings){
+        rg.rot+=rg.sp*(active?1.5:1);
+        const ctX=Math.cos(rg.tiltX),stX=Math.sin(rg.tiltX);
+        octx.beginPath();
+        for(let k=0;k<=44;k++){const ang=(k/44)*Math.PI*2;
+          let px=Math.cos(ang)*rg.rf, pz=Math.sin(ang)*rg.rf, py=0;
+          let y1=py*ctX-pz*stX, z1=py*stX+pz*ctX;
+          const a2=rg.rot;const x1=px*Math.cos(a2)-z1*Math.sin(a2), z2=px*Math.sin(a2)+z1*Math.cos(a2);
+          const x3=x1*cosY-z2*sinY;
+          const sx=cx+x3*radius, sy=cy+y1*radius;
+          if(k===0)octx.moveTo(sx,sy);else octx.lineTo(sx,sy);}
+        octx.strokeStyle=`rgba(${pr0},${pg0},255,0.16)`;octx.lineWidth=1;octx.stroke();
       }
+
+      // Internal galaxy — spiral points swirling inside the plasma orb
+      for(const gp of galaxy){
+        gp.a+=gp.sp*(active?1.6:1);gp.tw+=0.04;
+        const gr=gp.r*radius*0.85;
+        const px=cx+Math.cos(gp.a)*gr, py=cy+Math.sin(gp.a)*gr*0.9;
+        const bright=0.4+0.6*Math.sin(gp.tw);
+        octx.beginPath();octx.arc(px,py,gp.s*(0.6+bright*0.6),0,Math.PI*2);
+        octx.fillStyle=`rgba(${Math.floor(200+55*bright)},${Math.floor(220+35*bright)},255,${(0.5*bright+0.2).toFixed(2)})`;
+        octx.fill();
+      }
+
+      // Neural pathways — nodes on a rotating sphere, edges light up when THINKING
+      const proj=new Array(NODES);
+      for(let i=0;i<NODES;i++){const p=nodePos[i];
+        const x1=p.x*cosY-p.z*sinY, z1=p.x*sinY+p.z*cosY;
+        proj[i]={x:cx+x1*radius*0.9,y:cy+p.y*radius*0.9,depth:(z1+1)/2};}
+      const edgeGlow=isThinking?0.5:0.16;
+      for(let e=0;e<edges.length;e++){const a=proj[edges[e][0]],b2=proj[edges[e][1]];const depth=(a.depth+b2.depth)/2;if(depth<0.15)continue;
+        const fire=isThinking?(0.4+0.6*Math.sin(orbTime*8+e)):0.5;
+        octx.beginPath();octx.moveTo(a.x,a.y);octx.lineTo(b2.x,b2.y);
+        octx.strokeStyle=`rgba(${pr0},${pg0},255,${(depth*edgeGlow*fire).toFixed(2)})`;octx.lineWidth=depth*0.8;octx.stroke();}
+      for(let i=0;i<NODES;i++){const a=proj[i];if(a.depth<0.15)continue;nodePos[i].pulse+=isThinking?0.15:0.05;
+        const fire=0.5+0.5*Math.sin(nodePos[i].pulse);
+        octx.beginPath();octx.arc(a.x,a.y,(0.4+a.depth*1.6)*(0.7+fire*0.5),0,Math.PI*2);
+        octx.fillStyle=`rgba(${Math.floor(pr0+60)},${Math.floor(pg0+40)},255,${(a.depth*0.85).toFixed(2)})`;octx.fill();}
+
+      // Quantum core — plasma bloom + bright pulsing center
+      const bloom=octx.createRadialGradient(cx,cy,0,cx,cy,radius*0.9);
+      bloom.addColorStop(0,'rgba(255,255,255,0.9)');
+      bloom.addColorStop(0.2,`rgba(225,240,255,0.6)`);
+      bloom.addColorStop(0.5,`rgba(${pr0},${pg0},${pb0},0.2)`);
+      bloom.addColorStop(1,'transparent');
+      octx.fillStyle=bloom;octx.beginPath();octx.arc(cx,cy,radius*0.9,0,Math.PI*2);octx.fill();
+      const coreR=radius*(0.16+0.05*beat);
+      const core=octx.createRadialGradient(cx,cy,0,cx,cy,coreR);
+      core.addColorStop(0,'rgba(255,255,255,1)');core.addColorStop(0.6,'rgba(230,245,255,0.85)');core.addColorStop(1,'transparent');
+      octx.fillStyle=core;octx.beginPath();octx.arc(cx,cy,coreR,0,Math.PI*2);octx.fill();
 
       octx.globalCompositeOperation='source-over';
 
@@ -884,10 +902,10 @@
         if(d.token){window.jt=d.token;localStorage.setItem('jt',d.token);window.jm='chat';msg("Online. Ready, Sir.",'a');speak("Systems online. Ready, Sir.");statusEl.textContent='OPERATIONAL'}
         else msg(d.error||'Failed','a')}catch{msg('Error','a')}return}
 
-      msg(t,'u');statusEl.textContent='PROCESSING';reactor.classList.add('speaking');orbSub.textContent='ANALYZING';
+      msg(t,'u');statusEl.textContent='PROCESSING';reactor.classList.add('speaking');orbSub.textContent='ANALYZING';isThinking=true;
       const tp=msg('...','t');
       try{const r=await fetch('/chat',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+(window.jt||'')},body:JSON.stringify({message:t,sessionId:sid})});
-        const d=await r.json();tp.remove();reactor.classList.remove('speaking');statusEl.textContent='OPERATIONAL';orbSub.textContent='SAY "HEY FRIDAY"';
+        const d=await r.json();tp.remove();isThinking=false;reactor.classList.remove('speaking');statusEl.textContent='OPERATIONAL';orbSub.textContent='SAY "HEY FRIDAY"';
         if(d.error){msg('Error: '+d.error,'a')}
         else{sid=d.sessionId;const reply=d.reply;
           if(reply.length>250){msg(reply.slice(0,180)+'...','a');openDet(reply)}
@@ -936,7 +954,7 @@
             speak("Research complete, Sir. Report is in the panel.");
           }
           else speak(reply.slice(0,400))}}
-      catch{tp.remove();reactor.classList.remove('speaking');statusEl.textContent='OPERATIONAL';orbSub.textContent='SAY "HEY FRIDAY"';msg('Connection error','a')}}
+      catch{tp.remove();isThinking=false;reactor.classList.remove('speaking');statusEl.textContent='OPERATIONAL';orbSub.textContent='SAY "HEY FRIDAY"';msg('Connection error','a')}}
 
     // TTS with speech-rate pulsation (drives canvas orb)
     let pulseFrame = null;
