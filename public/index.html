@@ -582,9 +582,12 @@
       .msg-more button{min-height:42px;font-size:14px}
 
       /* 6 — Bottom input: iOS pill, big targets, safe-area (+12px past inset), 16px (no zoom) */
-      .chat-in{gap:8px;padding:10px 12px calc(env(safe-area-inset-bottom) + 12px)}
-      .chat-in input#inp{font-size:16px;padding:12px 16px;border-radius:22px}
-      .ib{width:44px;height:44px}                                /* 14 — 44px touch targets */
+      .chat-in{gap:7px;padding:10px 12px calc(env(safe-area-inset-bottom) + 12px);flex-wrap:nowrap}
+      .chat-in input#inp{font-size:16px;padding:12px 15px;border-radius:22px}
+      .chat-in .ib{width:44px;height:44px;flex-shrink:0}          /* 14 — 44px touch targets, never shrink */
+      .ib{width:44px;height:44px}
+      /* Music opens from the + sheet on mobile — drop the redundant inline ♪ toggle */
+      .music-toggle-btn{display:none!important}
       .plus-menu{bottom:calc(64px + env(safe-area-inset-bottom));min-width:60vw}
 
       /* 7 — Music panel: full-width, docked at top so it never fights the chat */
@@ -2620,6 +2623,16 @@
       p.addEventListener('touchend',()=>{sy=null;});
       if(isPhone())setMini();
       window.addEventListener('resize',()=>{ if(isPhone()&&!p.classList.contains('mp-sheet'))setMini(); });
+      // Bulletproof close — force-hide regardless of the panel state machine so
+      // the X always works (removes panel-visible which otherwise wins in CSS).
+      const closeBtn=p.querySelector('.mp-close');
+      if(closeBtn)closeBtn.addEventListener('click',()=>{
+        p.classList.remove('panel-visible','mp-sheet');
+        p.classList.add('panel-hidden','mp-min');
+        p.style.pointerEvents='none';
+        try{if(window.musicPlayer)window.musicPlayer.visible=false;}catch{}
+        hap();
+      },true);
     })();
     // ===== Live model badge + AI status (drives the console header) =====
     function prettyModel(id){
