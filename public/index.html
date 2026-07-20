@@ -878,6 +878,10 @@
             }
             speak(reply.slice(0,120));
           }
+          else if(d.action==='show_map'){
+            showMap(d.place||'');
+            speak(reply.slice(0,120));
+          }
           else if(d.action==='show_image'&&d.imageUrl){
             openDet('<img src="'+d.imageUrl+'" style="width:100%;border-radius:8px;margin-bottom:10px"/><p style="color:rgba(0,229,255,.5);font-size:11px">'+d.imagePrompt+'</p>');
             speak("Here's your image, Sir.");
@@ -951,7 +955,72 @@
     }
     function msg(t,c){const d=document.createElement('div');d.className='m '+c;d.textContent=t;msgs.appendChild(d);msgs.scrollTop=msgs.scrollHeight;return d}
     function openDet(t){document.getElementById('detBody').innerHTML=t.replace(/\n/g,'<br>').replace(/\*\*(.*?)\*\*/g,'<strong style="color:#00e5ff">$1</strong>');document.getElementById('det').classList.add('open')}
-    function closeDet(){document.getElementById('det').classList.remove('open')}
+    function closeDet(){document.getElementById('det').classList.remove('open');if(window._friMap){try{window._friMap.remove()}catch{}window._friMap=null}}
+
+    // --- Real interactive map (Leaflet + OpenStreetMap / satellite tiles) ---
+    let _leafletLoading=null;
+    function loadLeaflet(){
+      if(window.L&&window.L.terminator)return Promise.resolve();
+      if(_leafletLoading)return _leafletLoading;
+      _leafletLoading=new Promise((resolve)=>{
+        // CSS
+        if(!document.getElementById('leaflet-css')){
+          const link=document.createElement('link');link.id='leaflet-css';link.rel='stylesheet';
+          link.href='https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+          document.head.appendChild(link);
+        }
+        const loadScript=(src)=>new Promise(res=>{const s=document.createElement('script');s.src=src;s.onload=res;s.onerror=res;document.head.appendChild(s)});
+        loadScript('https://unpkg.com/leaflet@1.9.4/dist/leaflet.js')
+          .then(()=>loadScript('https://unpkg.com/@joergdietrich/leaflet.terminator@1.1.0/L.Terminator.js'))
+          .then(resolve);
+      });
+      return _leafletLoading;
+    }
+
+    async function showMap(place){
+      openDet('<div id="friMapBox" style="width:100%;height:70vh;min-height:320px;border-radius:8px;overflow:hidden;background:#0a1628"></div><div id="friMapInfo" style="font-size:11px;color:rgba(0,229,255,.5);margin-top:8px">Locating…</div>');
+      await loadLeaflet();
+      if(!window.L){document.getElementById('friMapInfo').textContent='Map failed to load. Check your connection.';return}
+
+      let lat=20,lon=0,zoom=2,label='World view';
+      if(place){
+        try{
+          const r=await fetch('https://nominatim.openstreetmap.org/search?format=json&limit=1&q='+encodeURIComponent(place),{headers:{'Accept':'application/json'}});
+          const arr=await r.json();
+          if(arr&&arr.length){lat=+arr[0].lat;lon=+arr[0].lon;zoom=13;label=arr[0].display_name}
+          else{label='Could not find "'+place+'". Showing world view.'}
+        }catch{label='Location lookup failed. Showing world view.'}
+      }
+
+      // Clean up any previous map instance
+      if(window._friMap){try{window._friMap.remove()}catch{}window._friMap=null}
+      const map=L.map('friMapBox',{zoomControl:true,attributionControl:true}).setView([lat,lon],zoom);
+      window._friMap=map;
+
+      const street=L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap'});
+      const sat=L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{maxZoom:19,attribution:'© Esri'});
+      const labelsOverlay=L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager_only_labels/{z}/{x}/{y}{r}.png',{maxZoom:19,attribution:'© CARTO'});
+      street.addTo(map);
+      L.control.layers({'Streets':street,'Satellite':sat},{'Place labels':labelsOverlay}).addTo(map);
+
+      if(place&&label&&!label.startsWith('Could')&&!label.startsWith('Location')){
+        L.marker([lat,lon]).addTo(map).bindPopup(place).openPopup();
+      }
+
+      // Real-time day/night terminator overlay
+      if(L.terminator){
+        try{
+          const term=L.terminator({fillOpacity:0.28,color:'#001a33',fillColor:'#001a33'});
+          term.addTo(map);
+          // Keep the day/night line updated every minute
+          if(window._friTermTimer)clearInterval(window._friTermTimer);
+          window._friTermTimer=setInterval(()=>{try{term.setTime(new Date())}catch{}},60000);
+        }catch{}
+      }
+
+      document.getElementById('friMapInfo').textContent=label;
+      setTimeout(()=>{try{map.invalidateSize()}catch{}},250);
+    }
 
     // --- History & New Chat ---
     function newChat(){

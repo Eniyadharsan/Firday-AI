@@ -12,7 +12,7 @@ from loguru import logger
 
 from friday.config import PORT
 from friday.system_prompt import get_system_prompt
-from friday.modules import llm, search, news, auth, music, memory, image, rag, mcp, video, agents, planner, long_memory, research
+from friday.modules import llm, search, news, auth, music, memory, image, rag, mcp, video, agents, planner, long_memory, research, maps
 from friday.modules.auth import require_auth, get_current_user_id
 
 app = Flask(__name__, static_folder="public", static_url_path="")
@@ -226,6 +226,18 @@ def chat():
                 "reply": "Sorry, I couldn't find that song. Try a different search.",
                 "sessionId": session_id
             })
+
+    # --- Map (real interactive map, checked before image so "map of X" isn't AI-painted) ---
+    if maps.is_map_request(message):
+        place = maps.extract_place(message)
+        memory.save_message(user_id, session_id, "user", message)
+        reply = f'Here is the map of {place}, Sir.' if place else "Here is the map, Sir."
+        return jsonify({
+            "reply": reply,
+            "sessionId": session_id,
+            "action": "show_map",
+            "place": place,
+        })
 
     # --- Image ---
     if image.is_image_request(message):
