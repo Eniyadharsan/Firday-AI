@@ -14,10 +14,17 @@ _AUDIO_KEYWORDS = re.compile(
 
 def is_image_request(message: str) -> bool:
     """Detect if user wants to generate an image."""
-    lower = message.lower()
+    lower = message.lower().strip()
 
     # Exclusion: if the message is clearly about music/audio, do NOT treat as image
     if _AUDIO_KEYWORDS.search(lower):
+        return False
+
+    # Exclusion: questions or references about already-shown content are NOT
+    # generation requests (e.g. "what map is this?", "which map did you show me?").
+    if re.match(r"^(what|which|why|how|who|whom|whose|when|where|is|are|was|were|do|does|did|explain|tell me|describe)\b", lower):
+        return False
+    if re.search(r"\b(shown|showed|you (gave|generated|created|made|showed)|did you (show|give|make|generate))\b", lower):
         return False
 
     # Pattern 1: "give/show/get me [something]" — only if it's about a visual subject
