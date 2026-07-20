@@ -124,3 +124,48 @@ class TestMemory:
         memory.save_message("test_user2", "sess1", "user", "msg1")
         sessions = memory.get_all_sessions("test_user2")
         assert len(sessions) >= 1
+
+
+class TestLLMOverrides:
+    """Model + temperature override validation for the dev context panel."""
+
+    def test_temperature_default_when_none(self):
+        from friday.modules import llm
+        from friday.config import LLM_TEMPERATURE
+        assert llm._resolve_temperature(None) == LLM_TEMPERATURE
+
+    def test_temperature_clamped_high(self):
+        from friday.modules import llm
+        assert llm._resolve_temperature(9.0) == 1.5
+
+    def test_temperature_clamped_low(self):
+        from friday.modules import llm
+        assert llm._resolve_temperature(-3) == 0.0
+
+    def test_temperature_invalid_falls_back(self):
+        from friday.modules import llm
+        from friday.config import LLM_TEMPERATURE
+        assert llm._resolve_temperature("not-a-number") == LLM_TEMPERATURE
+
+    def test_temperature_valid_passthrough(self):
+        from friday.modules import llm
+        assert llm._resolve_temperature(0.3) == 0.3
+
+    def test_models_default_when_none(self):
+        from friday.modules import llm
+        from friday.config import LLM_MODELS
+        assert llm._resolve_models(None) == list(LLM_MODELS)
+
+    def test_models_invalid_ignored(self):
+        from friday.modules import llm
+        from friday.config import LLM_MODELS
+        assert llm._resolve_models("totally-unknown-model") == list(LLM_MODELS)
+
+    def test_models_valid_moved_to_front(self):
+        from friday.modules import llm
+        from friday.config import LLM_MODELS
+        if len(LLM_MODELS) >= 2:
+            target = LLM_MODELS[1]
+            resolved = llm._resolve_models(target)
+            assert resolved[0] == target
+            assert sorted(resolved) == sorted(LLM_MODELS)

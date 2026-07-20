@@ -1804,14 +1804,27 @@
         openDet(md);
       }).catch(()=>openDet('Could not load memory.'));
     }
-    // Model / temperature selectors (stored; sent with requests — backend may ignore)
+    // Model / temperature selectors — populated from backend allowlist so
+    // only models that actually work are offered; sent with every /chat request.
     (function initDevControls(){
       const ms=document.getElementById('cx-model'),tp=document.getElementById('cx-temp'),tv=document.getElementById('cx-tempv');
       const saved=JSON.parse(localStorage.getItem('friDev')||'{}');
-      if(saved.model&&ms)ms.value=saved.model;if(saved.temp!=null&&tp){tp.value=saved.temp;tv.textContent=saved.temp;}
-      window._devCfg=()=>({model:ms?ms.value:undefined,temperature:tp?parseFloat(tp.value):undefined});
-      if(ms)ms.onchange=()=>{localStorage.setItem('friDev',JSON.stringify(window._devCfg()));};
-      if(tp)tp.oninput=()=>{tv.textContent=tp.value;localStorage.setItem('friDev',JSON.stringify(window._devCfg()));};
+      window._devCfg=()=>({model:ms&&ms.value?ms.value:undefined,temperature:tp?parseFloat(tp.value):undefined});
+      const persist=()=>localStorage.setItem('friDev',JSON.stringify(window._devCfg()));
+      if(saved.temperature!=null&&tp){tp.value=saved.temperature;tv.textContent=saved.temperature;}
+      if(ms)ms.onchange=persist;
+      if(tp)tp.oninput=()=>{tv.textContent=tp.value;persist();};
+      // Pull the real model list from the backend allowlist.
+      fetch('/models',{headers:{'Authorization':'Bearer '+(window.jt||'')}})
+        .then(r=>r.ok?r.json():null).then(d=>{
+          if(!d||!ms)return;
+          if(Array.isArray(d.models)&&d.models.length){
+            ms.innerHTML=d.models.map(m=>'<option value="'+m+'">'+m+'</option>').join('');
+          }
+          ms.value=(saved.model&&d.models&&d.models.includes(saved.model))?saved.model:(d.default||ms.options[0]&&ms.options[0].value);
+          if(saved.temperature==null&&tp&&d.temperature!=null){tp.value=d.temperature;tv.textContent=d.temperature;}
+          persist();
+        }).catch(()=>{ if(saved.model&&ms)ms.value=saved.model; });
     })();
     refreshCtx();
 

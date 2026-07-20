@@ -166,6 +166,9 @@ def chat():
     message: str = data.get("message", "")
     session_id: str = data.get("sessionId", f"s-{int(time.time()*1000)}")
     user_id: str = get_current_user_id()
+    # Developer-mode overrides (validated inside llm.generate; invalid -> ignored)
+    req_model = data.get("model")
+    req_temp = data.get("temperature")
 
     if not message:
         return jsonify({"error": "message required"}), 400
@@ -212,7 +215,7 @@ def chat():
     # --- Music ---
     if music.is_music_request(message):
         history.append({"role": "user", "content": message})
-        reply = llm.generate(history)
+        reply = llm.generate(history, model=req_model, temperature=req_temp)
         history.append({"role": "assistant", "content": reply})
         song = music.extract_song_from_reply(reply) or message.lower().replace("play ", "").replace("put on ", "").replace("queue ", "").strip()
 
@@ -296,7 +299,7 @@ def chat():
     if agent_id and len(message) > 20:
         reply = agents.orchestrate(message, history)
     else:
-        reply = llm.generate(history)
+        reply = llm.generate(history, model=req_model, temperature=req_temp)
 
     history.append({"role": "assistant", "content": reply})
 
@@ -323,6 +326,9 @@ def chat_stream():
     if not message:
         return jsonify({"error": "message required"}), 400
 
+    req_model = data.get("model")
+    req_temp = data.get("temperature")
+
     if session_id not in sessions:
         sessions[session_id] = [{"role": "system", "content": get_cached_prompt()}]
     history = sessions[session_id]
@@ -330,13 +336,25 @@ def chat_stream():
 
     def generate():
         full = ""
-        for token in llm.stream_generate(history):
+        for token in llm.stream_generate(history, model=req_model, temperature=req_temp):
             full += token
             yield f"data: {token}\n\n"
         history.append({"role": "assistant", "content": full})
         yield "data: [DONE]\n\n"
 
     return Response(generate(), mimetype="text/event-stream")
+
+
+@app.route("/models", methods=["GET"])
+@require_auth
+def list_models():
+    """Expose the available model allowlist + defaults for the dev context panel."""
+    from friday.config import LLM_MODELS, LLM_TEMPERATURE
+    return jsonify({
+        "models": LLM_MODELS,
+        "default": LLM_MODELS[0] if LLM_MODELS else None,
+        "temperature": LLM_TEMPERATURE,
+    })
 
 
 # ===== Search / News / Image / Music / Memory =====
