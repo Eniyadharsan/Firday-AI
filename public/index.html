@@ -183,6 +183,23 @@
     .chat::before{content:'';position:absolute;inset:0;border-radius:18px;padding:1px;pointer-events:none;
       background:linear-gradient(180deg,rgba(0,229,255,.35),transparent 40%,transparent 70%,rgba(0,150,255,.15));
       -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude}
+    /* Chat header toolbar */
+    .chat-head{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:9px 12px 8px;border-bottom:1px solid rgba(0,229,255,.1)}
+    .chat-title{flex:1;min-width:0;background:none;border:1px solid transparent;color:#bfe9ff;font-family:inherit;font-size:12px;letter-spacing:.5px;padding:4px 6px;border-radius:6px;outline:none;transition:all .15s}
+    .chat-title:hover,.chat-title:focus{border-color:rgba(0,229,255,.2);background:rgba(0,229,255,.04)}
+    .chat-head-btns{display:flex;gap:4px;flex-shrink:0}
+    .chb{width:26px;height:26px;border-radius:7px;border:1px solid rgba(0,229,255,.14);background:rgba(0,229,255,.03);color:rgba(0,229,255,.7);font-size:12px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;font-family:inherit}
+    .chb:hover{background:rgba(0,229,255,.12);color:#00e5ff}
+    .chb.active{color:#ffd479;border-color:rgba(255,212,121,.4)}
+    .chat-searchbar{padding:6px 12px;border-bottom:1px solid rgba(0,229,255,.08);display:flex;gap:8px;align-items:center}
+    .chat-searchbar input{flex:1;background:rgba(0,20,40,.5);border:1px solid rgba(0,229,255,.14);border-radius:14px;color:#dff4ff;font-family:inherit;font-size:11.5px;padding:6px 12px;outline:none}
+    .chat-searchbar span{font-size:10px;color:rgba(0,229,255,.5)}
+    .export-menu{position:absolute;top:44px;right:12px;z-index:20;background:rgba(6,18,38,.96);backdrop-filter:blur(16px);border:1px solid rgba(0,229,255,.2);border-radius:10px;padding:6px;display:flex;flex-direction:column;gap:2px;box-shadow:0 8px 24px rgba(0,0,0,.5)}
+    .export-menu button{background:none;border:none;color:rgba(0,229,255,.75);font-family:inherit;font-size:11px;text-align:left;padding:7px 12px;border-radius:6px;cursor:pointer}
+    .export-menu button:hover{background:rgba(0,229,255,.1);color:#00e5ff}
+    .m mark{background:rgba(255,212,121,.35);color:#fff;border-radius:2px}
+    .m.pinned{border-left-color:#ffd479!important;box-shadow:0 0 0 1px rgba(255,212,121,.2)}
+    .m.bookmarked::after{content:'🔖';position:absolute;top:8px;right:10px;font-size:10px;opacity:.7}
     .chat-msgs{flex:1;overflow-y:auto;padding:14px 14px 6px;font-size:12.5px;scroll-behavior:smooth}
     .chat-msgs::-webkit-scrollbar{width:3px}
     .chat-msgs::-webkit-scrollbar-thumb{background:rgba(0,229,255,.25);border-radius:2px}
@@ -582,6 +599,25 @@
   </div>
 
   <div class="chat">
+    <div class="chat-head">
+      <input id="chatTitle" class="chat-title" value="New conversation" title="Rename conversation"/>
+      <div class="chat-head-btns">
+        <button class="chb" id="chFav" title="Favorite">☆</button>
+        <button class="chb" id="chSearch" title="Search messages">⌕</button>
+        <button class="chb" id="chExport" title="Export">⤓</button>
+        <button class="chb" id="chTop" title="Jump to first">⤒</button>
+        <button class="chb" id="chBottom" title="Jump to last">⤓⤓</button>
+      </div>
+    </div>
+    <div class="chat-searchbar" id="chatSearchBar" style="display:none">
+      <input id="chatSearchInput" placeholder="Search this conversation…"/>
+      <span id="chatSearchCount"></span>
+    </div>
+    <div class="export-menu" id="exportMenu" style="display:none">
+      <button data-exp="md">Markdown (.md)</button>
+      <button data-exp="json">JSON (.json)</button>
+      <button data-exp="pdf">PDF / Print</button>
+    </div>
     <div class="chat-msgs" id="msgs"></div>
     <div class="chat-in">
       <input type="file" id="fileInp" style="display:none" accept=".pdf,.txt,.md,.html,.csv,.png,.jpg,.jpeg" onchange="handleFile(this)"/>
@@ -1423,11 +1459,14 @@
       const bar=document.createElement('div');bar.className='msg-tools';
       const nver=el._versions?el._versions.length:1;
       bar.innerHTML='<button data-copy>Copy</button><button data-regen>⟳ Regenerate</button><button data-cont>➔ Continue</button>'+
+        '<button data-pin>📌 Pin</button><button data-bm>🔖 Bookmark</button>'+
         (nver>1?'<span class="ver-nav"><button data-prev>‹</button>v'+(el._vi+1)+'/'+nver+'<button data-next>›</button><button data-cmp>Compare</button></span>':'');
       el.appendChild(bar);
       bar.querySelector('[data-copy]').onclick=()=>{const txt=el._versions[el._vi];navigator.clipboard&&navigator.clipboard.writeText(txt);};
       bar.querySelector('[data-regen]').onclick=()=>regenerate(el);
       bar.querySelector('[data-cont]').onclick=()=>continueResp(el);
+      bar.querySelector('[data-pin]').onclick=()=>{el.classList.toggle('pinned');bar.querySelector('[data-pin]').textContent=el.classList.contains('pinned')?'📌 Pinned':'📌 Pin';};
+      bar.querySelector('[data-bm]').onclick=()=>{el.classList.toggle('bookmarked');saveBookmark(el._versions[el._vi],el.classList.contains('bookmarked'));bar.querySelector('[data-bm]').textContent=el.classList.contains('bookmarked')?'🔖 Saved':'🔖 Bookmark';};
       if(nver>1){
         bar.querySelector('[data-prev]').onclick=()=>switchVersion(el,-1);
         bar.querySelector('[data-next]').onclick=()=>switchVersion(el,1);
@@ -1466,6 +1505,79 @@
 
     // Image lightbox
     function openLightbox(src){let lb=document.getElementById('lightbox');if(!lb){lb=document.createElement('div');lb.id='lightbox';lb.className='lightbox';lb.innerHTML='<img/>';lb.onclick=()=>lb.classList.remove('open');document.body.appendChild(lb);}lb.querySelector('img').src=src;lb.classList.add('open');}
+
+    // ── Conversation features (rename, favorite, search, export, jump, bookmarks) ──
+    function convMeta(){try{return JSON.parse(localStorage.getItem('friConvMeta')||'{}');}catch{return {};}}
+    function saveConvMeta(m){localStorage.setItem('friConvMeta',JSON.stringify(m));}
+    function curMeta(){const m=convMeta();return m[sid||'_']||{};}
+    function setCurMeta(patch){const m=convMeta();const key=sid||'_';m[key]=Object.assign({},m[key]||{},patch);saveConvMeta(m);}
+    function saveBookmark(text,on){const b=JSON.parse(localStorage.getItem('friBookmarks')||'[]');if(on){b.unshift({t:text.slice(0,4000),ts:Date.now()});}localStorage.setItem('friBookmarks',JSON.stringify(b.slice(0,200)));}
+
+    function initConvFeatures(){
+      const title=document.getElementById('chatTitle');
+      const fav=document.getElementById('chFav');
+      const applyMeta=()=>{const m=curMeta();title.value=m.name||'New conversation';const f=!!m.favorite;fav.textContent=f?'★':'☆';fav.classList.toggle('active',f);};
+      applyMeta();window._applyConvMeta=applyMeta;
+      title.addEventListener('change',()=>setCurMeta({name:title.value.trim()||'New conversation'}));
+      title.addEventListener('keydown',e=>{if(e.key==='Enter')title.blur();});
+      fav.onclick=()=>{const m=curMeta();const nf=!m.favorite;setCurMeta({favorite:nf});applyMeta();};
+      // Search
+      const sb=document.getElementById('chatSearchBar'),si=document.getElementById('chatSearchInput'),sc=document.getElementById('chatSearchCount');
+      document.getElementById('chSearch').onclick=()=>{sb.style.display=sb.style.display==='none'?'flex':'none';if(sb.style.display==='flex')si.focus();else clearSearch();};
+      si.addEventListener('input',()=>runSearch(si.value,sc));
+      // Export menu
+      const em=document.getElementById('exportMenu');
+      document.getElementById('chExport').onclick=(e)=>{e.stopPropagation();em.style.display=em.style.display==='none'?'flex':'none';};
+      document.addEventListener('click',()=>{em.style.display='none';});
+      em.addEventListener('click',e=>e.stopPropagation());
+      em.querySelectorAll('[data-exp]').forEach(b=>b.onclick=()=>{exportConv(b.getAttribute('data-exp'));em.style.display='none';});
+      // Jump
+      document.getElementById('chTop').onclick=()=>{msgs.scrollTo({top:0,behavior:'smooth'});};
+      document.getElementById('chBottom').onclick=()=>{msgs.scrollTo({top:msgs.scrollHeight,behavior:'smooth'});};
+    }
+    function clearSearch(){msgs.querySelectorAll('mark').forEach(mk=>{const p=mk.parentNode;p.replaceChild(document.createTextNode(mk.textContent),mk);p.normalize();});}
+    function runSearch(q,countEl){
+      clearSearch();
+      if(!q){countEl.textContent='';return;}
+      const rx=new RegExp('('+q.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+')','gi');let n=0;let firstHit=null;
+      msgs.querySelectorAll('.m').forEach(m=>{
+        const walk=document.createTreeWalker(m,NodeFilter.SHOW_TEXT);const nodes=[];while(walk.nextNode())nodes.push(walk.currentNode);
+        nodes.forEach(tn=>{if(tn.parentElement.closest('pre,code,button'))return;if(!rx.test(tn.nodeValue))return;rx.lastIndex=0;
+          const span=document.createElement('span');span.innerHTML=tn.nodeValue.replace(rx,'<mark>$1</mark>');
+          const marks=span.querySelectorAll('mark');n+=marks.length;if(!firstHit&&marks.length)firstHit=m;
+          tn.parentNode.replaceChild(span,tn);
+        });
+      });
+      countEl.textContent=n?n+' found':'no matches';
+      if(firstHit)firstHit.scrollIntoView({behavior:'smooth',block:'center'});
+    }
+    function conversationText(){
+      const parts=[];
+      msgs.querySelectorAll('.m').forEach(m=>{
+        if(m.classList.contains('t'))return;
+        const who=m.classList.contains('u')?'You':(m.classList.contains('a')?'FRIDAY':'System');
+        const txt=(m._versions?m._versions[m._vi]:m.textContent).trim();
+        if(txt)parts.push({who,txt});
+      });
+      return parts;
+    }
+    function exportConv(kind){
+      const title=(curMeta().name||'FRIDAY conversation');
+      const parts=conversationText();
+      if(kind==='json'){
+        dl(JSON.stringify({title,exported:new Date().toISOString(),messages:parts},null,2),title+'.json','application/json');
+      }else if(kind==='md'){
+        let md='# '+title+'\n\n';parts.forEach(p=>{md+='**'+p.who+':**\n\n'+p.txt+'\n\n---\n\n';});
+        dl(md,title+'.md','text/markdown');
+      }else{ // pdf via print
+        const w=window.open('','_blank');if(!w)return;
+        let html='<html><head><title>'+title+'</title><style>body{font-family:system-ui,Arial;max-width:760px;margin:30px auto;color:#111;line-height:1.6}h1{color:#0a4}h3{color:#06c;margin-top:22px}hr{border:none;border-top:1px solid #ddd}</style></head><body><h1>'+title+'</h1>';
+        parts.forEach(p=>{html+='<h3>'+p.who+'</h3><div>'+p.txt.replace(/</g,'&lt;').replace(/\n/g,'<br>')+'</div><hr>';});
+        html+='</body></html>';w.document.write(html);w.document.close();setTimeout(()=>w.print(),300);
+      }
+    }
+    function dl(content,name,type){const b=new Blob([content],{type});const u=URL.createObjectURL(b);const a=document.createElement('a');a.href=u;a.download=name;a.click();URL.revokeObjectURL(u);}
+    initConvFeatures();
 
     function openDet(t){document.getElementById('detBody').innerHTML=renderMarkdown(t);enhanceModule(document.getElementById('detBody'));document.getElementById('det').classList.add('open')}
     function closeDet(){document.getElementById('det').classList.remove('open')}
@@ -1653,6 +1765,7 @@
     function newChat(){
       sid='s-'+Date.now();
       msgs.innerHTML='';
+      if(window._applyConvMeta)window._applyConvMeta();
       msg("New conversation. How can I help?",'a');
       // Refresh sidebar to show current conversations
       if(document.getElementById('histPanel').style.display==='flex')loadHistory();
@@ -1688,6 +1801,7 @@
         const r=await fetch('/history/'+sessionId,{headers:{'Authorization':'Bearer '+(window.jt||'')}});
         const d=await r.json();
         sid=sessionId;msgs.innerHTML='';
+        if(window._applyConvMeta)window._applyConvMeta();
         if(d.messages&&d.messages.length>0){
           d.messages.forEach(m=>msg(m.content,m.role==='user'?'u':'a'));
         }else{msg("No messages in this conversation.",'a')}
