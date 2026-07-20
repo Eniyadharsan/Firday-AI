@@ -283,8 +283,27 @@
     /* Streaming caret */
     .streaming::after{content:'▋';color:#00e5ff;animation:qtFade 1s steps(2) infinite;margin-left:1px}
 
+    /* Drag-drop overlay */
+    .drop-overlay{position:absolute;inset:44px 8px 60px;z-index:30;display:none;align-items:center;justify-content:center;border:2px dashed rgba(0,229,255,.5);border-radius:14px;background:rgba(0,40,80,.35);backdrop-filter:blur(6px);color:#7fe4ff;font-size:13px;letter-spacing:1px}
+    .chat.dragging .drop-overlay{display:flex}
+    /* Attachment chips */
+    .attach-row{display:flex;gap:6px;flex-wrap:wrap;padding:0 12px}
+    .attach-row:not(:empty){padding:8px 12px 0}
+    .attach-chip{display:flex;align-items:center;gap:6px;background:rgba(0,229,255,.08);border:1px solid rgba(0,229,255,.2);border-radius:8px;padding:4px 8px;font-size:10px;color:#bfe9ff;max-width:150px}
+    .attach-chip img{width:22px;height:22px;object-fit:cover;border-radius:4px}
+    .attach-chip .rm{cursor:pointer;color:rgba(255,120,120,.8);font-weight:bold}
+    /* Command / autocomplete menu */
+    .cmd-menu{position:absolute;bottom:60px;left:12px;right:12px;z-index:40;max-height:240px;overflow-y:auto;background:rgba(6,18,38,.97);backdrop-filter:blur(18px);border:1px solid rgba(0,229,255,.2);border-radius:12px;padding:6px;box-shadow:0 8px 30px rgba(0,0,0,.55)}
+    .cmd-item{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:8px;cursor:pointer;font-size:11.5px;color:rgba(0,229,255,.75)}
+    .cmd-item:hover,.cmd-item.active{background:rgba(0,229,255,.12);color:#00e5ff}
+    .cmd-item .ci-ico{width:22px;text-align:center;opacity:.8}
+    .cmd-item .ci-desc{color:rgba(0,229,255,.4);font-size:9.5px;margin-left:auto}
+    /* Input wrap + waveform */
+    .inp-wrap{flex:1;position:relative;display:flex}
+    .wave-canvas{position:absolute;inset:0;width:100%;height:100%;border-radius:22px;pointer-events:none;z-index:2}
     /* Input dock — floating glass */
     .chat-in{display:flex;gap:8px;align-items:center;padding:10px 12px;border-top:1px solid rgba(0,229,255,.1);background:rgba(0,229,255,.02)}
+    #slashBtn{font-size:15px;font-weight:bold}
     .chat-in input#inp{flex:1;padding:10px 14px;border-radius:22px;border:1px solid rgba(0,229,255,.14);background:rgba(0,20,40,.5);color:#dff4ff;font-family:inherit;font-size:12.5px;outline:none;transition:all .2s}
     .chat-in input#inp:focus{border-color:rgba(0,229,255,.4);box-shadow:0 0 16px rgba(0,229,255,.12)}
     .chat-in input#inp::placeholder{color:rgba(0,229,255,.3)}
@@ -619,10 +638,17 @@
       <button data-exp="pdf">PDF / Print</button>
     </div>
     <div class="chat-msgs" id="msgs"></div>
+    <div id="dropOverlay" class="drop-overlay">⤓ Drop files to attach</div>
+    <div id="attachRow" class="attach-row"></div>
+    <div id="cmdMenu" class="cmd-menu" style="display:none"></div>
     <div class="chat-in">
-      <input type="file" id="fileInp" style="display:none" accept=".pdf,.txt,.md,.html,.csv,.png,.jpg,.jpeg" onchange="handleFile(this)"/>
-      <button class="ib" onclick="document.getElementById('fileInp').click()" title="Upload file"><svg viewBox="0 0 24 24"><path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm4 18H6V4h7v5h5v11z" fill="#00e5ff"/></svg></button>
-      <input id="inp" placeholder="Command..." autocomplete="off"/>
+      <input type="file" id="fileInp" style="display:none" multiple accept=".pdf,.txt,.md,.html,.csv,.png,.jpg,.jpeg" onchange="handleFiles(this.files)"/>
+      <button class="ib" onclick="document.getElementById('fileInp').click()" title="Upload files"><svg viewBox="0 0 24 24"><path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm4 18H6V4h7v5h5v11z" fill="#00e5ff"/></svg></button>
+      <button class="ib" id="slashBtn" title="Commands & templates">/</button>
+      <div class="inp-wrap">
+        <canvas id="waveCanvas" class="wave-canvas" style="display:none"></canvas>
+        <input id="inp" placeholder="Message FRIDAY…  (/ for commands, @ to mention files)" autocomplete="off"/>
+      </div>
       <button class="ib" id="mic" onclick="toggleMic()"><svg viewBox="0 0 24 24"><path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/><path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/></svg></button>
       <button class="ib" id="stp" style="display:none" onclick="stopTTS()"><svg viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="2"/></svg></button>
       <button class="ib" onclick="send()"><svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg></button>
@@ -1269,11 +1295,11 @@
       recognition.interimResults=true;
       recognition.lang='en-US';
 
-      recognition.onstart=()=>{rec=true;document.getElementById('mic').classList.add('rec');reactor.classList.add('listening');isListening=true;orbSub.textContent='LISTENING';statusEl.textContent='VOICE INPUT'};
+      recognition.onstart=()=>{rec=true;document.getElementById('mic').classList.add('rec');reactor.classList.add('listening');isListening=true;orbSub.textContent='LISTENING';statusEl.textContent='VOICE INPUT';startWaveform();};
       recognition.onresult=e=>{let t='';for(let i=0;i<e.results.length;i++)t+=e.results[i][0].transcript;inp.value=t;
         if(e.results[e.results.length-1].isFinal)setTimeout(()=>{if(inp.value.trim())send()},300)};
-      recognition.onend=()=>{rec=false;document.getElementById('mic').classList.remove('rec');if(!audio){reactor.classList.remove('listening');isListening=false;orbSub.textContent='TAP TO TALK';statusEl.textContent='OPERATIONAL'}};
-      recognition.onerror=()=>{rec=false;document.getElementById('mic').classList.remove('rec');reactor.classList.remove('listening');isListening=false;orbSub.textContent='TAP TO TALK';statusEl.textContent='OPERATIONAL'};
+      recognition.onend=()=>{rec=false;document.getElementById('mic').classList.remove('rec');stopWaveform();if(!audio){reactor.classList.remove('listening');isListening=false;orbSub.textContent='TAP TO TALK';statusEl.textContent='OPERATIONAL'}};
+      recognition.onerror=()=>{rec=false;document.getElementById('mic').classList.remove('rec');stopWaveform();reactor.classList.remove('listening');isListening=false;orbSub.textContent='TAP TO TALK';statusEl.textContent='OPERATIONAL'};
     }
 
     function startWakeListening(){}
@@ -1281,22 +1307,120 @@
     function toggleMic(){if(!recognition)return;if(rec)recognition.stop();else{stopTTS();try{recognition.start()}catch{}}}
     function handleOrb(){if(window.jm!=='chat'){inp.focus();return}toggleMic()}
 
-    async function handleFile(input){
-      const file=input.files[0];if(!file)return;
+    async function uploadOneFile(file){
       msg('📎 '+file.name,'u');
-      const formData=new FormData();
-      formData.append('file',file);
-      formData.append('userId','default');
+      const formData=new FormData();formData.append('file',file);formData.append('userId','default');
       statusEl.textContent='UPLOADING';reactor.classList.add('speaking');
       try{
-        const r=await fetch('/rag/upload',{method:'POST',body:formData});
+        const r=await fetch('/rag/upload',{method:'POST',headers:{'Authorization':'Bearer '+(window.jt||'')},body:formData});
         const d=await r.json();
-        reactor.classList.remove('speaking');statusEl.textContent='OPERATIONAL';
-        if(d.success){msg('Indexed "'+file.name+'" ('+d.chunks+' chunks). Ask me anything about it.','a');speak("Document indexed. Ask me anything about it.")}
-        else{msg('Error: '+(d.error||'Upload failed'),'a')}
-      }catch{reactor.classList.remove('speaking');statusEl.textContent='OPERATIONAL';msg('Upload failed','a')}
-      input.value='';
+        if(d.success){msg('Indexed "'+file.name+'"'+(d.chunks?' ('+d.chunks+' chunks)':'')+'. Ask me anything about it.','a');window._ragFiles&&window._ragFiles.push(file.name);}
+        else{msg('Error: '+(d.error||'Upload failed for '+file.name),'a')}
+      }catch{msg('Upload failed for '+file.name,'a');}
+      reactor.classList.remove('speaking');statusEl.textContent='OPERATIONAL';
     }
+    async function handleFiles(files){
+      const arr=[...files];if(!arr.length)return;
+      for(const f of arr){await uploadOneFile(f);}
+      const fi=document.getElementById('fileInp');if(fi)fi.value='';
+      speak(arr.length>1?"Documents indexed.":"Document indexed.");
+    }
+    // backward-compat
+    function handleFile(input){handleFiles(input.files);}
+
+    // ===== Input area features: drag-drop, paste, slash commands, @mentions, waveform =====
+    window._ragFiles=window._ragFiles||[];
+    (function refreshRagFiles(){fetch('/rag/list',{headers:{'Authorization':'Bearer '+(window.jt||'')}}).then(r=>r.json()).then(d=>{if(d&&d.documents)window._ragFiles=d.documents.map(x=>x.filename||x.name||x);}).catch(()=>{});})();
+
+    // Prompt templates + slash commands + AI quick actions
+    const SLASH_CMDS=[
+      {c:'/summarize',ico:'📝',desc:'Summarize',tpl:'Summarize the following concisely:\n'},
+      {c:'/explain',ico:'💡',desc:'Explain simply',tpl:'Explain this in simple terms:\n'},
+      {c:'/code',ico:'⌨',desc:'Write code',tpl:'Write clean, well-commented code that: '},
+      {c:'/translate',ico:'🌐',desc:'Translate',tpl:'Translate the following to English:\n'},
+      {c:'/improve',ico:'✨',desc:'Improve writing',tpl:'Improve the clarity and tone of:\n'},
+      {c:'/table',ico:'▦',desc:'Make a table',tpl:'Present this as a markdown table:\n'},
+      {c:'/chart',ico:'📊',desc:'Create a chart',tpl:'Create a chart (respond with a ```chart Chart.js JSON spec) for: '},
+      {c:'/plan',ico:'🗂',desc:'Make a plan',tpl:'Create a step-by-step plan for: '},
+      {c:'/brainstorm',ico:'🧠',desc:'Brainstorm ideas',tpl:'Brainstorm creative ideas for: '},
+      {c:'/image',ico:'🖼',desc:'Generate image',tpl:'generate an image of '},
+      {c:'/map',ico:'🗺',desc:'Show a map',tpl:'show me a map of '},
+      {c:'/clear',ico:'🧹',desc:'New conversation',action:()=>newChat()}
+    ];
+    const cmdMenu=document.getElementById('cmdMenu');
+    let cmdMode=null,cmdActive=0,cmdItems=[];
+
+    function openCmdMenu(items,mode){cmdItems=items;cmdMode=mode;cmdActive=0;
+      if(!items.length){cmdMenu.style.display='none';return;}
+      cmdMenu.innerHTML=items.map((it,i)=>'<div class="cmd-item'+(i===0?' active':'')+'" data-i="'+i+'"><span class="ci-ico">'+(it.ico||'@')+'</span><span>'+(it.label||it.c)+'</span><span class="ci-desc">'+(it.desc||'')+'</span></div>').join('');
+      cmdMenu.style.display='block';
+      cmdMenu.querySelectorAll('.cmd-item').forEach(el=>el.onclick=()=>applyCmd(+el.getAttribute('data-i')));
+    }
+    function closeCmdMenu(){cmdMenu.style.display='none';cmdMode=null;cmdItems=[];}
+    function applyCmd(i){const it=cmdItems[i];if(!it)return;
+      if(cmdMode==='slash'){ if(it.action){closeCmdMenu();inp.value='';it.action();return;} inp.value=it.tpl||''; }
+      else if(cmdMode==='mention'){ const v=inp.value; inp.value=v.replace(/@[^\s@]*$/, '@'+it.name+' '); }
+      closeCmdMenu();inp.focus();
+    }
+    function updateInputMenus(){
+      const v=inp.value;
+      const atM=v.match(/@([^\s@]*)$/);
+      if(v.startsWith('/')){
+        const q=v.slice(1).toLowerCase();
+        openCmdMenu(SLASH_CMDS.filter(c=>c.c.slice(1).startsWith(q)),'slash');
+      }else if(atM){
+        const q=atM[1].toLowerCase();
+        const files=(window._ragFiles||[]).filter(f=>f.toLowerCase().includes(q)).slice(0,8).map(f=>({name:f,label:'@'+f,ico:'📄',desc:'file'}));
+        openCmdMenu(files,'mention');
+      }else{closeCmdMenu();}
+    }
+    inp.addEventListener('input',updateInputMenus);
+    inp.addEventListener('keydown',e=>{
+      if(cmdMenu.style.display==='block'&&cmdItems.length){
+        if(e.key==='ArrowDown'){e.preventDefault();cmdActive=(cmdActive+1)%cmdItems.length;}
+        else if(e.key==='ArrowUp'){e.preventDefault();cmdActive=(cmdActive-1+cmdItems.length)%cmdItems.length;}
+        else if(e.key==='Tab'||(e.key==='Enter'&&cmdMode==='slash'&&cmdItems.length)){e.preventDefault();applyCmd(cmdActive);return;}
+        else if(e.key==='Escape'){closeCmdMenu();return;}
+        else return;
+        cmdMenu.querySelectorAll('.cmd-item').forEach((el,i)=>el.classList.toggle('active',i===cmdActive));
+      }
+    },true);
+    document.getElementById('slashBtn').onclick=()=>{inp.focus();if(cmdMenu.style.display==='block'){closeCmdMenu();}else{openCmdMenu(SLASH_CMDS,'slash');}};
+
+    // Drag-and-drop uploads
+    const chatEl=document.querySelector('.chat');
+    ['dragenter','dragover'].forEach(ev=>chatEl.addEventListener(ev,e=>{e.preventDefault();chatEl.classList.add('dragging');}));
+    ['dragleave','drop'].forEach(ev=>chatEl.addEventListener(ev,e=>{e.preventDefault();if(ev==='drop'||!chatEl.contains(e.relatedTarget))chatEl.classList.remove('dragging');}));
+    chatEl.addEventListener('drop',e=>{if(e.dataTransfer&&e.dataTransfer.files&&e.dataTransfer.files.length)handleFiles(e.dataTransfer.files);});
+
+    // Paste image / file detection
+    window.addEventListener('paste',e=>{
+      if(document.activeElement!==inp&&!chatEl.contains(document.activeElement))return;
+      const items=e.clipboardData&&e.clipboardData.items;if(!items)return;
+      const files=[];for(const it of items){if(it.kind==='file'){const f=it.getAsFile();if(f)files.push(f);}}
+      if(files.length){e.preventDefault();handleFiles(files);}
+    });
+
+    // Live voice waveform during recording
+    let _waveRAF=null,_waveStop=null;
+    async function startWaveform(){
+      const cv=document.getElementById('waveCanvas');
+      try{
+        const stream=await navigator.mediaDevices.getUserMedia({audio:true});
+        const ac=new (window.AudioContext||window.webkitAudioContext)();
+        const src=ac.createMediaStreamSource(stream);const an=ac.createAnalyser();an.fftSize=256;src.connect(an);
+        const data=new Uint8Array(an.frequencyBinCount);
+        cv.style.display='block';const ctx=cv.getContext('2d');
+        function draw(){cv.width=cv.offsetWidth;cv.height=cv.offsetHeight;an.getByteFrequencyData(data);
+          ctx.clearRect(0,0,cv.width,cv.height);const bars=32,step=(cv.width/bars);
+          for(let i=0;i<bars;i++){const v=data[i*2]/255;const h=Math.max(2,v*cv.height*0.8);
+            ctx.fillStyle='rgba(0,229,255,'+(0.3+v*0.6)+')';ctx.fillRect(i*step+2,(cv.height-h)/2,step-3,h);}
+          _waveRAF=requestAnimationFrame(draw);}
+        draw();
+        _waveStop=()=>{try{cancelAnimationFrame(_waveRAF);stream.getTracks().forEach(t=>t.stop());ac.close();}catch{}cv.style.display='none';};
+      }catch{}
+    }
+    function stopWaveform(){if(_waveStop){_waveStop();_waveStop=null;}}
     // ── Message rendering: response modules, markdown, streaming, quantum thinking ──
     function escHtml(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
 
