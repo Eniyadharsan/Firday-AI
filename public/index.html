@@ -738,13 +738,23 @@
       core.addColorStop(1,'transparent');
       octx.fillStyle=core;octx.beginPath();octx.arc(cx,cy,coreR,0,Math.PI*2);octx.fill();
 
-      // Rotate + project all nodes
+      // Rotate + project all nodes with organic JELLY deformation (soft wobbling membrane)
       const cosY=Math.cos(orbRot),sinY=Math.sin(orbRot),cosX=Math.cos(orbRot*0.4),sinX=Math.sin(orbRot*0.4);
+      const jAmp=active?0.16:0.10;                 // jiggle harder when interacting
+      const jT=orbTime*(active?2.4:1.5);
       const proj=new Array(NODES);
       for(let i=0;i<NODES;i++){
         const p=nodePos[i];
-        const x1=p.x*cosY-p.z*sinY, z1=p.x*sinY+p.z*cosY;
-        const y1=p.y*cosX-z1*sinX, z2=p.y*sinX+z1*cosX;
+        // layered sine waves across the surface => jelly wobble
+        const wob=1+jAmp*(
+          0.5*Math.sin(p.x*3.0+jT)+
+          0.4*Math.sin(p.y*3.7+jT*1.3+1.7)+
+          0.35*Math.sin(p.z*3.3+jT*0.8+3.1)+
+          0.25*Math.sin((p.x+p.y+p.z)*2.4+jT*1.7)
+        );
+        const wx=p.x*wob, wy=p.y*wob, wz=p.z*wob;
+        const x1=wx*cosY-wz*sinY, z1=wx*sinY+wz*cosY;
+        const y1=wy*cosX-z1*sinX, z2=wy*sinX+z1*cosX;
         proj[i]={x:cx+x1*radius,y:cy+y1*radius,z:z2,depth:(z2+1)/2};
       }
 
