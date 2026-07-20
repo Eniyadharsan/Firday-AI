@@ -255,6 +255,27 @@
     .ib.rec{border-color:rgba(255,60,60,.4);background:rgba(255,60,60,.12);animation:qtFade 1s infinite}
     .ib.rec svg{fill:#ff4444}
 
+    /* Generation controls (pause/resume/stop) shown while FRIDAY generates */
+    .gen-controls{display:flex;gap:6px;align-items:center;padding:6px 12px;border-top:1px solid rgba(0,229,255,.08)}
+    .gen-controls button{background:rgba(0,229,255,.06);border:1px solid rgba(0,229,255,.2);color:rgba(0,229,255,.8);border-radius:14px;font-size:10px;letter-spacing:.5px;padding:5px 12px;cursor:pointer;font-family:inherit;transition:all .15s;display:flex;align-items:center;gap:5px}
+    .gen-controls button:hover{background:rgba(0,229,255,.14);color:#00e5ff}
+    .gen-controls .gc-dot{width:6px;height:6px;border-radius:50%;background:#00e5ff;box-shadow:0 0 6px #00e5ff;animation:qtFade 1s infinite}
+
+    /* Per-message action toolbar */
+    .msg-tools{display:flex;gap:4px;margin-top:8px;flex-wrap:wrap;align-items:center}
+    .msg-tools button{background:none;border:1px solid rgba(0,229,255,.15);color:rgba(0,229,255,.6);border-radius:6px;font-size:9px;letter-spacing:.5px;padding:3px 8px;cursor:pointer;font-family:inherit;transition:all .15s}
+    .msg-tools button:hover{background:rgba(0,229,255,.1);color:#00e5ff;border-color:rgba(0,229,255,.35)}
+    .msg-tools .ver-nav{display:flex;align-items:center;gap:4px;color:rgba(0,229,255,.45);font-size:9px;margin-left:2px}
+    .msg-tools .ver-nav button{padding:2px 6px}
+
+    /* Side-by-side compare modal */
+    .cmp-modal{position:fixed;inset:0;z-index:6100;background:rgba(2,6,16,.86);backdrop-filter:blur(10px);display:none;align-items:center;justify-content:center;padding:24px}
+    .cmp-modal.open{display:flex;animation:msgIn .3s ease}
+    .cmp-wrap{display:flex;gap:16px;max-width:1100px;width:100%;max-height:82vh}
+    .cmp-col{flex:1;min-width:0;background:linear-gradient(160deg,rgba(6,18,38,.7),rgba(4,12,28,.6));border:1px solid rgba(0,229,255,.18);border-radius:14px;padding:16px;overflow-y:auto;font-size:12.5px;color:#cfe9f2;line-height:1.55}
+    .cmp-col h5{color:#7fe4ff;font-size:11px;letter-spacing:2px;margin-bottom:10px;position:sticky;top:0}
+    .cmp-close{position:absolute;top:18px;right:22px;width:34px;height:34px;border-radius:50%;border:1px solid rgba(0,229,255,.25);background:rgba(0,10,25,.6);color:#00e5ff;font-size:15px;cursor:pointer}
+
     /* Image lightbox */
     .lightbox{position:fixed;inset:0;z-index:6000;background:rgba(2,6,16,.9);backdrop-filter:blur(8px);display:none;align-items:center;justify-content:center;cursor:zoom-out}
     .lightbox.open{display:flex;animation:msgIn .3s ease}
@@ -1115,8 +1136,8 @@
         const d=await r.json();tp.remove();isThinking=false;reactor.classList.remove('speaking');statusEl.textContent='OPERATIONAL';orbSub.textContent='SAY "HEY FRIDAY"';
         if(d.error){msg('Error: '+d.error,'a')}
         else{sid=d.sessionId;const reply=d.reply;
-          // Full response renders as a rich markdown module (no truncation)
-          msg(reply,'a');
+          // Full response renders as a rich markdown module (no truncation) with gen tools
+          const _am=msg(reply,'a');_am._srcMsg=t;
           if(d.action==='play_music_embed'&&d.track){
             closeDet();
             if(window.musicPlayer && window.musicPlayer.ytApiLoaded !== false){
@@ -1280,21 +1301,95 @@
       return '<div class="quantum-think"><div class="qt-core"><div class="qt-ring"></div><div class="qt-ring"></div><div class="qt-ring"></div><div class="qt-dot"></div></div><div class="qt-text"><span>FRIDAY is thinking…</span></div></div>';
     }
 
+    let currentGen=null; // active streaming controller
+
+    // Natural-paced streaming with LIVE markdown + pause/resume/stop
     function streamInto(el,text){
+      const ctrl={paused:false,stopped:false,i:0,full:text,done:false};
+      el._gen=ctrl;currentGen=ctrl;
       el.classList.add('streaming');
-      const total=text.length;let i=0;const step=Math.max(1,Math.ceil(total/90));
-      const iv=setInterval(()=>{
-        i+=step;el.textContent=text.slice(0,i);msgs.scrollTop=msgs.scrollHeight;
-        if(i>=total){clearInterval(iv);el.classList.remove('streaming');el.innerHTML=renderMarkdown(text);enhanceModule(el);msgs.scrollTop=msgs.scrollHeight;}
-      },16);
+      showGenControls(ctrl);
+      const rate=58;let acc=0,prev=performance.now(),last=0;
+      function render(){el.innerHTML=renderMarkdown(text.slice(0,ctrl.i));msgs.scrollTop=msgs.scrollHeight;}
+      function finish(){el.classList.remove('streaming');ctrl.done=true;el.innerHTML=renderMarkdown(ctrl.stopped?text.slice(0,ctrl.i):text);enhanceModule(el);hideGenControls();if(currentGen===ctrl)currentGen=null;showMsgTools(el);msgs.scrollTop=msgs.scrollHeight;}
+      function frame(now){
+        if(ctrl.stopped){finish();return;}
+        if(!ctrl.paused){const dt=(now-prev)/1000;acc+=dt*rate*(0.65+Math.random()*0.7);while(acc>=1&&ctrl.i<text.length){ctrl.i++;acc--;}}
+        prev=now;
+        if(now-last>70){last=now;render();}
+        if(ctrl.i>=text.length){finish();return;}
+        ctrl._raf=requestAnimationFrame(frame);
+      }
+      ctrl._raf=requestAnimationFrame(frame);
     }
 
     function msg(t,c){
       const d=document.createElement('div');d.className='m '+c;
       if(c==='t'){d.innerHTML=quantumThinkingHTML();}
-      else if(c==='a'){ if((t||'').length>60){streamInto(d,t);} else {d.innerHTML=renderMarkdown(t);enhanceModule(d);} }
+      else if(c==='a'){ d._versions=[t];d._vi=0; if((t||'').length>60){streamInto(d,t);} else {d.innerHTML=renderMarkdown(t);enhanceModule(d);showMsgTools(d);} }
       else{d.textContent=t;}
       msgs.appendChild(d);msgs.scrollTop=msgs.scrollHeight;return d;
+    }
+
+    // ── Generation controls (pause / resume / stop) ──
+    function showGenControls(ctrl){
+      hideGenControls();
+      const bar=document.createElement('div');bar.className='gen-controls';bar.id='genControls';
+      bar.innerHTML='<span class="gc-dot"></span>'+
+        '<button id="gcPause">⏸ Pause</button>'+
+        '<button id="gcStop">⏹ Stop</button>';
+      const chatEl=document.querySelector('.chat');const inEl=document.querySelector('.chat-in');
+      chatEl.insertBefore(bar,inEl);
+      bar.querySelector('#gcPause').onclick=()=>{ctrl.paused=!ctrl.paused;bar.querySelector('#gcPause').textContent=ctrl.paused?'▶ Resume':'⏸ Pause';};
+      bar.querySelector('#gcStop').onclick=()=>{ctrl.stopped=true;};
+    }
+    function hideGenControls(){const b=document.getElementById('genControls');if(b)b.remove();}
+
+    // ── Per-message toolbar: copy / regenerate / continue / version nav / compare ──
+    function showMsgTools(el){
+      const old=el.querySelector(':scope > .msg-tools');if(old)old.remove();
+      const bar=document.createElement('div');bar.className='msg-tools';
+      const nver=el._versions?el._versions.length:1;
+      bar.innerHTML='<button data-copy>Copy</button><button data-regen>⟳ Regenerate</button><button data-cont>➔ Continue</button>'+
+        (nver>1?'<span class="ver-nav"><button data-prev>‹</button>v'+(el._vi+1)+'/'+nver+'<button data-next>›</button><button data-cmp>Compare</button></span>':'');
+      el.appendChild(bar);
+      bar.querySelector('[data-copy]').onclick=()=>{const txt=el._versions[el._vi];navigator.clipboard&&navigator.clipboard.writeText(txt);};
+      bar.querySelector('[data-regen]').onclick=()=>regenerate(el);
+      bar.querySelector('[data-cont]').onclick=()=>continueResp(el);
+      if(nver>1){
+        bar.querySelector('[data-prev]').onclick=()=>switchVersion(el,-1);
+        bar.querySelector('[data-next]').onclick=()=>switchVersion(el,1);
+        bar.querySelector('[data-cmp]').onclick=()=>compareVersions(el);
+      }
+    }
+    function renderVersion(el){el.innerHTML=renderMarkdown(el._versions[el._vi]);enhanceModule(el);showMsgTools(el);}
+    function switchVersion(el,dir){el._vi=Math.max(0,Math.min(el._versions.length-1,el._vi+dir));renderVersion(el);}
+
+    async function requestReply(message){
+      try{const r=await fetch('/chat',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+(window.jt||'')},body:JSON.stringify({message,sessionId:sid})});
+        const d=await r.json();if(d.sessionId)sid=d.sessionId;return d.reply||d.error||'(no response)';}catch{return '(connection error)';}
+    }
+    async function regenerate(el){
+      if(!el._srcMsg)return;const tools=el.querySelector('.msg-tools');if(tools)tools.remove();
+      isThinking=true;reactor.classList.add('speaking');
+      const reply=await requestReply(el._srcMsg);
+      isThinking=false;reactor.classList.remove('speaking');
+      el._versions.push(reply);el._vi=el._versions.length-1;streamInto(el,reply);
+    }
+    async function continueResp(el){
+      const tools=el.querySelector('.msg-tools');if(tools)tools.remove();
+      isThinking=true;reactor.classList.add('speaking');
+      const more=await requestReply('Continue your previous response from where you left off. Do not repeat.');
+      isThinking=false;reactor.classList.remove('speaking');
+      el._versions[el._vi]=el._versions[el._vi]+'\n\n'+more;streamInto(el,el._versions[el._vi]);
+    }
+    function compareVersions(el){
+      let m=document.getElementById('cmpModal');
+      if(!m){m=document.createElement('div');m.id='cmpModal';m.className='cmp-modal';m.innerHTML='<button class="cmp-close">✕</button><div class="cmp-wrap"><div class="cmp-col" id="cmpA"></div><div class="cmp-col" id="cmpB"></div></div>';document.body.appendChild(m);m.querySelector('.cmp-close').onclick=()=>m.classList.remove('open');}
+      const a=Math.max(0,el._vi-1),b=el._vi;
+      m.querySelector('#cmpA').innerHTML='<h5>VERSION '+(a+1)+'</h5>'+renderMarkdown(el._versions[a]);
+      m.querySelector('#cmpB').innerHTML='<h5>VERSION '+(b+1)+'</h5>'+renderMarkdown(el._versions[b]);
+      m.classList.add('open');
     }
 
     // Image lightbox
