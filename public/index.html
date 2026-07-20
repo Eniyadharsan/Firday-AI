@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="theme-color" content="#0a1628">
   <link rel="manifest" href="/manifest.json">
@@ -491,6 +491,84 @@
       .map-route-info{max-height:32vh}
     }
 
+    /* ═══════════════════════════════════════════════════════════════
+       iOS-NATIVE PASS — safe areas, overflow menu, + attachment sheet,
+       collapsible music, console header, glow tiering, touch targets.
+    ═══════════════════════════════════════════════════════════════ */
+    /* Console conversation header */
+    .chat-head-main{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px}
+    .chat-sub{font-family:var(--font-mono);font-size:10.5px;letter-spacing:.4px;color:rgba(0,229,255,.42);padding:0 6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .chat-sub b{color:rgba(0,255,136,.75);font-weight:600}
+
+    /* Message actions overflow (⋯) menu */
+    .msg-tools{position:relative}
+    .mt-more{font-weight:bold;letter-spacing:1px;min-width:30px}
+    .msg-more{position:absolute;bottom:calc(100% + 6px);left:0;z-index:60;display:flex;flex-direction:column;gap:2px;min-width:186px;padding:6px;
+      background:linear-gradient(160deg,rgba(8,20,40,.97),rgba(4,12,28,.98));backdrop-filter:blur(22px);-webkit-backdrop-filter:blur(22px);
+      border:1px solid rgba(0,229,255,.2);border-radius:16px;box-shadow:0 14px 44px rgba(0,0,0,.6);animation:panelIn .24s cubic-bezier(.2,.7,.3,1) both}
+    .msg-more button{text-align:left;border:none!important;background:none;padding:9px 12px!important;border-radius:10px;font-size:12.5px;color:rgba(0,229,255,.8)}
+    .msg-more button:hover{background:rgba(0,229,255,.12)!important;color:#00e5ff;transform:none!important}
+
+    /* + attachment sheet (iMessage-style) */
+    .plus-menu{position:absolute;bottom:60px;left:12px;z-index:60;display:none;grid-template-columns:repeat(3,1fr);gap:8px;padding:12px;min-width:232px;
+      background:linear-gradient(160deg,rgba(8,20,40,.97),rgba(4,12,28,.98));backdrop-filter:blur(26px);-webkit-backdrop-filter:blur(26px);
+      border:1px solid rgba(0,229,255,.2);border-radius:22px;box-shadow:0 18px 50px rgba(0,0,0,.62)}
+    .plus-menu.open{display:grid;animation:panelIn .28s cubic-bezier(.2,.7,.3,1) both}
+    .pm-item{display:flex;flex-direction:column;align-items:center;gap:6px;padding:12px 6px;border-radius:16px;cursor:pointer;color:rgba(0,229,255,.82);font-size:11px;background:rgba(0,229,255,.05);border:1px solid rgba(0,229,255,.1);transition:all .18s cubic-bezier(.2,.7,.3,1)}
+    .pm-item:hover{background:rgba(0,229,255,.14);transform:translateY(-2px);box-shadow:0 6px 18px rgba(0,150,255,.2)}
+    .pm-item .pm-ico{font-size:21px;line-height:1}
+    .plus-btn{transition:transform .25s cubic-bezier(.2,.7,.3,1)}
+    .plus-btn.open{transform:rotate(45deg)}
+
+    /* Music panel collapse */
+    .mp-collapse{background:none;border:1px solid rgba(255,255,255,.18);color:#fff;width:22px;height:22px;border-radius:50%;cursor:pointer;font-size:10px;display:flex;align-items:center;justify-content:center;transition:all .18s}
+    .mp-collapse:hover{background:rgba(255,255,255,.12)}
+    .music-panel.mp-min .mp-search-section,.music-panel.mp-min .mp-progress-section,.music-panel.mp-min .mp-album-art{display:none}
+    .music-panel.mp-min .mp-now-playing{padding-bottom:4px}
+
+    /* ── iPhone (≤600px): native spacing, safe areas, touch targets ── */
+    @media (max-width:600px){
+      /* 1 — Safe-area top nav, vertically centered */
+      .hud-top{min-height:calc(46px + env(safe-area-inset-top));height:auto;padding-top:calc(env(safe-area-inset-top) + 4px);padding-bottom:8px;align-items:center}
+
+      /* 3,9,12,14 — Chat floats over the orb; heavier glass, iOS radii */
+      .chat{left:10px;right:10px;width:auto;max-height:54vh;bottom:calc(10px + env(safe-area-inset-bottom));border-radius:28px;
+        backdrop-filter:blur(34px) saturate(1.4);-webkit-backdrop-filter:blur(34px) saturate(1.4);
+        box-shadow:0 20px 60px rgba(0,0,0,.6),0 0 40px rgba(0,150,255,.08)}
+      .chat-msgs{padding:12px 14px 6px;font-size:15px}          /* 5 — body 15 */
+      .m{margin:12px 0;line-height:1.6}
+      .m.a{padding:12px 15px;border-radius:8px 20px 20px 20px;box-shadow:0 6px 22px rgba(0,0,0,.32)}
+      .m.u{padding:10px 14px;border-radius:20px 20px 8px 20px}
+      .m.a h1{font-size:17px}.m.a h2{font-size:16px}.m.a h3{font-size:15px}  /* 5 — title 17 */
+      .chat-title{font-size:16px}
+      .chat-sub{font-size:11px}                                  /* 5 — metadata 12ish */
+
+      /* 2 — Glow tiering: secondary chrome loses its border/glow */
+      .chb{border-color:transparent;background:transparent;width:36px;height:36px}
+      .chb:hover,.chb.active{background:rgba(0,229,255,.12)}
+      .ib{border-color:rgba(0,229,255,.12)}
+
+      /* 4,11 — compact action row + roomy overflow menu; 13px buttons */
+      .msg-tools button{font-size:13px;padding:7px 13px;min-height:36px;border-radius:11px}
+      .msg-more{min-width:200px}
+      .msg-more button{min-height:42px;font-size:14px}
+
+      /* 6 — Bottom input: iOS pill, big targets, safe-area, 16px (no zoom) */
+      .chat-in{gap:8px;padding:10px 12px calc(10px + env(safe-area-inset-bottom))}
+      .chat-in input#inp{font-size:16px;padding:12px 16px;border-radius:22px}
+      .ib{width:42px;height:42px}                                /* 14 — 44px-ish touch targets */
+      .plus-menu{bottom:calc(64px + env(safe-area-inset-bottom));min-width:60vw}
+
+      /* 7 — Music panel: full-width, docked at top so it never fights the chat */
+      .music-panel{left:10px;right:10px;top:calc(env(safe-area-inset-top) + 48px);bottom:auto;max-width:none;border-radius:22px}
+
+      /* Slide side panels below the safe area */
+      .ctx-panel,.detail{top:calc(env(safe-area-inset-top) + 50px)}
+      .map-topbar{padding-top:env(safe-area-inset-top);height:auto;min-height:calc(52px + env(safe-area-inset-top))}
+      .map-search-bar{top:calc(env(safe-area-inset-top) + 60px)}
+      .map-close,.mp-close{width:38px;height:38px}
+    }
+
     /* Watery mouse effect canvas */
     .fx{position:fixed;inset:0;pointer-events:none;z-index:5}
 
@@ -734,7 +812,10 @@
 
   <div class="chat">
     <div class="chat-head">
-      <input id="chatTitle" class="chat-title" value="New conversation" title="Rename conversation"/>
+      <div class="chat-head-main">
+        <input id="chatTitle" class="chat-title" value="FRIDAY Session" title="Rename conversation"/>
+        <div class="chat-sub" id="chatSub">Initializing…</div>
+      </div>
       <div class="chat-head-btns">
         <button class="chb" id="chFav" title="Favorite">☆</button>
         <button class="chb" id="chSearch" title="Search messages">⌕</button>
@@ -756,9 +837,18 @@
     <div id="dropOverlay" class="drop-overlay">⤓ Drop files to attach</div>
     <div id="attachRow" class="attach-row"></div>
     <div id="cmdMenu" class="cmd-menu" style="display:none"></div>
+    <div class="plus-menu" id="plusMenu">
+      <div class="pm-item" onclick="pmDo('files')"><span class="pm-ico">📄</span>Files</div>
+      <div class="pm-item" onclick="pmDo('photo')"><span class="pm-ico">🖼️</span>Photo</div>
+      <div class="pm-item" onclick="pmDo('camera')"><span class="pm-ico">📷</span>Camera</div>
+      <div class="pm-item" onclick="pmDo('maps')"><span class="pm-ico">🗺️</span>Maps</div>
+      <div class="pm-item" onclick="pmDo('music')"><span class="pm-ico">🎵</span>Music</div>
+      <div class="pm-item" onclick="pmDo('research')"><span class="pm-ico">🔬</span>Research</div>
+    </div>
     <div class="chat-in">
       <input type="file" id="fileInp" style="display:none" multiple accept=".pdf,.txt,.md,.html,.csv,.png,.jpg,.jpeg" onchange="handleFiles(this.files)"/>
-      <button class="ib" onclick="document.getElementById('fileInp').click()" title="Upload files"><svg viewBox="0 0 24 24"><path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm4 18H6V4h7v5h5v11z" fill="#00e5ff"/></svg></button>
+      <input type="file" id="camInp" accept="image/*" capture="environment" style="display:none" onchange="handleFiles(this.files)"/>
+      <button class="ib plus-btn" id="plusBtn" title="Add" onclick="togglePlusMenu(event)"><svg viewBox="0 0 24 24"><path d="M11 5h2v6h6v2h-6v6h-2v-6H5v-2h6z" fill="#00e5ff"/></svg></button>
       <div class="inp-wrap">
         <canvas id="waveCanvas" class="wave-canvas" style="display:none"></canvas>
         <input id="inp" placeholder="Message FRIDAY…  (@ to mention files)" autocomplete="off"/>
@@ -832,7 +922,10 @@
     <!-- Header with close button -->
     <div class="mp-header">
       <span class="mp-header-title">Now Playing</span>
-      <button class="mp-close" aria-label="Close music panel">&times;</button>
+      <div style="display:flex;gap:6px;align-items:center">
+        <button class="mp-collapse" aria-label="Collapse music panel">▾</button>
+        <button class="mp-close" aria-label="Close music panel">&times;</button>
+      </div>
     </div>
     <!-- Now playing section with album art + track info + controls -->
     <div class="mp-now-playing">
@@ -1712,12 +1805,20 @@
       const old=el.querySelector(':scope > .msg-tools');if(old)old.remove();
       const bar=document.createElement('div');bar.className='msg-tools';
       const nver=el._versions?el._versions.length:1;
-      bar.innerHTML='<button data-copy>Copy</button><button data-copymd>Copy MD</button><button data-regen>⟳ Regenerate</button><button data-cont>➔ Continue</button>'+
-        '<button data-speak>🔊 Speak</button><button data-share>Share</button><button data-edit>✎ Edit prompt</button>'+
-        '<button data-dl>⤓ Download</button><button data-pin>📌 Pin</button><button data-bm>🔖 Bookmark</button>'+
-        '<button data-fold>Collapse</button><button data-del>🗑</button>'+
-        (nver>1?'<span class="ver-nav"><button data-prev>‹</button>v'+(el._vi+1)+'/'+nver+'<button data-next>›</button><button data-cmp>Compare</button></span>':'');
+      bar.innerHTML='<button data-copy>Copy</button><button data-share>Share</button>'+
+        '<button class="mt-more" data-more aria-label="More actions">⋯</button>'+
+        (nver>1?'<span class="ver-nav"><button data-prev>‹</button>v'+(el._vi+1)+'/'+nver+'<button data-next>›</button><button data-cmp>Compare</button></span>':'')+
+        '<div class="msg-more" style="display:none">'+
+          '<button data-copymd>Copy Markdown</button><button data-regen>⟳ Regenerate</button><button data-cont>➔ Continue</button>'+
+          '<button data-speak>🔊 Speak</button><button data-edit>✎ Edit prompt</button><button data-dl>⤓ Download</button>'+
+          '<button data-pin>📌 Pin</button><button data-bm>🔖 Bookmark</button><button data-fold>Collapse</button><button data-del>🗑 Delete</button>'+
+        '</div>';
       el.appendChild(bar);
+      // Overflow (⋯) menu toggle + outside-click dismiss
+      const moreBtn=bar.querySelector('[data-more]'),moreMenu=bar.querySelector('.msg-more');
+      moreBtn.onclick=(ev)=>{ev.stopPropagation();const show=moreMenu.style.display==='none';moreMenu.style.display=show?'flex':'none';
+        if(show){const close=(e2)=>{if(!moreMenu.contains(e2.target)&&e2.target!==moreBtn){moreMenu.style.display='none';document.removeEventListener('click',close);}};setTimeout(()=>document.addEventListener('click',close),0);}};
+      moreMenu.addEventListener('click',()=>{setTimeout(()=>{moreMenu.style.display='none';},0);});
       const txt=()=>el._versions[el._vi];
       bar.querySelector('[data-copy]').onclick=()=>{navigator.clipboard&&navigator.clipboard.writeText(txt());};
       bar.querySelector('[data-copymd]').onclick=()=>{navigator.clipboard&&navigator.clipboard.writeText(txt());};
@@ -2414,6 +2515,41 @@
       try{G.renderer.dispose();}catch{}
       G=null;
     }
+
+    // ===== iOS-native UI behaviors: + attachment sheet, music collapse, header =====
+    function hap(ms){ if(navigator.vibrate){try{navigator.vibrate(ms||8);}catch{}} }
+    function togglePlusMenu(e){
+      if(e)e.stopPropagation();
+      const m=document.getElementById('plusMenu'),b=document.getElementById('plusBtn');
+      const open=m.classList.toggle('open'); b.classList.toggle('open',open); hap();
+      if(open){const close=(ev)=>{if(!m.contains(ev.target)&&ev.target!==b&&!b.contains(ev.target)){m.classList.remove('open');b.classList.remove('open');document.removeEventListener('click',close);}};
+        setTimeout(()=>document.addEventListener('click',close),0);}
+    }
+    function pmDo(k){
+      const m=document.getElementById('plusMenu'),b=document.getElementById('plusBtn');
+      m.classList.remove('open'); b.classList.remove('open'); hap();
+      const inpEl=document.getElementById('inp');
+      if(k==='files')document.getElementById('fileInp').click();
+      else if(k==='photo'){const f=document.getElementById('fileInp');f.setAttribute('accept','image/*');f.click();
+        setTimeout(()=>f.setAttribute('accept','.pdf,.txt,.md,.html,.csv,.png,.jpg,.jpeg'),800);}
+      else if(k==='camera')document.getElementById('camInp').click();
+      else if(k==='maps')showMap({mode:'view'});
+      else if(k==='music'){ if(inpEl){inpEl.value='play ';inpEl.focus();} }
+      else if(k==='research'){ if(inpEl){inpEl.value='research ';inpEl.focus();} }
+    }
+    // Music panel collapse toggle + collapsed-by-default on phones
+    (function initMusicCollapse(){
+      const p=document.querySelector('.music-panel'); if(!p)return;
+      const cb=p.querySelector('.mp-collapse');
+      if(cb)cb.onclick=()=>{const min=p.classList.toggle('mp-min');cb.textContent=min?'▴':'▾';hap();};
+      if(window.matchMedia('(max-width:600px)').matches){p.classList.add('mp-min');if(cb)cb.textContent='▴';}
+    })();
+    // Console-style session substatus
+    (function initSessionStatus(){
+      const s=document.getElementById('chatSub'); if(!s)return;
+      const t=new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'});
+      s.innerHTML='Started '+t+' · <b>Operational</b>';
+    })();
 
     // --- History & New Chat ---
     function newChat(){
