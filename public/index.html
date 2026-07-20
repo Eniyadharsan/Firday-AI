@@ -589,111 +589,153 @@
     let fw,fh;function fxResize(){fw=fxc.width=innerWidth;fh=fxc.height=innerHeight}addEventListener('resize',fxResize);fxResize();
 
     // ===== Cinematic deep-space environment around the orb (orb itself untouched) =====
-    const nebulae=[];for(let i=0;i<5;i++)nebulae.push({x:Math.random(),y:Math.random(),r:0.32+Math.random()*0.4,hue:200+Math.random()*70,a:0.05+Math.random()*0.06,dx:(Math.random()-0.5)*0.00003,dy:(Math.random()-0.5)*0.00003,ph:Math.random()*6.28});
-    const estars=[];for(let i=0;i<440;i++)estars.push({x:Math.random(),y:Math.random(),s:Math.random()*1.4+0.2,a:Math.random(),layer:Math.random(),tw:0.002+Math.random()*0.006});
-    const edust=[];for(let i=0;i<80;i++)edust.push({x:Math.random(),y:Math.random(),s:Math.random()*1.2+0.3,vx:(Math.random()-0.5)*0.0005,vy:(Math.random()-0.5)*0.0005,a:0.08+Math.random()*0.28});
+    const fxReactor=document.getElementById('reactor');
+    // Mouse position (bends nearby particles + HUD)
+    let fxMouseX=-9999, fxMouseY=-9999;
+    addEventListener('mousemove',e=>{fxMouseX=e.clientX;fxMouseY=e.clientY;});
+    addEventListener('mouseout',()=>{fxMouseX=-9999;fxMouseY=-9999;});
+
+    // 6 parallax starfield layers
+    const LAYERS=6;
+    const estars=[];for(let i=0;i<520;i++){const layer=(Math.random()*LAYERS)|0;estars.push({x:Math.random(),y:Math.random(),s:0.2+layer*0.28,a:Math.random(),tw:0.002+Math.random()*0.006,par:0.12+layer*0.28});}
+    // Slow nebula clouds (shift over minutes)
+    const nebulae=[];for(let i=0;i<5;i++)nebulae.push({x:Math.random(),y:Math.random(),r:0.34+Math.random()*0.4,hue:200+Math.random()*70,a:0.05+Math.random()*0.06,dx:(Math.random()-0.5)*0.0000045,dy:(Math.random()-0.5)*0.0000045,ph:Math.random()*6.28});
+    // Dust orbiting + drifting toward the orb
+    const edust=[];function spawnDust(d){d.ang=Math.random()*6.283;d.rad=1.0+Math.random()*1.1;d.spd=(0.0009+Math.random()*0.0022)*(Math.random()<0.5?-1:1);d.inw=0.0006+Math.random()*0.0012;d.s=Math.random()*1.3+0.3;d.a=0.1+Math.random()*0.35;}
+    for(let i=0;i<90;i++){const d={};spawnDust(d);d.rad=0.2+Math.random()*1.9;edust.push(d);}
     const envWaves=[];let envWaveT=0;
-    const hudRings=[{rf:1.7,sp:0.0016,ticks:72,dash:false,rot:0},{rf:2.15,sp:-0.0011,ticks:36,dash:true,rot:0},{rf:2.7,sp:0.0007,ticks:140,dash:false,rot:0}];
+    // Holographic rings that appear and fade
+    const ringPool=[];let ringSpawnT=0;
     const glyphChars='0123456789ABCDEF∑∆ΩΨφλπµ∞⟨⟩</>=';
+    const hudRings=[{rf:1.7,sp:0.0016,ticks:72,dash:false,rot:0},{rf:2.15,sp:-0.0011,ticks:36,dash:true,rot:0},{rf:2.7,sp:0.0007,ticks:140,dash:false,rot:0}];
     const hudGlyphs=[];for(let i=0;i<44;i++)hudGlyphs.push({ring:(Math.random()*3)|0,a:Math.random()*6.28,ch:glyphChars[(Math.random()*glyphChars.length)|0],flip:0.008+Math.random()*0.03,sp:(Math.random()-0.5)*0.002});
-    let hudRot=0,camPh=0;
+    let hudRot=0,camPh=0,zoomPh=0;
 
     function fxDraw(){
+      fxctx.setTransform(1,0,0,1,0,0);
       fxctx.clearRect(0,0,fw,fh);
       const ocx=fw/2, ocy=fh*0.45, orbR=Math.min(fw,fh)*0.15;
-      camPh+=0.005;
-      const camX=Math.sin(camPh)*7, camY=Math.cos(camPh*0.7)*5;   // subtle camera breathing/drift
+      const spk=!!(fxReactor&&fxReactor.classList.contains('speaking'));  // environment reacts during speech
 
-      // Nebula clouds (slow drift, soft)
-      for(const n of nebulae){n.x+=n.dx;n.y+=n.dy;n.ph+=0.003;
+      // Gentle camera drift (±2-3px) + slow zoom in/out over ~45s
+      camPh+=0.004;zoomPh+=2*Math.PI/(45*60);
+      const camX=Math.sin(camPh)*2.5, camY=Math.cos(camPh*0.7)*2.5;
+      const camZoom=1+Math.sin(zoomPh)*0.02;
+      fxctx.save();
+      fxctx.translate(ocx,ocy);fxctx.scale(camZoom,camZoom);fxctx.translate(-ocx+camX,-ocy+camY);
+
+      // mouse bend helper
+      const mBend=(x,y,amt)=>{const dx=x-fxMouseX,dy=y-fxMouseY,d2=dx*dx+dy*dy;const R=140;if(d2<R*R){const d=Math.sqrt(d2)||1;const f=(1-d/R)*amt;return[x+dx/d*f,y+dy/d*f];}return[x,y];};
+
+      // Nebula clouds (very slow, minutes)
+      for(const n of nebulae){n.x+=n.dx;n.y+=n.dy;n.ph+=0.0009;
         if(n.x<-0.3)n.x=1.3;if(n.x>1.3)n.x=-0.3;if(n.y<-0.3)n.y=1.3;if(n.y>1.3)n.y=-0.3;
-        const gx=n.x*fw+camX*2,gy=n.y*fh+camY*2,gr=n.r*Math.max(fw,fh);
+        const gx=n.x*fw,gy=n.y*fh,gr=n.r*Math.max(fw,fh);
         const g=fxctx.createRadialGradient(gx,gy,0,gx,gy,gr);
         const a=n.a*(0.7+0.3*Math.sin(n.ph));
-        g.addColorStop(0,`hsla(${n.hue},80%,55%,${a.toFixed(3)})`);
-        g.addColorStop(1,'transparent');
-        fxctx.fillStyle=g;fxctx.fillRect(0,0,fw,fh);
+        g.addColorStop(0,`hsla(${n.hue},80%,55%,${a.toFixed(3)})`);g.addColorStop(1,'transparent');
+        fxctx.fillStyle=g;fxctx.fillRect(-50,-50,fw+100,fh+100);
       }
 
-      // Volumetric blue fog around the center region
+      // Volumetric fog around center (intensifies during speech)
+      const fogA=spk?0.16:0.10;
       const fog=fxctx.createRadialGradient(ocx,ocy,0,ocx,ocy,orbR*4.5);
-      fog.addColorStop(0,'rgba(0,120,255,0.10)');
-      fog.addColorStop(0.5,'rgba(0,70,190,0.045)');
+      fog.addColorStop(0,`rgba(0,120,255,${fogA})`);
+      fog.addColorStop(0.5,`rgba(0,70,190,${(fogA*0.45).toFixed(3)})`);
       fog.addColorStop(1,'transparent');
-      fxctx.fillStyle=fog;fxctx.fillRect(0,0,fw,fh);
+      fxctx.fillStyle=fog;fxctx.fillRect(-50,-50,fw+100,fh+100);
 
-      // Twinkling stars with depth + parallax
+      // 6-layer parallax starfield (deeper layers move less)
       for(const st of estars){st.a+=st.tw;if(st.a>1)st.a=0;
-        const px=(st.x*fw+camX*(0.3+st.layer*1.6))%fw, py=(st.y*fh+camY*(0.3+st.layer*1.6))%fh;
-        const al=(Math.sin(st.a*Math.PI)*0.6+0.08)*(0.35+st.layer*0.65);
-        fxctx.beginPath();fxctx.arc(px,py,st.s*(0.5+st.layer),0,6.283);
+        let px=(st.x*fw+camX*st.par*6)%fw, py=(st.y*fh+camY*st.par*6)%fh;
+        [px,py]=mBend(px,py,10*st.par);
+        const al=(Math.sin(st.a*Math.PI)*0.6+0.06)*(0.3+st.par);
+        fxctx.beginPath();fxctx.arc(px,py,st.s,0,6.283);
         fxctx.fillStyle=`rgba(205,228,255,${al.toFixed(2)})`;fxctx.fill();
-      }
-
-      // Drifting cosmic dust
-      for(const d of edust){d.x+=d.vx;d.y+=d.vy;if(d.x<0)d.x=1;if(d.x>1)d.x=0;if(d.y<0)d.y=1;if(d.y>1)d.y=0;
-        fxctx.beginPath();fxctx.arc(d.x*fw,d.y*fh,d.s,0,6.283);
-        fxctx.fillStyle=`rgba(120,180,255,${d.a.toFixed(2)})`;fxctx.fill();
       }
 
       fxctx.globalCompositeOperation='lighter';
 
-      // Soft light rays extending from the center into space
+      // Dust orbiting + drifting toward orb (accelerates during speech), leaves faint trail
+      for(const d of edust){
+        d.ang+=d.spd*(spk?2.0:1);
+        d.rad-=d.inw*(spk?2.2:1);
+        if(d.rad<=0.12)spawnDust(d);
+        const sc=orbR*1.9;
+        let px=ocx+Math.cos(d.ang)*d.rad*sc, py=ocy+Math.sin(d.ang)*d.rad*sc*0.92;
+        [px,py]=mBend(px,py,26);
+        const al=d.a*(1-d.rad/2.1);
+        fxctx.beginPath();fxctx.arc(px,py,d.s,0,6.283);
+        fxctx.fillStyle=`rgba(130,200,255,${al.toFixed(2)})`;fxctx.fill();
+      }
+
+      // Soft light rays from center
       for(let i=0;i<6;i++){const ang=hudRot*0.3+i*(Math.PI/3);
         const ex=ocx+Math.cos(ang)*orbR*7, ey=ocy+Math.sin(ang)*orbR*7;
         const g=fxctx.createLinearGradient(ocx,ocy,ex,ey);
-        g.addColorStop(0,'rgba(0,170,255,0.05)');g.addColorStop(1,'transparent');
+        g.addColorStop(0,`rgba(0,170,255,${spk?0.08:0.05})`);g.addColorStop(1,'transparent');
         fxctx.strokeStyle=g;fxctx.lineWidth=orbR*0.5;
         fxctx.beginPath();fxctx.moveTo(ocx,ocy);fxctx.lineTo(ex,ey);fxctx.stroke();
       }
 
-      // Concentric pulse waves travelling outward every few seconds
-      envWaveT++;if(envWaveT>170){envWaveT=0;envWaves.push({r:orbR*1.3,life:1});}
-      for(let i=envWaves.length-1;i>=0;i--){const w=envWaves[i];w.r+=1.5;w.life-=0.0045;if(w.life<=0){envWaves.splice(i,1);continue;}
+      // Energy ripples radiating outward (more frequent during speech)
+      envWaveT++;if(envWaveT>(spk?70:170)){envWaveT=0;envWaves.push({r:orbR*1.3,life:1});}
+      for(let i=envWaves.length-1;i>=0;i--){const w=envWaves[i];w.r+=spk?2.4:1.5;w.life-=0.0045;if(w.life<=0){envWaves.splice(i,1);continue;}
         fxctx.beginPath();fxctx.arc(ocx,ocy,w.r,0,6.283);
-        fxctx.strokeStyle=`rgba(0,205,255,${(w.life*0.16).toFixed(2)})`;fxctx.lineWidth=1.3;fxctx.stroke();
+        fxctx.strokeStyle=`rgba(0,205,255,${(w.life*(spk?0.22:0.16)).toFixed(2)})`;fxctx.lineWidth=1.3;fxctx.stroke();
       }
       fxctx.globalCompositeOperation='source-over';
 
-      // ── Holographic HUD layers floating around the orb ──
+      // ── Holographic HUD rings (persistent, rotating) ──
       hudRot+=0.004;
-      fxctx.save();fxctx.translate(ocx+camX,ocy+camY);
+      fxctx.save();fxctx.translate(ocx,ocy);
       fxctx.strokeStyle='rgba(0,200,255,0.22)';
-      hudRings.forEach((ring,ri)=>{
-        ring.rot+=ring.sp;const rr=orbR*ring.rf;
-        // base ring
+      hudRings.forEach((ring)=>{
+        ring.rot+=ring.sp*(spk?1.5:1);const rr=orbR*ring.rf;
         fxctx.save();fxctx.rotate(ring.rot);
         fxctx.globalAlpha=0.5;
         fxctx.beginPath();fxctx.arc(0,0,rr,0,6.283);
         fxctx.lineWidth=1;fxctx.setLineDash(ring.dash?[6,10]:[]);fxctx.stroke();fxctx.setLineDash([]);
-        // rotating technical tick marks
-        for(let t=0;t<ring.ticks;t++){const ta=(t/ring.ticks)*6.283;
-          const tl=(t%5===0)?orbR*0.08:orbR*0.035;
-          const x1=Math.cos(ta)*rr, y1=Math.sin(ta)*rr;
-          const x2=Math.cos(ta)*(rr+tl), y2=Math.sin(ta)*(rr+tl);
+        for(let t=0;t<ring.ticks;t++){const ta=(t/ring.ticks)*6.283;const tl=(t%5===0)?orbR*0.08:orbR*0.035;
           fxctx.globalAlpha=(t%5===0)?0.5:0.25;
-          fxctx.beginPath();fxctx.moveTo(x1,y1);fxctx.lineTo(x2,y2);fxctx.lineWidth=1;fxctx.stroke();
+          fxctx.beginPath();fxctx.moveTo(Math.cos(ta)*rr,Math.sin(ta)*rr);fxctx.lineTo(Math.cos(ta)*(rr+tl),Math.sin(ta)*(rr+tl));fxctx.lineWidth=1;fxctx.stroke();
         }
-        // blueprint arc segments (brighter accent)
         fxctx.globalAlpha=0.6;fxctx.strokeStyle='rgba(120,225,255,0.5)';
         fxctx.beginPath();fxctx.arc(0,0,rr,ring.rot*2,ring.rot*2+0.6);fxctx.lineWidth=2;fxctx.stroke();
         fxctx.beginPath();fxctx.arc(0,0,rr,ring.rot*2+3.14,ring.rot*2+3.4);fxctx.stroke();
         fxctx.strokeStyle='rgba(0,200,255,0.22)';
         fxctx.restore();
       });
-      // Floating digital glyphs / hex fragments on the rings
+      // Glyphs / hex fragments (bend toward mouse)
       fxctx.font=(Math.max(8,orbR*0.11))+"px 'Courier New',monospace";
       fxctx.textAlign='center';fxctx.textBaseline='middle';
       for(const gl of hudGlyphs){gl.a+=gl.sp;if(Math.random()<gl.flip)gl.ch=glyphChars[(Math.random()*glyphChars.length)|0];
         const rr=orbR*hudRings[gl.ring].rf*1.04;
-        const gx=Math.cos(gl.a)*rr, gy=Math.sin(gl.a)*rr;
-        fxctx.globalAlpha=0.35+0.25*Math.sin(hudRot*3+gl.a*4);
+        let gx=Math.cos(gl.a)*rr, gy=Math.sin(gl.a)*rr;
+        const wx=ocx+gx, wy=ocy+gy; const[bx,by]=mBend(wx,wy,20); gx=bx-ocx; gy=by-ocy;
+        fxctx.globalAlpha=0.32+0.24*Math.sin(hudRot*3+gl.a*4);
         fxctx.fillStyle='rgba(150,225,255,0.9)';
         fxctx.fillText(gl.ch,gx,gy);
       }
       fxctx.globalAlpha=1;
       fxctx.restore();
 
+      // ── Holographic rings that appear and fade around the orb ──
+      ringSpawnT++;if(ringSpawnT>(spk?90:150)){ringSpawnT=0;ringPool.push({rf:1.4+Math.random()*1.4,rot:Math.random()*6.28,sp:(Math.random()-0.5)*0.01,life:0,dir:1});}
+      fxctx.save();fxctx.translate(ocx,ocy);
+      for(let i=ringPool.length-1;i>=0;i--){const R=ringPool[i];
+        R.life+=R.dir*0.006;if(R.life>=1){R.life=1;R.dir=-1;}
+        if(R.life<=0&&R.dir<0){ringPool.splice(i,1);continue;}
+        R.rot+=R.sp;const rr=orbR*R.rf;
+        fxctx.save();fxctx.rotate(R.rot);
+        fxctx.globalAlpha=R.life*0.4;
+        fxctx.strokeStyle='rgba(90,210,255,0.9)';fxctx.lineWidth=1;
+        fxctx.setLineDash([4,8]);fxctx.beginPath();fxctx.arc(0,0,rr,0,6.283);fxctx.stroke();fxctx.setLineDash([]);
+        fxctx.restore();
+      }
+      fxctx.globalAlpha=1;fxctx.restore();
+
+      fxctx.restore(); // camera transform
       requestAnimationFrame(fxDraw)}fxDraw();
 
     // --- Orb Canvas Renderer (particle sphere like the reference image) ---
