@@ -372,7 +372,7 @@
     .cmd-item .ci-ico{width:22px;text-align:center;opacity:.8}
     .cmd-item .ci-desc{color:rgba(0,229,255,.4);font-size:9.5px;margin-left:auto}
     /* Input wrap + waveform */
-    .inp-wrap{flex:1;position:relative;display:flex}
+    .inp-wrap{flex:1;min-width:0;position:relative;display:flex}
     .wave-canvas{position:absolute;inset:0;width:100%;height:100%;border-radius:22px;pointer-events:none;z-index:2}
     /* Input dock — floating glass */
     .chat-in{display:flex;gap:8px;align-items:center;padding:10px 12px;border-top:1px solid rgba(0,229,255,.1);background:rgba(0,229,255,.02)}
@@ -598,6 +598,15 @@
       .mp-collapse{width:40px;height:40px}
       /* Issue 6 — no horizontal overflow in portrait */
       html,body{overflow-x:hidden;max-width:100vw}
+      /* Orb becomes the hero — sit it in the visible gap above the chat */
+      .center{top:40%}
+    }
+
+    /* Narrow phones (<430px): collapse least-used header actions to avoid clipping */
+    @media (max-width:430px){
+      #chTop,#chBottom{display:none}
+      .chat-head-btns{gap:2px}
+      .chb{width:34px;height:34px}
     }
 
     /* Watery mouse effect canvas */
@@ -745,8 +754,19 @@
       .chat{width:calc(100% - 24px);left:12px}
       .detail{width:calc(100% - 24px);right:12px;left:12px}
 
-      /* Music panel responsive layout - position ABOVE the chat on mobile */
-      .music-panel{max-width:none;width:calc(100vw - 32px);left:16px;right:16px;max-height:35vh;bottom:auto;top:50px}
+      /* Music = compact mini bar under the nav; expands to a full-screen sheet */
+      .music-panel{left:8px;right:8px;width:auto;max-width:none;top:calc(env(safe-area-inset-top) + 44px);bottom:auto;max-height:116px;border-radius:18px;overflow:hidden}
+      .music-panel .mp-now-playing{cursor:pointer}
+      /* Full-screen bottom sheet (Apple Music-style) */
+      .music-panel.mp-sheet{left:0;right:0;top:0;bottom:0;width:100%;height:100dvh;max-height:100dvh;border-radius:0;overflow-y:auto;z-index:1500;padding-top:calc(env(safe-area-inset-top) + 18px);padding-bottom:calc(env(safe-area-inset-bottom) + 20px)}
+      .music-panel.mp-sheet::before{content:'';position:absolute;top:calc(env(safe-area-inset-top) + 6px);left:50%;transform:translateX(-50%);width:40px;height:4px;border-radius:2px;background:rgba(255,255,255,.3);z-index:8}
+      .music-panel.mp-sheet .mp-album-art{width:68vw!important;height:68vw!important;max-width:320px;max-height:320px;margin:14px auto 8px;display:block}
+      .music-panel.mp-sheet .mp-now-playing{flex-direction:column;text-align:center;gap:6px;cursor:default}
+      .music-panel.mp-sheet .mp-title{font-size:18px;white-space:normal}
+      .music-panel.mp-sheet .mp-artist{font-size:14px}
+      .music-panel.mp-sheet .mp-controls{justify-content:center;gap:26px;padding:16px 0}
+      .music-panel.mp-sheet .mp-controls button{width:52px;height:52px;font-size:22px}
+      .music-panel.mp-sheet .mp-search-section{padding:0 20px 20px}
       /* Music toggle button - slightly smaller on mobile */
       .music-toggle-btn{width:26px;height:26px;font-size:12px}
       /* Music player responsive layout */
@@ -2579,12 +2599,27 @@
       else if(k==='music'){ if(inpEl){inpEl.value='play ';inpEl.focus();} }
       else if(k==='research'){ if(inpEl){inpEl.value='research ';inpEl.focus();} }
     }
-    // Music panel collapse toggle + collapsed-by-default on phones
+    // Music: compact mini bar <-> full-screen sheet on phones; collapse on desktop
     (function initMusicCollapse(){
       const p=document.querySelector('.music-panel'); if(!p)return;
       const cb=p.querySelector('.mp-collapse');
-      if(cb)cb.onclick=()=>{const min=p.classList.toggle('mp-min');cb.textContent=min?'▴':'▾';hap();};
-      if(window.matchMedia('(max-width:600px)').matches){p.classList.add('mp-min');if(cb)cb.textContent='▴';}
+      const np=p.querySelector('.mp-now-playing');
+      const isPhone=()=>window.matchMedia('(max-width:600px)').matches;
+      function setMini(){p.classList.add('mp-min');p.classList.remove('mp-sheet');if(cb)cb.textContent='▴';}
+      function setSheet(){p.classList.remove('mp-min');p.classList.add('mp-sheet');if(cb)cb.textContent='▾';}
+      if(cb)cb.onclick=(e)=>{e.stopPropagation();hap();
+        if(p.classList.contains('mp-sheet')){setMini();return;}
+        if(isPhone()){setSheet();return;}
+        p.classList.toggle('mp-min');cb.textContent=p.classList.contains('mp-min')?'▴':'▾';};
+      // Tap the mini bar's now-playing area to expand into the full sheet
+      if(np)np.addEventListener('click',()=>{ if(isPhone()&&p.classList.contains('mp-min')){setSheet();hap();} });
+      // Swipe down on the sheet to dismiss back to the mini bar
+      let sy=null;
+      p.addEventListener('touchstart',e=>{ if(p.classList.contains('mp-sheet'))sy=e.touches[0].clientY; },{passive:true});
+      p.addEventListener('touchmove',e=>{ if(sy!=null){const dy=e.touches[0].clientY-sy; if(dy>70){setMini();hap();sy=null;}} },{passive:true});
+      p.addEventListener('touchend',()=>{sy=null;});
+      if(isPhone())setMini();
+      window.addEventListener('resize',()=>{ if(isPhone()&&!p.classList.contains('mp-sheet'))setMini(); });
     })();
     // ===== Live model badge + AI status (drives the console header) =====
     function prettyModel(id){
