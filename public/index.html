@@ -682,6 +682,8 @@
     /* Music Panel open/close animation classes */
     .music-panel.panel-hidden,.music-player.panel-hidden{transform:scale(0.95);opacity:0;pointer-events:none;transition:transform 250ms ease-in,opacity 250ms ease-in}
     .music-panel.panel-visible,.music-player.panel-visible{transform:scale(1);opacity:1;pointer-events:auto;transition:transform 300ms ease-out,opacity 300ms ease-out}
+    /* Hard dismiss — beats any lingering panel-visible / state-machine class */
+    .music-panel.force-hidden,.music-player.force-hidden{display:none!important}
 
     /* Music Player - Now Playing Panel (legacy, pending DOM migration) */
     .music-player{position:fixed;bottom:0;left:0;right:0;z-index:600;background:rgba(10,22,40,.92);backdrop-filter:blur(20px);border-top-left-radius:16px;border-top-right-radius:16px;border-top:1px solid rgba(0,229,255,.1);box-shadow:0 -4px 30px rgba(0,0,0,.5);transition:transform .35s cubic-bezier(.4,0,.2,1),opacity .3s ease;overflow:hidden}
@@ -978,7 +980,7 @@
       <span class="mp-header-title">Now Playing</span>
       <div style="display:flex;gap:6px;align-items:center">
         <button class="mp-collapse" aria-label="Collapse music panel">▾</button>
-        <button class="mp-close" aria-label="Close music panel">&times;</button>
+        <button class="mp-close" aria-label="Close music panel" onclick="closeMusic(event)">&times;</button>
       </div>
     </div>
     <!-- Now playing section with album art + track info + controls -->
@@ -2623,17 +2625,35 @@
       p.addEventListener('touchend',()=>{sy=null;});
       if(isPhone())setMini();
       window.addEventListener('resize',()=>{ if(isPhone()&&!p.classList.contains('mp-sheet'))setMini(); });
-      // Bulletproof close — force-hide regardless of the panel state machine so
-      // the X always works (removes panel-visible which otherwise wins in CSS).
-      const closeBtn=p.querySelector('.mp-close');
-      if(closeBtn)closeBtn.addEventListener('click',()=>{
-        p.classList.remove('panel-visible','mp-sheet');
-        p.classList.add('panel-hidden','mp-min');
-        p.style.pointerEvents='none';
-        try{if(window.musicPlayer)window.musicPlayer.visible=false;}catch{}
-        hap();
-      },true);
     })();
+    // Bulletproof music dismiss — wired inline on the X so it never depends on
+    // query timing or the panel state machine. force-hidden = display:none!important.
+    function closeMusic(e){
+      if(e){e.preventDefault&&e.preventDefault();e.stopPropagation&&e.stopPropagation();}
+      const p=document.querySelector('.music-panel'); if(!p)return;
+      p.classList.add('force-hidden','panel-hidden','mp-min');
+      p.classList.remove('panel-visible','mp-sheet');
+      p.style.pointerEvents='none';
+      const mini=document.getElementById('mp-mini-indicator'); if(mini)mini.classList.add('hidden');
+      try{if(window.musicPlayer)window.musicPlayer.visible=false;}catch(_){}
+      try{if(window.panelManager&&window.panelManager.hide)window.panelManager.hide();}catch(_){}
+      if(navigator.vibrate)try{navigator.vibrate(8);}catch(_){}
+    }
+    // Re-enable the panel only when a NEW track/play explicitly shows it again.
+    setTimeout(function reHook(){
+      const p=document.querySelector('.music-panel'); if(!p)return;
+      const clear=()=>{p.classList.remove('force-hidden');p.style.pointerEvents='';};
+      try{ if(window.panelManager&&window.panelManager.show&&!window.panelManager._fx){
+        const _s=window.panelManager.show.bind(window.panelManager);
+        window.panelManager.show=function(){clear();return _s.apply(this,arguments);};
+        window.panelManager._fx=true;
+      }}catch(_){}
+      try{ if(window.musicPlayer&&window.musicPlayer.show&&!window.musicPlayer._fx){
+        const _p=window.musicPlayer.show.bind(window.musicPlayer);
+        window.musicPlayer.show=function(){clear();return _p.apply(this,arguments);};
+        window.musicPlayer._fx=true;
+      }}catch(_){}
+    },1600);
     // ===== Live model badge + AI status (drives the console header) =====
     function prettyModel(id){
       if(!id)return 'AUTO';
