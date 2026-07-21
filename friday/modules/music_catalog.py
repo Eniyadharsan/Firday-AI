@@ -59,7 +59,9 @@ class CatalogCache:
                     if not value or not value.strip():
                         continue
                     key = value.strip().lower()
-                    original = value.strip()
+                    # Preserve the original value exactly as passed (including whitespace)
+                    # The key is normalized for lookup, but original is preserved for return
+                    original = value
                     # If already present, update timestamp and move to end (MRU)
                     if key in self._cache:
                         self._cache.move_to_end(key)
