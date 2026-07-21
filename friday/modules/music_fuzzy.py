@@ -120,8 +120,9 @@ class FuzzyMatcher:
         best_distance = float("inf")
 
         for candidate in candidates:
-            candidate_lower = candidate.lower()
-            distance = _levenshtein_distance(query_normalized, candidate_lower)
+            # Normalize the candidate the same way as the query for consistent comparison
+            candidate_normalized = candidate.strip().lower()
+            distance = _levenshtein_distance(query_normalized, candidate_normalized)
             if distance <= 2 and distance < best_distance:
                 best_distance = distance
                 best_match = candidate

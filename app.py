@@ -11,11 +11,243 @@ from flask_limiter.util import get_remote_address
 from loguru import logger
 
 from friday.config import PORT
+from friday.config import ISO_TIMESTAMP_FORMAT
 from friday.system_prompt import get_system_prompt
 from friday.modules import llm, search, news, auth, music, memory, image, rag, mcp, video, agents, planner, long_memory, research, maps
 from friday.modules.auth import require_auth, get_current_user_id
+from friday.modules.tool_calling import (
+    ToolRegistry,
+    FallbackRouter,
+    IntentRouter,
+    format_music_response,
+    format_music_control_response,
+    format_map_view_response,
+    format_directions_response,
+    format_image_response,
+    format_video_response,
+    format_research_response,
+)
 
 app = Flask(__name__, static_folder="public", static_url_path="")
+
+
+# ===== Intent Router Initialization (loaded once at startup per Requirement 9.4) =====
+
+def _create_music_play_handler():
+    """Create handler for music_play tool."""
+    def handler(session_id: str, user_id: str, song_query: str, **kwargs) -> dict:
+        """Search for and play music based on the song query."""
+        results = music.search_tracks(song_query, max_results=10)
+        if results:
+            track = results[0]
+            memory.save_message(user_id, session_id, "user", f"play {song_query}")
+            memory.save_message(user_id, session_id, "assistant", f'Playing {track["title"]} by {track["artist"]}')
+            return format_music_response(
+                reply=f'Playing "{track["title"]}" by {track["artist"]}...',
+                session_id=session_id,
+                track=track,
+            )
+        else:
+            memory.save_message(user_id, session_id, "user", f"play {song_query}")
+            return {
+                "reply": "Sorry, I couldn't find that song. Try a different search.",
+                "sessionId": session_id,
+            }
+    return handler
+
+
+def _create_music_control_handler():
+    """Create handler for music_control tool."""
+    def handler(session_id: str, user_id: str, action: str, **kwargs) -> dict:
+        """Handle music playback control commands."""
+        control_replies = {
+            "pause": "Music paused, Sir. Standing by.",
+            "resume": "Resuming playback, Sir.",
+            "stop": "Playback stopped, Sir.",
+            "next": "Skipping to the next track, Sir.",
+            "previous": "Going back to the previous track, Sir.",
+        }
+        memory.save_message(user_id, session_id, "user", action)
+        return format_music_control_response(
+            reply=control_replies.get(action, f"Executing {action} command."),
+            session_id=session_id,
+            control=action,
+        )
+    return handler
+
+
+def _create_map_view_handler():
+    """Create handler for map_view tool."""
+    def handler(session_id: str, user_id: str, place: str, **kwargs) -> dict:
+        """Display a map of the specified location."""
+        memory.save_message(user_id, session_id, "user", f"map of {place}")
+        reply = f"Here is the map of {place}, Sir." if place else "Here is the map, Sir."
+        return format_map_view_response(
+            reply=reply,
+            session_id=session_id,
+            place=place,
+        )
+    return handler
+
+
+def _create_directions_handler():
+    """Create handler for directions tool."""
+    def handler(session_id: str, user_id: str, destination: str, origin: str = "", **kwargs) -> dict:
+        """Get directions between two locations."""
+        memory.save_message(user_id, session_id, "user", f"directions from {origin} to {destination}")
+        if origin:
+            reply = f"Plotting a route from {origin} to {destination}, Sir."
+        else:
+            reply = f"Getting directions to {destination}, Sir."
+        return format_directions_response(
+            reply=reply,
+            session_id=session_id,
+            origin=origin,
+            destination=destination,
+        )
+    return handler
+
+
+def _create_image_generate_handler():
+    """Create handler for image_generate tool."""
+    def handler(session_id: str, user_id: str, prompt: str, **kwargs) -> dict:
+        """Generate an image from a text description."""
+        url = image.generate_image_url(prompt)
+        memory.save_message(user_id, session_id, "user", prompt)
+        return format_image_response(
+            reply="Here's your image, Sir.",
+            session_id=session_id,
+            image_url=url,
+            image_prompt=prompt,
+        )
+    return handler
+
+
+def _create_video_generate_handler():
+    """Create handler for video_generate tool."""
+    def handler(session_id: str, user_id: str, prompt: str, **kwargs) -> dict:
+        """Generate a video from a text description."""
+        resp = video.get_video_response(prompt)
+        memory.save_message(user_id, session_id, "user", prompt)
+        return format_video_response(
+            reply=resp.get("reply", "Generating your video, Sir."),
+            session_id=session_id,
+            video_url=resp.get("videoUrl", ""),
+            video_prompt=prompt,
+        )
+    return handler
+
+
+def _create_research_handler():
+    """Create handler for research tool."""
+    def handler(session_id: str, user_id: str, topic: str, **kwargs) -> dict:
+        """Conduct deep research on a topic."""
+        result = research.generate_research_report(topic)
+        memory.save_message(user_id, session_id, "user", topic)
+        memory.save_message(user_id, session_id, "assistant", f"Research: {topic}")
+        return format_research_response(
+            reply=f"Research complete. {result['sources_count']} sources in {result['time_taken']}.",
+            session_id=session_id,
+            report=result["report"],
+            topic=result["topic"],
+            meta={
+                "sources": result["sources_count"],
+                "news": result["news_count"],
+                "time": result["time_taken"],
+            },
+        )
+    return handler
+
+
+def _create_web_search_handler():
+    """Create handler for web_search tool."""
+    def handler(session_id: str, user_id: str, query: str, **kwargs) -> dict:
+        """Search the web for information."""
+        result = search.web_search(query)
+        return {
+            "reply": result or "No results found.",
+            "sessionId": session_id,
+            "action": "search_result",
+            "query": query,
+        }
+    return handler
+
+
+def _create_news_handler():
+    """Create handler for news tool."""
+    def handler(session_id: str, user_id: str, topic: str = "", **kwargs) -> dict:
+        """Get latest news on a topic."""
+        news.refresh_cache()
+        if topic:
+            result = news.fetch_news(topic) or news.get_cached_news("world")
+        else:
+            result = news.get_cached_news("world")
+        return {
+            "reply": result or "No news available.",
+            "sessionId": session_id,
+            "action": "news_result",
+            "topic": topic or "world",
+        }
+    return handler
+
+
+def _create_weather_handler():
+    """Create handler for weather tool."""
+    def handler(session_id: str, user_id: str, location: str, **kwargs) -> dict:
+        """Get weather for a location."""
+        result = search.web_search(f"{location} weather today")
+        return {
+            "reply": result or f"Could not get weather for {location}.",
+            "sessionId": session_id,
+            "action": "weather_result",
+            "location": location,
+        }
+    return handler
+
+
+def _create_stock_handler():
+    """Create handler for stock tool."""
+    def handler(session_id: str, user_id: str, symbol: str, **kwargs) -> dict:
+        """Get stock or crypto price information."""
+        result = search.web_search(f"{symbol} current price")
+        return {
+            "reply": result or f"Could not get price for {symbol}.",
+            "sessionId": session_id,
+            "action": "stock_result",
+            "symbol": symbol,
+        }
+    return handler
+
+
+def _initialize_intent_router() -> IntentRouter:
+    """Initialize the IntentRouter with all capability handlers.
+    
+    This is called once at application startup per Requirement 9.4.
+    """
+    tool_registry = ToolRegistry.get_instance()
+    fallback_router = FallbackRouter()
+    intent_router = IntentRouter(tool_registry, llm, fallback_router)
+    
+    # Register all capability handlers
+    intent_router.register_handler("music_play", _create_music_play_handler())
+    intent_router.register_handler("music_control", _create_music_control_handler())
+    intent_router.register_handler("map_view", _create_map_view_handler())
+    intent_router.register_handler("directions", _create_directions_handler())
+    intent_router.register_handler("image_generate", _create_image_generate_handler())
+    intent_router.register_handler("video_generate", _create_video_generate_handler())
+    intent_router.register_handler("research", _create_research_handler())
+    intent_router.register_handler("web_search", _create_web_search_handler())
+    intent_router.register_handler("news", _create_news_handler())
+    intent_router.register_handler("weather", _create_weather_handler())
+    intent_router.register_handler("stock", _create_stock_handler())
+    
+    logger.info("IntentRouter initialized with all capability handlers")
+    return intent_router
+
+
+# Initialize the IntentRouter at startup (singleton, loaded once)
+_intent_router = _initialize_intent_router()
+
 
 # --- Music Search Engine (lazy singleton) ---
 _search_engine = None
@@ -111,7 +343,23 @@ def static_files(path: str):
 @app.route("/health")
 def health():
     from friday.db import USE_TURSO
-    return jsonify({"status": "running", "version": "2.1", "auth": "JWT", "rateLimit": "30/min on chat", "database": "turso" if USE_TURSO else "local_sqlite"})
+    from friday.modules.tool_calling.metrics import MetricsCollector
+    
+    # Get routing metrics from MetricsCollector (rolling 5-minute window)
+    metrics_collector = MetricsCollector.get_instance()
+    routing_metrics = metrics_collector.get_metrics()
+    
+    return jsonify({
+        "status": "running",
+        "version": "2.1",
+        "auth": "JWT",
+        "rateLimit": "30/min on chat",
+        "database": "turso" if USE_TURSO else "local_sqlite",
+        # Routing metrics per Requirement 10.4
+        "tool_selection_success_rate": round(routing_metrics.success_rate, 2),
+        "fallback_rate": round(routing_metrics.fallback_rate, 2),
+        "average_latency_ms": round(routing_metrics.average_latency_ms, 2),
+    })
 
 
 # ===== Auth =====
@@ -179,97 +427,23 @@ def chat():
     history = sessions[session_id]
     lower = message.lower()
 
-    # --- Research mode ---
-    if research.is_research_request(message):
-        result = research.generate_research_report(message)
-        memory.save_message(user_id, session_id, "user", message)
-        memory.save_message(user_id, session_id, "assistant", f"Research: {message}")
-        return jsonify({"reply": f"Research complete. {result['sources_count']} sources in {result['time_taken']}.", "sessionId": session_id, "action": "show_report", "report": result["report"], "topic": result["topic"], "meta": {"sources": result["sources_count"], "news": result["news_count"], "time": result["time_taken"]}})
+    # --- Use IntentRouter for tool-based routing ---
+    # This replaces the regex-based routing cascade (Requirements 3.1, 4.1-4.8)
+    routing_result = _intent_router.route(message, session_id, user_id)
+    
+    # If a capability handler processed the request, return its response
+    if routing_result.handler_used != "default_chat":
+        # For non-chat handlers, the response is already formatted
+        # Log routing metrics
+        logger.debug(
+            f"IntentRouter: handler={routing_result.handler_used} "
+            f"fallback={routing_result.is_fallback} "
+            f"latency_ms={routing_result.latency_ms:.2f}"
+        )
+        return jsonify(routing_result.response)
 
-    # --- Video ---
-    if video.is_video_request(message):
-        resp = video.get_video_response(message)
-        resp["sessionId"] = session_id
-        memory.save_message(user_id, session_id, "user", message)
-        return jsonify(resp)
-
-    # --- Music playback control (pause/resume/stop/next/previous) ---
-    # Must be checked BEFORE is_music_request so "play"/"resume" aren't treated as new searches
-    _control = music.detect_playback_control(message)
-    if _control:
-        _control_replies = {
-            "pause": "Music paused, Sir. Standing by.",
-            "resume": "Resuming playback, Sir.",
-            "stop": "Playback stopped, Sir.",
-            "next": "Skipping to the next track, Sir.",
-            "previous": "Going back to the previous track, Sir.",
-        }
-        memory.save_message(user_id, session_id, "user", message)
-        return jsonify({
-            "reply": _control_replies[_control],
-            "sessionId": session_id,
-            "action": "control_music",
-            "control": _control,
-        })
-
-    # --- Music ---
-    if music.is_music_request(message):
-        history.append({"role": "user", "content": message})
-        reply = llm.generate(history, model=req_model, temperature=req_temp)
-        history.append({"role": "assistant", "content": reply})
-        song = music.extract_song_from_reply(reply) or message.lower().replace("play ", "").replace("put on ", "").replace("queue ", "").strip()
-
-        results = music.search_tracks(song, max_results=10)
-        if results:
-            track = results[0]
-            memory.save_message(user_id, session_id, "user", message)
-            memory.save_message(user_id, session_id, "assistant", f'Playing {track["title"]} by {track["artist"]}')
-            return jsonify({
-                "reply": f'Playing "{track["title"]}" by {track["artist"]}...',
-                "sessionId": session_id,
-                "action": "play_music_embed",
-                "track": track
-            })
-        else:
-            memory.save_message(user_id, session_id, "user", message)
-            return jsonify({
-                "reply": "Sorry, I couldn't find that song. Try a different search.",
-                "sessionId": session_id
-            })
-
-    # --- Map (real interactive 3D map, checked before image so "map of X" isn't AI-painted) ---
-    if maps.is_map_request(message):
-        memory.save_message(user_id, session_id, "user", message)
-        if maps.is_directions_request(message):
-            origin, destination = maps.extract_route(message)
-            if destination:
-                reply = (f'Plotting a route from {origin} to {destination}, Sir.'
-                         if origin else f'Getting directions to {destination}, Sir.')
-                return jsonify({
-                    "reply": reply,
-                    "sessionId": session_id,
-                    "action": "show_map",
-                    "mode": "directions",
-                    "origin": origin,
-                    "destination": destination,
-                })
-        place = maps.extract_place(message)
-        reply = f'Here is the map of {place}, Sir.' if place else "Here is the map, Sir."
-        return jsonify({
-            "reply": reply,
-            "sessionId": session_id,
-            "action": "show_map",
-            "mode": "view",
-            "place": place,
-        })
-
-    # --- Image ---
-    if image.is_image_request(message):
-        url = image.generate_image_url(message)
-        memory.save_message(user_id, session_id, "user", message)
-        return jsonify({"reply": "Here's your image, Sir.", "sessionId": session_id, "action": "show_image", "imageUrl": url, "imagePrompt": message})
-
-    # --- Context enrichment ---
+    # --- Default chat flow (when no tool was selected) ---
+    # Context enrichment for general chat
     context = ""
     if _RE_NEWS.search(lower):
         news.refresh_cache()
@@ -310,7 +484,7 @@ def chat():
     # Persist synchronously — background threads don't survive on serverless (Vercel)
     _background_save(user_id, session_id, message, reply)
 
-    return jsonify({"reply": reply, "sessionId": session_id, "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ")})
+    return jsonify({"reply": reply, "sessionId": session_id, "timestamp": time.strftime(ISO_TIMESTAMP_FORMAT)})
 
 
 # ===== Streaming Chat =====

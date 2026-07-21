@@ -6,12 +6,17 @@ Optimized for low latency:
 - json import at module level (not per-chunk in streaming)
 """
 
+from __future__ import annotations
+
 import json
+from typing import Any
+
 import requests
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 from loguru import logger
 from friday.config import CEREBRAS_API_KEY, LLM_MODELS, LLM_MAX_TOKENS, LLM_TEMPERATURE
+from friday.modules.tool_calling.models import ToolCall, ToolSelectionResult
 
 API_URL = "https://api.cerebras.ai/v1/chat/completions"
 
@@ -138,3 +143,154 @@ def stream_generate(messages: list[dict[str, str]], model: str = None, temperatu
     except Exception as e:
         logger.error(f"Stream error: {e}")
         yield "Error generating response."
+
+
+def select_tools(
+    message: str,
+    tools: list[dict[str, Any]],
+    tool_choice: str = "auto",
+    timeout: float = 3.0,
+) -> ToolSelectionResult:
+    """Send message to Cerebras with tool definitions and return tool selection.
+
+    Uses the existing connection pool (_session) for HTTP requests to minimize
+    connection overhead. Implements a 3-second timeout for tool selection with
+    error handling for connection failures, HTTP errors, and parse failures.
+
+    Args:
+        message: User message to route
+        tools: Tool definitions in OpenAI format (list of tool objects with
+            type="function" and function={name, description, parameters})
+        tool_choice: Control tool selection behavior:
+            - "auto": LLM decides whether to call tools (default)
+            - "none": LLM will not call any tools
+            - specific tool name: Force the LLM to call that tool
+        timeout: Request timeout in seconds (default: 3.0)
+
+    Returns:
+        ToolSelectionResult containing:
+        - tool_calls: List of ToolCall objects if tools were selected
+        - assistant_content: Response text if no tools were selected
+        - error: Error message if request failed
+
+    **Validates: Requirements 2.1, 2.2, 2.3, 2.4, 2.5, 2.6, 9.3**
+    """
+    # Check API key availability
+    if not CEREBRAS_API_KEY:
+        return ToolSelectionResult(error="CEREBRAS_API_KEY not configured")
+    if CEREBRAS_API_KEY == "your-cerebras-api-key":
+        return ToolSelectionResult(error="Invalid CEREBRAS_API_KEY")
+
+    # Build the request payload
+    # Requirement 2.1: Include tools parameter with Tool_Registry definitions
+    # Requirement 2.5: Support tool_choice parameter
+    payload: dict[str, Any] = {
+        "model": _resolve_models(None)[0],  # Use default model
+        "messages": [{"role": "user", "content": message}],
+        "tools": tools,
+        "tool_choice": tool_choice,
+        "max_tokens": LLM_MAX_TOKENS,
+        "temperature": _resolve_temperature(None),
+    }
+
+    try:
+        # Requirement 9.3: Reuse HTTP connections via connection pooling
+        response = _session.post(
+            API_URL,
+            json=payload,
+            timeout=timeout,  # 3-second timeout for tool selection
+        )
+
+        # Requirement 2.4: Handle HTTP error status codes (4xx or 5xx)
+        if response.status_code >= 400:
+            error_msg = f"HTTP {response.status_code}"
+            if response.status_code >= 500:
+                error_msg = f"http_{response.status_code}"
+            elif response.status_code >= 400:
+                error_msg = f"http_{response.status_code}"
+            logger.warning(f"Tool selection HTTP error: {error_msg}")
+            return ToolSelectionResult(error=error_msg)
+
+        # Parse the JSON response
+        try:
+            data = response.json()
+        except json.JSONDecodeError as e:
+            logger.error(f"Tool selection parse error: {e}")
+            return ToolSelectionResult(error="parse_error")
+
+        # Extract the message from the response
+        choices = data.get("choices", [])
+        if not choices:
+            return ToolSelectionResult(error="parse_error")
+
+        message_data = choices[0].get("message", {})
+
+        # Requirement 2.2: Parse tool_calls if present
+        raw_tool_calls = message_data.get("tool_calls")
+
+        if raw_tool_calls:
+            # Parse each tool call
+            parsed_calls: list[ToolCall] = []
+            for tc in raw_tool_calls:
+                try:
+                    # Requirement 2.6: Validate tool_calls have required fields
+                    tc_id = tc.get("id")
+                    function_data = tc.get("function", {})
+                    function_name = function_data.get("name")
+                    arguments_str = function_data.get("arguments", "{}")
+
+                    # Check for missing or invalid function name
+                    if not function_name or not isinstance(function_name, str):
+                        logger.error(f"Tool call missing or invalid function name: {tc}")
+                        return ToolSelectionResult(error="parse_error")
+
+                    # Check for missing id
+                    if not tc_id:
+                        logger.error(f"Tool call missing id: {tc}")
+                        return ToolSelectionResult(error="parse_error")
+
+                    # Parse arguments JSON
+                    try:
+                        arguments = json.loads(arguments_str) if isinstance(arguments_str, str) else arguments_str
+                        if not isinstance(arguments, dict):
+                            arguments = {}
+                    except json.JSONDecodeError:
+                        logger.error(f"Tool call unparseable arguments: {arguments_str}")
+                        return ToolSelectionResult(error="parse_error")
+
+                    parsed_calls.append(ToolCall(
+                        id=tc_id,
+                        function_name=function_name,
+                        arguments=arguments,
+                    ))
+
+                except Exception as e:
+                    # Requirement 2.6: Malformed tool_calls treated as parse failure
+                    logger.error(f"Error parsing tool call: {e}")
+                    return ToolSelectionResult(error="parse_error")
+
+            return ToolSelectionResult(tool_calls=parsed_calls)
+
+        # Requirement 2.3: If no tool_calls, return assistant content
+        assistant_content = message_data.get("content")
+        return ToolSelectionResult(assistant_content=assistant_content)
+
+    except requests.Timeout:
+        # Requirement 2.4: Handle request timeout exceeding 3 seconds
+        logger.warning(f"Tool selection timeout after {timeout}s")
+        return ToolSelectionResult(error="timeout")
+
+    except requests.ConnectionError as e:
+        # Requirement 2.4: Handle connection failures
+        logger.error(f"Tool selection connection error: {e}")
+        return ToolSelectionResult(error="connection_error")
+
+    except requests.RequestException as e:
+        # General request errors
+        logger.error(f"Tool selection request error: {e}")
+        return ToolSelectionResult(error="connection_error")
+
+    except Exception as e:
+        # Catch-all for unexpected errors
+        logger.error(f"Tool selection unexpected error: {e}")
+        return ToolSelectionResult(error="parse_error")
