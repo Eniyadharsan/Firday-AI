@@ -512,7 +512,20 @@
     .ai-dot.speaking{color:#00e5ff;animation-duration:1.2s}
     .ai-dot.listening{color:#b085ff;animation-duration:1s}
     .ai-dot.offline{color:#ff5a5a;animation:none}
+    .ai-dot.dream{color:#b085ff;animation-duration:3.2s}
     @keyframes aiPulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.4;transform:scale(.75)}}
+
+    /* ── AI Consciousness Mode (idle "living" behavior) ── */
+    #reactor.consciousness{animation:orbDrift 16s ease-in-out infinite}
+    @keyframes orbDrift{0%,100%{transform:translate(0,0)}25%{transform:translate(-6px,4px)}50%{transform:translate(5px,-6px)}75%{transform:translate(4px,6px)}}
+    .glyph-field{position:fixed;top:45%;left:50%;transform:translate(-50%,-50%);width:min(92vw,540px);height:min(92vw,540px);pointer-events:none;z-index:11}
+    .glyph{position:absolute;font-family:var(--font-mono);font-size:12px;color:rgba(0,229,255,.35);text-shadow:0 0 8px rgba(0,229,255,.45);opacity:0;transform:translate(-50%,-50%);animation:glyphFloat 7s ease-in-out infinite}
+    @keyframes glyphFloat{0%{opacity:0;transform:translate(-50%,-50%) translateY(8px) scale(.9)}30%{opacity:.7}65%{opacity:.45}100%{opacity:0;transform:translate(-50%,-50%) translateY(-12px) scale(1.06)}}
+    .cs-greet{position:fixed;top:calc(env(safe-area-inset-top) + 54px);left:50%;transform:translateX(-50%);z-index:9000;max-width:min(92vw,460px);padding:14px 18px;border-radius:16px;
+      font-family:var(--font-ui);font-size:13px;line-height:1.5;color:#dff4ff;cursor:pointer;
+      background:linear-gradient(160deg,rgba(8,20,40,.9),rgba(4,10,26,.94));backdrop-filter:blur(22px);-webkit-backdrop-filter:blur(22px);
+      border:1px solid rgba(0,229,255,.25);box-shadow:0 16px 46px rgba(0,0,0,.6),0 0 24px rgba(0,150,255,.15);animation:panelIn .5s cubic-bezier(.2,.7,.3,1) both;transition:opacity .5s ease,transform .5s ease}
+    .cs-greet .cs-head{font-family:var(--font-mono);font-size:10px;letter-spacing:2px;color:rgba(0,229,255,.6);margin-bottom:6px;text-transform:uppercase}
 
     /* Message actions overflow (⋯) menu */
     .msg-tools{position:relative}
@@ -2654,6 +2667,80 @@
         window.musicPlayer._fx=true;
       }}catch(_){}
     },1600);
+
+    // ═══════════════════════════════════════════════════════════════
+    // AI CONSCIOUSNESS MODE — when idle, FRIDAY "keeps thinking": the orb
+    // drifts/breathes, holographic glyphs form and dissolve, the status
+    // cycles through background activities, and on return it greets you
+    // with context about what it did while you were away.
+    // ═══════════════════════════════════════════════════════════════
+    (function consciousnessMode(){
+      const IDLE_ENTER=40000;   // 40s of no interaction -> enter
+      const GREET_AWAY=120000;  // away >=2min -> contextual welcome back
+      const PHRASES=['Monitoring system health…','Organizing recent memories…','Indexing uploaded files…',
+        'Reflecting on recent context…','Consolidating knowledge…','Scanning ambient telemetry…','Listening to the quiet…'];
+      const PERSON=['Reflecting','Curious','Dreaming','Analyzing','Monitoring'];
+      const GLYPHS=['◈','⟡','◇','∴','⌬','⟁','✦','∎','⟐','λ','∑','◊','⎔'];
+      let lastActivity=Date.now(), on=false, awaySince=0, pi=0, tick=0;
+
+      function spawnGlyphs(){
+        removeGlyphs();
+        const f=document.createElement('div'); f.className='glyph-field'; f.id='glyphField';
+        for(let i=0;i<7;i++){const s=document.createElement('span'); s.className='glyph';
+          const a=Math.random()*Math.PI*2;
+          s.style.left=(50+Math.cos(a)*(30+Math.random()*16))+'%';
+          s.style.top=(50+Math.sin(a)*(30+Math.random()*16))+'%';
+          s.textContent=Math.random()<0.25?('0x'+Math.floor(Math.random()*65535).toString(16).toUpperCase()):GLYPHS[Math.floor(Math.random()*GLYPHS.length)];
+          s.style.animationDelay=(Math.random()*3)+'s'; s.style.animationDuration=(5+Math.random()*4)+'s';
+          f.appendChild(s);}
+        document.body.appendChild(f);
+      }
+      function removeGlyphs(){const f=document.getElementById('glyphField'); if(f)f.remove();}
+      function cyclePhrase(){
+        const ph=PHRASES[pi%PHRASES.length]; pi++;
+        try{if(typeof orbSub!=='undefined'&&orbSub)orbSub.textContent=ph.toUpperCase();}catch(_){}
+        window._aiStatusOverride=['dream',PERSON[pi%PERSON.length]];
+        spawnGlyphs();
+      }
+      function enter(){ on=true; awaySince=Date.now(); tick=0; pi=0;
+        try{const r=document.getElementById('reactor'); if(r)r.classList.add('consciousness');}catch(_){}
+        cyclePhrase();
+      }
+      function exit(greet){ on=false;
+        try{const r=document.getElementById('reactor'); if(r)r.classList.remove('consciousness');}catch(_){}
+        removeGlyphs(); window._aiStatusOverride=null;
+        try{if(typeof orbSub!=='undefined'&&orbSub)orbSub.textContent='TAP TO TALK';}catch(_){}
+        if(greet)welcomeBack();
+      }
+      function welcomeBack(){
+        if(!window.jt)return;
+        let conv=0; try{conv=Object.keys(JSON.parse(localStorage.getItem('friConvMeta')||'{}')).length;}catch(_){}
+        const files=(window._ragFiles||[]).length;
+        let topic=''; try{const us=document.getElementById('msgs')?[...document.getElementById('msgs').querySelectorAll('.m.u')]:[]; if(us.length)topic=us[us.length-1].textContent.trim().slice(0,60);}catch(_){}
+        const bits=[];
+        if(conv>0)bits.push('reviewed '+conv+' recent conversation'+(conv>1?'s':''));
+        if(files>0)bits.push('indexed '+files+' file'+(files>1?'s':''));
+        let body=bits.length?('While you were away, I '+bits.join(' and ')+'.'):'While you were away, I kept your session in order.';
+        if(topic)body+=' You were working on “'+topic+'”.';
+        showGreet('Welcome back',body);
+      }
+      function showGreet(head,body){
+        const old=document.getElementById('csGreet'); if(old)old.remove();
+        const g=document.createElement('div'); g.id='csGreet'; g.className='cs-greet';
+        const safe=body.replace(/&/g,'&amp;').replace(/</g,'&lt;');
+        g.innerHTML='<div class="cs-head">◈ '+head+'</div><div>'+safe+'</div>';
+        g.onclick=()=>g.remove(); document.body.appendChild(g);
+        setTimeout(()=>{ if(g.parentElement){ g.style.opacity='0'; g.style.transform='translateX(-50%) translateY(-8px)'; setTimeout(()=>g.remove(),500);} },9000);
+      }
+      function busy(){ try{return isThinking||isSpeaking||isListening;}catch(_){return false;} }
+      function blocked(){ const mo=document.getElementById('mapOverlay'); return (mo&&mo.classList.contains('open'))||window.jm!=='chat'; }
+      function activity(){ const awayFor=on?(Date.now()-awaySince):0; lastActivity=Date.now(); if(on)exit(awayFor>=GREET_AWAY); }
+      ['pointerdown','keydown','touchstart','mousemove','wheel'].forEach(ev=>window.addEventListener(ev,activity,{passive:true}));
+      setInterval(()=>{
+        if(on){ if(busy()||blocked()){exit(false);return;} tick++; if(tick%3===0)cyclePhrase(); }
+        else { if(!busy()&&!blocked()&&(Date.now()-lastActivity)>IDLE_ENTER)enter(); }
+      },2000);
+    })();
     // ===== Live model badge + AI status (drives the console header) =====
     function prettyModel(id){
       if(!id)return 'AUTO';
@@ -2666,6 +2753,7 @@
     }
     function aiState(){
       if(typeof navigator!=='undefined'&&navigator.onLine===false)return ['offline','Offline'];
+      if(window._aiStatusOverride)return window._aiStatusOverride;
       if(isListening)return ['listening','Listening'];
       if(isThinking)return ['thinking','Thinking…'];
       if(isSpeaking)return ['speaking','Speaking'];
