@@ -65,6 +65,18 @@ except Exception as e:
 app = Flask(__name__, static_folder="public", static_url_path="")
 
 
+# ===== Diagnostic endpoint - for debugging Vercel issues =====
+@app.route("/debug")
+def debug_endpoint():
+    """Simple diagnostic endpoint that doesn't depend on any imports."""
+    import sys
+    return {
+        "status": "ok",
+        "python_version": sys.version,
+        "tool_calling_available": _TOOL_CALLING_AVAILABLE,
+    }
+
+
 # ===== Intent Router Initialization (loaded once at startup per Requirement 9.4) =====
 
 def _create_music_play_handler():

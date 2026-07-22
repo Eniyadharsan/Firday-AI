@@ -6,6 +6,7 @@
     }
   ],
   "routes": [
+    { "src": "/debug", "dest": "/app.py" },
     { "src": "/health", "dest": "/app.py" },
     { "src": "/auth/(.*)", "dest": "/app.py" },
     { "src": "/chat", "dest": "/app.py" },
