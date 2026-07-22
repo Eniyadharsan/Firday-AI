@@ -43,11 +43,12 @@ def _apply_substitution(s: str, pos: int, char: str) -> str:
 
 # Generate catalog entry strings: realistic track titles/artist names
 # Must be at least 3 chars (the minimum for fuzzy matching to engage)
+# Exclude leading/trailing spaces to avoid normalization affecting edit distance
 _catalog_entry = st.text(
     alphabet=st.sampled_from(string.ascii_lowercase + string.digits + " "),
     min_size=3,
     max_size=50,
-).filter(lambda s: len(s.strip()) >= 3)
+).filter(lambda s: len(s.strip()) >= 3 and s == s.strip())
 
 # Characters that can be used for insertions and substitutions
 _edit_char = st.sampled_from(string.ascii_lowercase + string.digits)
@@ -61,6 +62,9 @@ def _edited_entry(draw):
     """Generate a catalog entry and a version with 1-2 random edits applied.
 
     Returns a tuple of (original_entry, edited_version, num_edits_applied).
+    The edited version is guaranteed to have the same normalized form as if
+    it were stripped (no leading/trailing whitespace that would change
+    edit distance after normalization).
     """
     entry = draw(_catalog_entry)
     num_edits = draw(_num_edits)
@@ -99,6 +103,12 @@ def _edited_entry(draw):
 
     # Ensure the edited version is not empty and different from original
     assume(len(modified.strip()) > 0)
+    
+    # IMPORTANT: Ensure the edited version, when stripped, has the same edit
+    # distance as the non-stripped version. This means no leading/trailing
+    # whitespace should have been added or removed by the edits.
+    # This prevents normalization from changing the effective edit distance.
+    assume(modified == modified.strip())
 
     return (entry, modified, num_edits)
 

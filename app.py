@@ -245,8 +245,20 @@ def _initialize_intent_router() -> IntentRouter:
     return intent_router
 
 
-# Initialize the IntentRouter at startup (singleton, loaded once)
-_intent_router = _initialize_intent_router()
+# Initialize the IntentRouter lazily at first request to avoid import-time failures on Vercel
+_intent_router: IntentRouter | None = None
+
+
+def _get_intent_router() -> IntentRouter:
+    """Get or create the IntentRouter singleton.
+    
+    Uses lazy initialization to avoid import-time failures in serverless environments.
+    Thread-safe via Python's GIL for simple assignment.
+    """
+    global _intent_router
+    if _intent_router is None:
+        _intent_router = _initialize_intent_router()
+    return _intent_router
 
 
 # --- Music Search Engine (lazy singleton) ---
@@ -429,7 +441,7 @@ def chat():
 
     # --- Use IntentRouter for tool-based routing ---
     # This replaces the regex-based routing cascade (Requirements 3.1, 4.1-4.8)
-    routing_result = _intent_router.route(message, session_id, user_id)
+    routing_result = _get_intent_router().route(message, session_id, user_id)
     
     # If a capability handler processed the request, return its response
     if routing_result.handler_used != "default_chat":
