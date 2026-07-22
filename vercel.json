@@ -6,12 +6,17 @@
       "use": "@vercel/python"
     },
     {
+      "src": "api/diagnose.py",
+      "use": "@vercel/python"
+    },
+    {
       "src": "app.py",
       "use": "@vercel/python"
     }
   ],
   "routes": [
     { "src": "/api/test", "dest": "/api/test.py" },
+    { "src": "/api/diagnose", "dest": "/api/diagnose.py" },
     { "src": "/(.*)", "dest": "/app.py" }
   ]
 }
