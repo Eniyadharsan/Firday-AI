@@ -44,6 +44,10 @@
     { "src": "/research", "dest": "/app.py" },
     { "src": "/models", "dest": "/app.py" },
     { "src": "/login", "dest": "/app.py" },
-    { "src": "/(.*)", "dest": "/public/$1" }
+    { "src": "/", "dest": "/public/index.html" },
+    { "src": "/index.html", "dest": "/public/index.html" },
+    { "src": "/manifest.json", "dest": "/public/manifest.json" },
+    { "src": "/sw.js", "dest": "/public/sw.js" },
+    { "src": "/icons/(.*)", "dest": "/public/icons/$1" }
   ]
 }
