@@ -33,6 +33,8 @@ Exports:
         format_conversational_response - Format general chat response
 """
 
+from __future__ import annotations
+
 from friday.modules.tool_calling.models import (
     ToolDefinition,
     ToolRegistrationError,
