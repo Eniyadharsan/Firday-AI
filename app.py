@@ -15,18 +15,27 @@ from friday.config import ISO_TIMESTAMP_FORMAT
 from friday.system_prompt import get_system_prompt
 from friday.modules import llm, search, news, auth, music, memory, image, rag, mcp, video, agents, planner, long_memory, research, maps
 from friday.modules.auth import require_auth, get_current_user_id
-from friday.modules.tool_calling import (
-    ToolRegistry,
-    FallbackRouter,
-    IntentRouter,
-    format_music_response,
-    format_music_control_response,
-    format_map_view_response,
-    format_directions_response,
-    format_image_response,
-    format_video_response,
-    format_research_response,
-)
+
+# Try to import tool_calling module - make it optional for backward compatibility
+# If import fails (e.g., on Vercel cold start), fall back to regex-based routing
+_TOOL_CALLING_AVAILABLE = False
+try:
+    from friday.modules.tool_calling import (
+        ToolRegistry,
+        FallbackRouter,
+        IntentRouter,
+        format_music_response,
+        format_music_control_response,
+        format_map_view_response,
+        format_directions_response,
+        format_image_response,
+        format_video_response,
+        format_research_response,
+    )
+    _TOOL_CALLING_AVAILABLE = True
+    logger.info("Tool calling module loaded successfully")
+except Exception as e:
+    logger.warning(f"Tool calling module not available: {e}. Using fallback routing.")
 
 app = Flask(__name__, static_folder="public", static_url_path="")
 
@@ -246,16 +255,19 @@ def _initialize_intent_router() -> IntentRouter:
 
 
 # Initialize the IntentRouter lazily at first request to avoid import-time failures on Vercel
-_intent_router: IntentRouter | None = None
+_intent_router = None
 
 
-def _get_intent_router() -> IntentRouter:
+def _get_intent_router():
     """Get or create the IntentRouter singleton.
     
     Uses lazy initialization to avoid import-time failures in serverless environments.
     Thread-safe via Python's GIL for simple assignment.
+    Returns None if tool_calling module is not available.
     """
     global _intent_router
+    if not _TOOL_CALLING_AVAILABLE:
+        return None
     if _intent_router is None:
         _intent_router = _initialize_intent_router()
     return _intent_router
@@ -355,23 +367,31 @@ def static_files(path: str):
 @app.route("/health")
 def health():
     from friday.db import USE_TURSO
-    from friday.modules.tool_calling.metrics import MetricsCollector
     
-    # Get routing metrics from MetricsCollector (rolling 5-minute window)
-    metrics_collector = MetricsCollector.get_instance()
-    routing_metrics = metrics_collector.get_metrics()
-    
-    return jsonify({
+    health_data = {
         "status": "running",
         "version": "2.1",
         "auth": "JWT",
         "rateLimit": "30/min on chat",
         "database": "turso" if USE_TURSO else "local_sqlite",
-        # Routing metrics per Requirement 10.4
-        "tool_selection_success_rate": round(routing_metrics.success_rate, 2),
-        "fallback_rate": round(routing_metrics.fallback_rate, 2),
-        "average_latency_ms": round(routing_metrics.average_latency_ms, 2),
-    })
+        "tool_calling_available": _TOOL_CALLING_AVAILABLE,
+    }
+    
+    # Get routing metrics from MetricsCollector if tool_calling is available
+    if _TOOL_CALLING_AVAILABLE:
+        try:
+            from friday.modules.tool_calling.metrics import MetricsCollector
+            metrics_collector = MetricsCollector.get_instance()
+            routing_metrics = metrics_collector.get_metrics()
+            health_data.update({
+                "tool_selection_success_rate": round(routing_metrics.success_rate, 2),
+                "fallback_rate": round(routing_metrics.fallback_rate, 2),
+                "average_latency_ms": round(routing_metrics.average_latency_ms, 2),
+            })
+        except Exception as e:
+            logger.warning(f"Could not get routing metrics: {e}")
+    
+    return jsonify(health_data)
 
 
 # ===== Auth =====
@@ -439,20 +459,24 @@ def chat():
     history = sessions[session_id]
     lower = message.lower()
 
-    # --- Use IntentRouter for tool-based routing ---
+    # --- Use IntentRouter for tool-based routing (if available) ---
     # This replaces the regex-based routing cascade (Requirements 3.1, 4.1-4.8)
-    routing_result = _get_intent_router().route(message, session_id, user_id)
-    
-    # If a capability handler processed the request, return its response
-    if routing_result.handler_used != "default_chat":
-        # For non-chat handlers, the response is already formatted
-        # Log routing metrics
-        logger.debug(
-            f"IntentRouter: handler={routing_result.handler_used} "
-            f"fallback={routing_result.is_fallback} "
-            f"latency_ms={routing_result.latency_ms:.2f}"
-        )
-        return jsonify(routing_result.response)
+    if _TOOL_CALLING_AVAILABLE:
+        try:
+            routing_result = _get_intent_router().route(message, session_id, user_id)
+            
+            # If a capability handler processed the request, return its response
+            if routing_result.handler_used != "default_chat":
+                # For non-chat handlers, the response is already formatted
+                # Log routing metrics
+                logger.debug(
+                    f"IntentRouter: handler={routing_result.handler_used} "
+                    f"fallback={routing_result.is_fallback} "
+                    f"latency_ms={routing_result.latency_ms:.2f}"
+                )
+                return jsonify(routing_result.response)
+        except Exception as e:
+            logger.warning(f"IntentRouter error, falling back to default chat: {e}")
 
     # --- Default chat flow (when no tool was selected) ---
     # Context enrichment for general chat
