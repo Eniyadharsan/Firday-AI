@@ -5,6 +5,8 @@ This adapter encapsulates all JioSaavn-specific search logic and returns
 standardized TrackResult objects.
 """
 
+from __future__ import annotations
+
 import requests
 from loguru import logger
 

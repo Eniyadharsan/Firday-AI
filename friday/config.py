@@ -1,5 +1,7 @@
 """Configuration — loads from .env or environment variables."""
 
+from __future__ import annotations
+
 import os
 from pathlib import Path
 from dotenv import load_dotenv
@@ -42,3 +44,7 @@ DEV_PASSWORD: str = os.getenv("DEV_PASSWORD", "")
 # --- External ---
 RESEND_API_KEY: str = os.getenv("RESEND_API_KEY", "")
 NEWS_REFRESH_INTERVAL: int = 300
+
+# --- Timestamps ---
+# ISO-8601 UTC timestamp format used across the application
+ISO_TIMESTAMP_FORMAT: str = "%Y-%m-%dT%H:%M:%SZ"

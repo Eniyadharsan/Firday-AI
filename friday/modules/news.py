@@ -1,5 +1,7 @@
 """News module — fetches live news from Google News RSS with session reuse."""
 
+from __future__ import annotations
+
 import re
 import time
 import requests

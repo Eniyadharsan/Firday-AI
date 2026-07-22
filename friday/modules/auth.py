@@ -3,6 +3,8 @@ Authentication — JWT tokens + password hashing + email OTP verification.
 Uses Turso cloud DB via friday.db module.
 """
 
+from __future__ import annotations
+
 import time
 import secrets
 import hashlib
@@ -12,11 +14,8 @@ from typing import Callable
 import jwt
 from flask import request, jsonify
 from loguru import logger
-from friday.config import JWT_SECRET, RESEND_API_KEY, DEV_AUTO_LOGIN, DEV_EMAIL, DEV_PASSWORD
+from friday.config import JWT_SECRET, RESEND_API_KEY, DEV_AUTO_LOGIN, DEV_EMAIL, DEV_PASSWORD, ISO_TIMESTAMP_FORMAT
 from friday import db
-
-# ISO-8601 UTC timestamp format used for DB created_at / last_login columns
-TIMESTAMP_FORMAT = "%Y-%m-%dT%H:%M:%SZ"
 
 # In-memory OTP store: {email: {"code": "123456", "expires": timestamp, "password": ..., "name": ...}}
 _pending_otps: dict[str, dict] = {}
@@ -191,7 +190,7 @@ def _complete_signup(email: str, password: str = None, name: str = None) -> dict
     user_id = secrets.token_hex(16)
     pw_hash = hash_password(password)
     user_name = name or email.split("@")[0]
-    now = time.strftime(TIMESTAMP_FORMAT)
+    now = time.strftime(ISO_TIMESTAMP_FORMAT)
 
     db.execute("INSERT INTO users (id, email, name, password_hash, created_at, last_login) VALUES (?, ?, ?, ?, ?, ?)",
                [user_id, email, user_name, pw_hash, now, now])
@@ -212,7 +211,7 @@ def dev_login() -> dict:
         user_id = secrets.token_hex(16)
         pw_hash = hash_password(DEV_PASSWORD)
         name = DEV_EMAIL.split("@")[0]
-        now = time.strftime(TIMESTAMP_FORMAT)
+        now = time.strftime(ISO_TIMESTAMP_FORMAT)
         db.execute("INSERT INTO users (id, email, name, password_hash, created_at, last_login) VALUES (?, ?, ?, ?, ?, ?)",
                    [user_id, DEV_EMAIL, name, pw_hash, now, now])
         logger.info(f"Dev account created: {DEV_EMAIL}")
@@ -224,7 +223,7 @@ def dev_login() -> dict:
     row = rows[0]
     if not verify_password(DEV_PASSWORD, row["password_hash"]):
         db.execute("UPDATE users SET password_hash = ? WHERE id = ?", [hash_password(DEV_PASSWORD), row["id"]])
-    db.execute("UPDATE users SET last_login = ? WHERE id = ?", [time.strftime(TIMESTAMP_FORMAT), row["id"]])
+    db.execute("UPDATE users SET last_login = ? WHERE id = ?", [time.strftime(ISO_TIMESTAMP_FORMAT), row["id"]])
     return {"token": make_token(row["id"], row["email"], row["name"]),
             "user": {"id": row["id"], "email": row["email"], "name": row["name"]}}
 

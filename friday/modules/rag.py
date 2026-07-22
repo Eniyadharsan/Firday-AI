@@ -3,13 +3,15 @@ RAG Module — Retrieval Augmented Generation
 Optimized: uses pooled execute/execute_insert instead of get_db() per call.
 """
 
+from __future__ import annotations
+
 import re
 import time
 import hashlib
 from pathlib import Path
 from loguru import logger
 from friday.db import execute, execute_insert
-from friday.config import DATA_DIR
+from friday.config import DATA_DIR, ISO_TIMESTAMP_FORMAT
 
 UPLOAD_DIR = DATA_DIR / "uploads"
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
@@ -83,7 +85,7 @@ def upload_document(user_id: str, filename: str, file_bytes: bytes) -> dict:
 
         execute_insert(
             "INSERT INTO documents (id, user_id, filename, content, chunks_count, uploaded_at) VALUES (?, ?, ?, ?, ?, ?)",
-            [doc_id, user_id, filename, text[:5000], len(chunks), time.strftime("%Y-%m-%dT%H:%M:%SZ")],
+            [doc_id, user_id, filename, text[:5000], len(chunks), time.strftime(ISO_TIMESTAMP_FORMAT)],
         )
 
         for i, chunk in enumerate(chunks):
