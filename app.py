@@ -62,6 +62,17 @@ try:
 except Exception as e:
     _import_errors.append(f"friday.modules.auth: {e}")
 
+# Fallback decorators if auth module failed to load
+if require_auth is None:
+    def require_auth(f):
+        """No-op decorator when auth is not available."""
+        return f
+
+if get_current_user_id is None:
+    def get_current_user_id():
+        """Return a default user ID when auth is not available."""
+        return "anonymous"
+
 # Try to import tool_calling module - make it optional for backward compatibility
 _TOOL_CALLING_AVAILABLE = False
 format_music_response = format_music_control_response = format_map_view_response = None
@@ -365,7 +376,19 @@ def _get_search_engine():
     return _search_engine
 
 # Rate limiting
-limiter = Limiter(get_remote_address, app=app, default_limits=["60 per minute"], storage_uri="memory://")
+if Limiter is not None and get_remote_address is not None:
+    limiter = Limiter(get_remote_address, app=app, default_limits=["60 per minute"], storage_uri="memory://")
+else:
+    limiter = None
+
+
+def rate_limit(limit_string):
+    """Decorator that applies rate limiting if limiter is available, otherwise no-op."""
+    def decorator(f):
+        if limiter is not None:
+            return limiter.limit(limit_string)(f)
+        return f
+    return decorator
 
 # Compression
 try:
@@ -503,7 +526,7 @@ def login_alias():
 # ===== Chat (rate limited) =====
 
 @app.route("/chat", methods=["POST"])
-@limiter.limit("30 per minute")
+@rate_limit("30 per minute")
 @require_auth
 def chat():
     data = request.json or {}
@@ -590,7 +613,7 @@ def chat():
 # ===== Streaming Chat =====
 
 @app.route("/chat/stream", methods=["POST"])
-@limiter.limit("30 per minute")
+@rate_limit("30 per minute")
 @require_auth
 def chat_stream():
     data = request.json or {}
