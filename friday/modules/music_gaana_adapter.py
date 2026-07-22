@@ -9,6 +9,8 @@ This adapter gracefully handles failures by returning an empty result list,
 allowing the aggregator to continue with other available sources.
 """
 
+from __future__ import annotations
+
 import requests
 from loguru import logger
 

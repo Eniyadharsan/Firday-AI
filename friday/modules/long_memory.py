@@ -3,9 +3,12 @@ Long-Term Memory — Auto-extracts and stores user preferences/facts.
 Optimized: uses pooled execute/execute_insert instead of get_db() per call.
 """
 
+from __future__ import annotations
+
 import re
 import time
 from loguru import logger
+from friday.config import ISO_TIMESTAMP_FORMAT
 from friday.db import execute, execute_insert
 
 
@@ -47,7 +50,7 @@ def _store_fact(user_id: str, fact: str, category: str = "general") -> None:
     """Store a long-term fact using pooled connection."""
     execute_insert(
         "INSERT INTO long_memory (user_id, fact, category, source, created_at) VALUES (?, ?, ?, 'auto', ?)",
-        [user_id, fact, category, time.strftime("%Y-%m-%dT%H:%M:%SZ")],
+        [user_id, fact, category, time.strftime(ISO_TIMESTAMP_FORMAT)],
     )
 
 

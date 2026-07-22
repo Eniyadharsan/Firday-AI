@@ -1,5 +1,7 @@
 """Web search module — DuckDuckGo instant answers."""
 
+from __future__ import annotations
+
 import requests
 from requests.adapters import HTTPAdapter
 from loguru import logger

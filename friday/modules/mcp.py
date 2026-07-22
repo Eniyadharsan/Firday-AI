@@ -7,6 +7,8 @@ This allows external AI agents/clients to use FRIDAY capabilities via MCP protoc
 MCP Spec: https://modelcontextprotocol.io
 """
 
+from __future__ import annotations
+
 import json
 from typing import Any
 from loguru import logger

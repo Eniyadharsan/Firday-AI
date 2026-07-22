@@ -10,6 +10,8 @@ Flow:
 6. Return structured report
 """
 
+from __future__ import annotations
+
 import re
 import time
 import requests

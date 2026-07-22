@@ -5,6 +5,8 @@ This adapter encapsulates all YouTube-specific search logic and returns
 standardized TrackResult objects.
 """
 
+from __future__ import annotations
+
 import os
 
 import requests

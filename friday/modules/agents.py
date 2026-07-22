@@ -4,6 +4,8 @@ Multi-Agent System — Specialized AI agents for different domains.
 Routes queries to the best agent, or orchestrates multiple agents for complex tasks.
 """
 
+from __future__ import annotations
+
 import re
 from loguru import logger
 from friday.modules import llm
