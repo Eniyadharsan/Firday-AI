@@ -5,16 +5,41 @@ Main application with proper security, rate limiting, and observability.
 
 import re
 import time
+import sys
+
+# Basic imports first
 from flask import Flask, request, jsonify, send_from_directory, Response
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from loguru import logger
 
-from friday.config import PORT
-from friday.config import ISO_TIMESTAMP_FORMAT
-from friday.system_prompt import get_system_prompt
-from friday.modules import llm, search, news, auth, music, memory, image, rag, mcp, video, agents, planner, long_memory, research, maps
-from friday.modules.auth import require_auth, get_current_user_id
+# Wrap all custom imports in try/except for debugging on Vercel
+try:
+    from friday.config import PORT
+    from friday.config import ISO_TIMESTAMP_FORMAT
+except Exception as e:
+    logger.error(f"Failed to import friday.config: {e}")
+    PORT = 7860
+    ISO_TIMESTAMP_FORMAT = "%Y-%m-%dT%H:%M:%SZ"
+
+try:
+    from friday.system_prompt import get_system_prompt
+except Exception as e:
+    logger.error(f"Failed to import friday.system_prompt: {e}")
+    def get_system_prompt():
+        return "You are FRIDAY, a helpful AI assistant."
+
+try:
+    from friday.modules import llm, search, news, auth, music, memory, image, rag, mcp, video, agents, planner, long_memory, research, maps
+except Exception as e:
+    logger.error(f"Failed to import friday.modules: {e}")
+    raise  # This is critical - re-raise
+
+try:
+    from friday.modules.auth import require_auth, get_current_user_id
+except Exception as e:
+    logger.error(f"Failed to import friday.modules.auth: {e}")
+    raise  # This is critical - re-raise
 
 # Try to import tool_calling module - make it optional for backward compatibility
 # If import fails (e.g., on Vercel cold start), fall back to regex-based routing
