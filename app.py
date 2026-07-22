@@ -5,6 +5,7 @@ Main application with proper security, rate limiting, and observability.
 
 from __future__ import annotations
 
+import os
 import re
 import time
 import sys
@@ -13,6 +14,10 @@ import traceback
 # Create Flask app FIRST before any other imports that might fail
 from flask import Flask, request, jsonify, send_from_directory, Response
 app = Flask(__name__, static_folder="public", static_url_path="")
+
+# Get the directory where app.py is located for static file serving
+_APP_DIR = os.path.dirname(os.path.abspath(__file__))
+_PUBLIC_DIR = os.path.join(_APP_DIR, "public")
 
 # Store import errors for debugging
 _import_errors = []
@@ -445,11 +450,11 @@ def get_cached_prompt() -> str:
 
 @app.route("/")
 def index():
-    return send_from_directory("public", "index.html")
+    return send_from_directory(_PUBLIC_DIR, "index.html")
 
 @app.route("/<path:path>")
 def static_files(path: str):
-    return send_from_directory("public", path)
+    return send_from_directory(_PUBLIC_DIR, path)
 
 @app.route("/health")
 def health():
