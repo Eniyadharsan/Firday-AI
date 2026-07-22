@@ -9,14 +9,17 @@ Optimized for low latency:
 from __future__ import annotations
 
 import json
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 import requests
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 from loguru import logger
 from friday.config import CEREBRAS_API_KEY, LLM_MODELS, LLM_MAX_TOKENS, LLM_TEMPERATURE
-from friday.modules.tool_calling.models import ToolCall, ToolSelectionResult
+
+# Lazy import to avoid circular dependency with tool_calling module
+if TYPE_CHECKING:
+    from friday.modules.tool_calling.models import ToolCall, ToolSelectionResult
 
 API_URL = "https://api.cerebras.ai/v1/chat/completions"
 
@@ -150,7 +153,7 @@ def select_tools(
     tools: list[dict[str, Any]],
     tool_choice: str = "auto",
     timeout: float = 3.0,
-) -> ToolSelectionResult:
+) -> "ToolSelectionResult":
     """Send message to Cerebras with tool definitions and return tool selection.
 
     Uses the existing connection pool (_session) for HTTP requests to minimize
@@ -175,6 +178,8 @@ def select_tools(
 
     **Validates: Requirements 2.1, 2.2, 2.3, 2.4, 2.5, 2.6, 9.3**
     """
+    # Import at runtime to avoid circular dependency with tool_calling module
+    from friday.modules.tool_calling.models import ToolCall, ToolSelectionResult
     # Check API key availability
     if not CEREBRAS_API_KEY:
         return ToolSelectionResult(error="CEREBRAS_API_KEY not configured")
