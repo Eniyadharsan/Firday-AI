@@ -29,7 +29,19 @@ class handler(BaseHTTPRequestHandler):
             ("friday.modules.auth", "from friday.modules import auth"),
             ("friday.modules.music", "from friday.modules import music"),
             ("friday.modules.memory", "from friday.modules import memory"),
+            ("friday.modules.search", "from friday.modules import search"),
+            ("friday.modules.news", "from friday.modules import news"),
+            ("friday.modules.image", "from friday.modules import image"),
+            ("friday.modules.rag", "from friday.modules import rag"),
+            ("friday.modules.mcp", "from friday.modules import mcp"),
+            ("friday.modules.video", "from friday.modules import video"),
+            ("friday.modules.agents", "from friday.modules import agents"),
+            ("friday.modules.planner", "from friday.modules import planner"),
+            ("friday.modules.long_memory", "from friday.modules import long_memory"),
+            ("friday.modules.research", "from friday.modules import research"),
+            ("friday.modules.maps", "from friday.modules import maps"),
             ("friday.modules.tool_calling", "from friday.modules.tool_calling import IntentRouter"),
+            ("app_module", "import app"),
         ]
         
         for name, import_stmt in imports_to_test:
@@ -39,7 +51,9 @@ class handler(BaseHTTPRequestHandler):
             except Exception as e:
                 results["imports"][name] = f"FAILED: {type(e).__name__}: {str(e)[:200]}"
                 # Get full traceback
-                results["imports"][name + "_traceback"] = traceback.format_exc()[-500:]
+                results["imports"][name + "_traceback"] = traceback.format_exc()[-1000:]
+                # Stop at first failure
+                break
         
         self.wfile.write(json.dumps(results, indent=2).encode())
         return
