@@ -3,47 +3,70 @@ F.R.I.D.A.Y - Personal AI Assistant
 Main application with proper security, rate limiting, and observability.
 """
 
+from __future__ import annotations
+
 import re
 import time
 import sys
+import traceback
 
-# Basic imports first
+# Create Flask app FIRST before any other imports that might fail
 from flask import Flask, request, jsonify, send_from_directory, Response
-from flask_limiter import Limiter
-from flask_limiter.util import get_remote_address
-from loguru import logger
+app = Flask(__name__, static_folder="public", static_url_path="")
+
+# Store import errors for debugging
+_import_errors = []
+
+# Basic imports
+try:
+    from flask_limiter import Limiter
+    from flask_limiter.util import get_remote_address
+except Exception as e:
+    _import_errors.append(f"flask_limiter: {e}")
+    Limiter = None
+    get_remote_address = None
+
+try:
+    from loguru import logger
+except Exception as e:
+    _import_errors.append(f"loguru: {e}")
+    import logging
+    logger = logging.getLogger(__name__)
 
 # Wrap all custom imports in try/except for debugging on Vercel
+PORT = 7860
+ISO_TIMESTAMP_FORMAT = "%Y-%m-%dT%H:%M:%SZ"
 try:
-    from friday.config import PORT
-    from friday.config import ISO_TIMESTAMP_FORMAT
+    from friday.config import PORT, ISO_TIMESTAMP_FORMAT
 except Exception as e:
-    logger.error(f"Failed to import friday.config: {e}")
-    PORT = 7860
-    ISO_TIMESTAMP_FORMAT = "%Y-%m-%dT%H:%M:%SZ"
+    _import_errors.append(f"friday.config: {e}\n{traceback.format_exc()}")
 
 try:
     from friday.system_prompt import get_system_prompt
 except Exception as e:
-    logger.error(f"Failed to import friday.system_prompt: {e}")
+    _import_errors.append(f"friday.system_prompt: {e}")
     def get_system_prompt():
         return "You are FRIDAY, a helpful AI assistant."
 
+# Critical imports - these will cause app to fail if not available
+llm = search = news = auth = music = memory = image = rag = mcp = video = agents = planner = long_memory = research = maps = None
 try:
     from friday.modules import llm, search, news, auth, music, memory, image, rag, mcp, video, agents, planner, long_memory, research, maps
 except Exception as e:
-    logger.error(f"Failed to import friday.modules: {e}")
-    raise  # This is critical - re-raise
+    _import_errors.append(f"friday.modules: {e}\n{traceback.format_exc()}")
 
+require_auth = None
+get_current_user_id = None
 try:
     from friday.modules.auth import require_auth, get_current_user_id
 except Exception as e:
-    logger.error(f"Failed to import friday.modules.auth: {e}")
-    raise  # This is critical - re-raise
+    _import_errors.append(f"friday.modules.auth: {e}")
 
 # Try to import tool_calling module - make it optional for backward compatibility
-# If import fails (e.g., on Vercel cold start), fall back to regex-based routing
 _TOOL_CALLING_AVAILABLE = False
+format_music_response = format_music_control_response = format_map_view_response = None
+format_directions_response = format_image_response = format_video_response = format_research_response = None
+ToolRegistry = FallbackRouter = IntentRouter = None
 try:
     from friday.modules.tool_calling import (
         ToolRegistry,
@@ -60,21 +83,25 @@ try:
     _TOOL_CALLING_AVAILABLE = True
     logger.info("Tool calling module loaded successfully")
 except Exception as e:
-    logger.warning(f"Tool calling module not available: {e}. Using fallback routing.")
-
-app = Flask(__name__, static_folder="public", static_url_path="")
+    _import_errors.append(f"friday.modules.tool_calling: {e}")
 
 
-# ===== Diagnostic endpoint - for debugging Vercel issues =====
+# ===== Diagnostic endpoint - MUST be first to debug issues =====
 @app.route("/debug")
 def debug_endpoint():
     """Simple diagnostic endpoint that doesn't depend on any imports."""
-    import sys
-    return {
+    return jsonify({
         "status": "ok",
         "python_version": sys.version,
         "tool_calling_available": _TOOL_CALLING_AVAILABLE,
-    }
+        "import_errors": _import_errors,
+        "modules_loaded": {
+            "llm": llm is not None,
+            "auth": auth is not None,
+            "music": music is not None,
+            "memory": memory is not None,
+        }
+    })
 
 
 # ===== Intent Router Initialization (loaded once at startup per Requirement 9.4) =====
