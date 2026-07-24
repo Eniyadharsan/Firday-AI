@@ -46,17 +46,10 @@ logger = logging.getLogger(__name__)
 
 # Gemini supported models with their specifications
 GEMINI_MODELS: dict[str, dict[str, Any]] = {
-    "gemini-1.5-pro": {
-        "name": "Gemini 1.5 Pro",
-        "context_window": 1048576,  # 1M tokens
-        "supports_streaming": True,
-        "supports_tool_calling": True,
-        "supports_vision": True,
-        "input_cost_per_1k": 0.00125,
-        "output_cost_per_1k": 0.005,
-    },
-    "gemini-1.5-flash": {
-        "name": "Gemini 1.5 Flash",
+    # Stable aliases first — they always route to a currently-available model,
+    # so they work across free-tier and billed keys without 404/deprecation.
+    "gemini-flash-latest": {
+        "name": "Gemini Flash (Latest)",
         "context_window": 1048576,  # 1M tokens
         "supports_streaming": True,
         "supports_tool_calling": True,
@@ -64,19 +57,46 @@ GEMINI_MODELS: dict[str, dict[str, Any]] = {
         "input_cost_per_1k": 0.000075,
         "output_cost_per_1k": 0.0003,
     },
-    "gemini-pro": {
-        "name": "Gemini Pro (Legacy)",
-        "context_window": 32768,
+    "gemini-pro-latest": {
+        "name": "Gemini Pro (Latest)",
+        "context_window": 1048576,  # 1M tokens
         "supports_streaming": True,
         "supports_tool_calling": True,
-        "supports_vision": False,
-        "input_cost_per_1k": 0.0005,
-        "output_cost_per_1k": 0.0015,
+        "supports_vision": True,
+        "input_cost_per_1k": 0.00125,
+        "output_cost_per_1k": 0.005,
+    },
+    "gemini-2.0-flash": {
+        "name": "Gemini 2.0 Flash",
+        "context_window": 1048576,  # 1M tokens
+        "supports_streaming": True,
+        "supports_tool_calling": True,
+        "supports_vision": True,
+        "input_cost_per_1k": 0.000075,
+        "output_cost_per_1k": 0.0003,
+    },
+    "gemini-2.5-flash": {
+        "name": "Gemini 2.5 Flash",
+        "context_window": 1048576,  # 1M tokens
+        "supports_streaming": True,
+        "supports_tool_calling": True,
+        "supports_vision": True,
+        "input_cost_per_1k": 0.000075,
+        "output_cost_per_1k": 0.0003,
+    },
+    "gemini-2.5-pro": {
+        "name": "Gemini 2.5 Pro",
+        "context_window": 1048576,  # 1M tokens
+        "supports_streaming": True,
+        "supports_tool_calling": True,
+        "supports_vision": True,
+        "input_cost_per_1k": 0.00125,
+        "output_cost_per_1k": 0.005,
     },
 }
 
-# Default model if none specified
-DEFAULT_MODEL = "gemini-1.5-pro"
+# Default model if none specified — the stable alias avoids deprecation 404s.
+DEFAULT_MODEL = "gemini-flash-latest"
 
 # Role mapping from FRIDAY/OpenAI format to Gemini format
 # Gemini uses "user" and "model" roles

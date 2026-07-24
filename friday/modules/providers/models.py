@@ -300,9 +300,12 @@ class ToolCallRequest:
 
 
 @dataclass
-class ProviderError:
+class ProviderError(Exception):
     """Error from a provider with retry info.
-    
+
+    Subclasses Exception so adapters can `raise` it directly while still
+    carrying structured fields for failover/retry decisions.
+
     Attributes:
         provider: Provider that returned the error
         error_type: Type of error ('rate_limit', 'auth', 'server', 'timeout', 'connection')
@@ -315,6 +318,11 @@ class ProviderError:
     message: str
     retry_after: Optional[int] = None
     is_retryable: bool = True
+
+    def __post_init__(self) -> None:
+        # Initialize the Exception base with a readable message so str(err)
+        # and logging show useful context.
+        super().__init__(f"[{self.provider}:{self.error_type}] {self.message}")
 
 
 @dataclass
