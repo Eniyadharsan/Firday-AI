@@ -3088,11 +3088,22 @@
           });
         }
         // Req 7.3: secure, write-only API key input (masked, never pre-filled with stored keys)
-        html+='<div class="mm-label">API KEY '+(p.is_configured?'(CONFIGURED)':'(NOT SET)')+'</div>';
-        html+='<div class="mm-key">';
-        html+='<input type="password" autocomplete="off" spellcheck="false" placeholder="Enter API key…" data-key-input="'+_mmEsc(p.name)+'"/>';
-        html+='<button data-validate="'+_mmEsc(p.name)+'">Save</button>';
-        html+='</div>';
+        // When a key is already configured we DON'T nag for one — show a clear
+        // "configured" state and tuck the replace field behind a toggle so a
+        // configured provider never looks like it's demanding a key.
+        if(p.is_configured){
+          html+='<div class="mm-label">API KEY <span style="color:#00ff88">✓ CONFIGURED</span> · <span class="mm-key-replace" data-replace="'+_mmEsc(p.name)+'" style="color:rgba(0,229,255,.7);cursor:pointer;text-decoration:underline">Replace</span></div>';
+          html+='<div class="mm-key" data-keywrap="'+_mmEsc(p.name)+'" style="display:none">';
+          html+='<input type="password" autocomplete="off" spellcheck="false" placeholder="Enter new key to replace…" data-key-input="'+_mmEsc(p.name)+'"/>';
+          html+='<button data-validate="'+_mmEsc(p.name)+'">Save</button>';
+          html+='</div>';
+        }else{
+          html+='<div class="mm-label">API KEY <span style="color:rgba(255,180,60,.9)">NOT SET</span></div>';
+          html+='<div class="mm-key" data-keywrap="'+_mmEsc(p.name)+'">';
+          html+='<input type="password" autocomplete="off" spellcheck="false" placeholder="Enter API key…" data-key-input="'+_mmEsc(p.name)+'"/>';
+          html+='<button data-validate="'+_mmEsc(p.name)+'">Save</button>';
+          html+='</div>';
+        }
         html+='<div class="mm-keymsg" data-keymsg="'+_mmEsc(p.name)+'"></div>';
         html+='</div></div>';
       });
@@ -3102,6 +3113,13 @@
       });
       listEl.querySelectorAll('[data-validate]').forEach(function(btn){
         btn.addEventListener('click',function(){validateProviderKey(btn.getAttribute('data-validate'));});
+      });
+      // "Replace" toggle reveals the hidden key field for configured providers.
+      listEl.querySelectorAll('[data-replace]').forEach(function(link){
+        link.addEventListener('click',function(){
+          const wrap=listEl.querySelector('[data-keywrap="'+_mmSel(link.getAttribute('data-replace'))+'"]');
+          if(wrap){const shown=wrap.style.display!=='none';wrap.style.display=shown?'none':'flex';if(!shown){const inp=wrap.querySelector('input');if(inp)inp.focus();}}
+        });
       });
     }
 
