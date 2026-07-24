@@ -102,6 +102,86 @@ except Exception as e:
     _import_errors.append(f"friday.modules.tool_calling: {e}")
 
 
+# Try to import multi-provider AI module - make it optional for backward compatibility
+_MULTI_PROVIDER_AVAILABLE = False
+_provider_registry = None
+_key_store = None
+try:
+    from friday.modules.providers import Provider_Registry, API_Key_Store
+    from friday.modules.providers.adapters import (
+        OpenAI_Adapter,
+        Anthropic_Adapter,
+        Gemini_Adapter,
+        Ollama_Adapter,
+        Cerebras_Adapter,
+        DeepSeek_Adapter,
+        OpenRouter_Adapter,
+        Grok_Adapter,
+    )
+
+    # Initialize the key store and load configured keys from the environment
+    _key_store = API_Key_Store()
+    _key_store.load_from_env()
+
+    # Initialize the registry singleton and register all provider adapters
+    _provider_registry = Provider_Registry.get_instance()
+    for _adapter_cls in (
+        OpenAI_Adapter,
+        Anthropic_Adapter,
+        Gemini_Adapter,
+        Ollama_Adapter,
+        Cerebras_Adapter,
+        DeepSeek_Adapter,
+        OpenRouter_Adapter,
+        Grok_Adapter,
+    ):
+        try:
+            _reg_error = _provider_registry.register(_adapter_cls(_key_store))
+            if _reg_error:
+                _import_errors.append(f"provider register {_adapter_cls.__name__}: {_reg_error}")
+        except Exception as _adapter_err:
+            _import_errors.append(f"provider register {_adapter_cls.__name__}: {_adapter_err}")
+
+    _MULTI_PROVIDER_AVAILABLE = True
+    logger.info("Multi-provider AI module loaded successfully")
+except Exception as e:
+    _import_errors.append(f"friday.modules.providers: {e}\n{traceback.format_exc()}")
+
+
+# Initialize the Unified AI Engine (optional, backward-compatible). When available,
+# the engine routes the final LLM generation through the configured active provider
+# with failover support. If anything goes wrong we simply fall back to the legacy
+# `llm` module (see _engine_generate / _engine_stream helpers).
+_ai_engine = None
+_failover_controller = None
+# Holds the most recent "primary provider restored" notification emitted by the
+# Failover_Controller so the frontend (which polls /api/providers) can surface a
+# manual switch-back prompt to the user (Requirement 9.6).
+_last_restore_notification = None
+if _MULTI_PROVIDER_AVAILABLE and _provider_registry is not None:
+    try:
+        from friday.modules.providers import Unified_AI_Engine, Failover_Controller
+
+        _failover_controller = Failover_Controller(_provider_registry)
+        _ai_engine = Unified_AI_Engine(_provider_registry, _failover_controller)
+
+        def _on_failover_event(event_type, data):
+            """Capture failover controller notifications for the frontend to poll."""
+            global _last_restore_notification
+            if event_type == "primary_restored":
+                _last_restore_notification = data
+
+        try:
+            _failover_controller.set_notification_callback(_on_failover_event)
+        except Exception:
+            pass
+
+        logger.info("Unified AI Engine initialized successfully")
+    except Exception as e:
+        _ai_engine = None
+        _import_errors.append(f"Unified_AI_Engine init: {e}\n{traceback.format_exc()}")
+
+
 # ===== Diagnostic endpoint - MUST be first to debug issues =====
 @app.route("/debug")
 def debug_endpoint():
@@ -483,6 +563,23 @@ def health():
         except Exception as e:
             logger.warning(f"Could not get routing metrics: {e}")
     
+    # Get provider health metrics if multi-provider support is available
+    if _MULTI_PROVIDER_AVAILABLE and _provider_registry is not None:
+        try:
+            provider_health = _provider_registry.get_health_metrics()
+            health_data["providers"] = {
+                name: {
+                    "status": health.status.value,
+                    "latency_ms": round(health.latency_ms, 2),
+                    "success_rate": round(health.success_rate, 2),
+                    "error_rate": round(health.error_rate, 2),
+                }
+                for name, health in provider_health.items()
+            }
+            health_data["active_provider"] = _provider_registry.get_active_provider_name()
+        except Exception as e:
+            logger.warning(f"Could not get provider health metrics: {e}")
+    
     return jsonify(health_data)
 
 
@@ -529,6 +626,65 @@ def login_alias():
 
 
 # ===== Chat (rate limited) =====
+
+def _engine_active() -> bool:
+    """Return True when the Unified AI Engine is available with an active provider.
+
+    The engine is only used when the multi-provider module loaded successfully AND
+    a provider/model has been configured as active in the registry. Otherwise callers
+    fall back to the legacy `llm` module for full backward compatibility.
+    """
+    if not (_MULTI_PROVIDER_AVAILABLE and _ai_engine is not None and _provider_registry is not None):
+        return False
+    try:
+        return _provider_registry.get_active_adapter() is not None
+    except Exception:
+        return False
+
+
+def _engine_generate(history, user_id, session_id, model=None, temperature=None):
+    """Generate a reply, preferring the Unified AI Engine with legacy fallback.
+
+    Returns a tuple of (reply_text, provider, model). When the engine is used,
+    `provider` and `model` reflect the provider/model that served the request; when
+    the legacy path is used they are None. History tracking is delegated to app.py's
+    session store (track_history=False) to avoid duplicating conversation context.
+    """
+    if _engine_active():
+        try:
+            resp = _ai_engine.generate(
+                messages=history,
+                user_id=user_id,
+                session_id=session_id,
+                model=model,
+                temperature=temperature,
+                track_history=False,
+            )
+            return resp.content, resp.provider, resp.model
+        except Exception as e:
+            logger.warning(f"Unified AI Engine generate failed, falling back to llm: {e}")
+
+    return llm.generate(history, model=model, temperature=temperature), None, None
+
+
+def _engine_stream(history, user_id, session_id, model=None, temperature=None):
+    """Yield reply tokens, preferring the Unified AI Engine with legacy fallback."""
+    if _engine_active():
+        try:
+            yield from _ai_engine.stream_generate(
+                messages=history,
+                user_id=user_id,
+                session_id=session_id,
+                model=model,
+                temperature=temperature,
+                track_history=False,
+            )
+            return
+        except Exception as e:
+            logger.warning(f"Unified AI Engine stream failed, falling back to llm: {e}")
+
+    yield from llm.stream_generate(history, model=model, temperature=temperature)
+
 
 @app.route("/chat", methods=["POST"])
 @rate_limit("30 per minute")
@@ -598,10 +754,14 @@ def chat():
 
     # Multi-agent routing
     agent_id = agents.detect_agent(message)
+    used_provider = None
+    used_model = None
     if agent_id and len(message) > 20:
         reply = agents.orchestrate(message, history)
     else:
-        reply = llm.generate(history, model=req_model, temperature=req_temp)
+        reply, used_provider, used_model = _engine_generate(
+            history, user_id, session_id, model=req_model, temperature=req_temp
+        )
 
     history.append({"role": "assistant", "content": reply})
 
@@ -612,7 +772,14 @@ def chat():
     # Persist synchronously — background threads don't survive on serverless (Vercel)
     _background_save(user_id, session_id, message, reply)
 
-    return jsonify({"reply": reply, "sessionId": session_id, "timestamp": time.strftime(ISO_TIMESTAMP_FORMAT)})
+    response = {"reply": reply, "sessionId": session_id, "timestamp": time.strftime(ISO_TIMESTAMP_FORMAT)}
+    # Include provider/model metadata when the Unified AI Engine served the request
+    # (Requirements 14.3, 14.4)
+    if used_provider is not None:
+        response["provider"] = used_provider
+    if used_model is not None:
+        response["model"] = used_model
+    return jsonify(response)
 
 
 # ===== Streaming Chat =====
@@ -628,6 +795,7 @@ def chat_stream():
     if not message:
         return jsonify({"error": "message required"}), 400
 
+    user_id: str = get_current_user_id()
     req_model = data.get("model")
     req_temp = data.get("temperature")
 
@@ -638,7 +806,7 @@ def chat_stream():
 
     def generate():
         full = ""
-        for token in llm.stream_generate(history, model=req_model, temperature=req_temp):
+        for token in _engine_stream(history, user_id, session_id, model=req_model, temperature=req_temp):
             full += token
             yield f"data: {token}\n\n"
         history.append({"role": "assistant", "content": full})
@@ -657,6 +825,143 @@ def list_models():
         "default": LLM_MODELS[0] if LLM_MODELS else None,
         "temperature": LLM_TEMPERATURE,
     })
+
+
+# ===== Multi-Provider AI Management =====
+
+@app.route("/api/providers", methods=["GET"])
+@require_auth
+def list_providers():
+    """Return the list of all registered providers with their status.
+
+    Used by the Model Manager UI to display provider configuration status,
+    health metrics, available models, and capabilities.
+    """
+    if not _MULTI_PROVIDER_AVAILABLE or _provider_registry is None:
+        return jsonify({"error": "Multi-provider support is not available"}), 503
+
+    try:
+        response = {
+            "providers": _provider_registry.get_all_providers(),
+            "active_provider": _provider_registry.get_active_provider_name(),
+            "active_model": _provider_registry.get_active_model(),
+        }
+
+        # Include failover status so the Active Model Badge can display a failover
+        # indicator (Req 9.3) and prompt for a manual switch back to the primary
+        # provider once it recovers (Req 9.6). Degrades gracefully if unavailable.
+        if _failover_controller is not None:
+            try:
+                failover_status = _failover_controller.get_failover_status()
+                if _last_restore_notification is not None:
+                    failover_status["primary_restored"] = _last_restore_notification
+                response["failover"] = failover_status
+            except Exception as fe:
+                logger.debug(f"Failover status unavailable: {fe}")
+
+        return jsonify(response)
+    except Exception as e:
+        logger.error(f"Error listing providers: {e}")
+        return jsonify({"error": "Failed to list providers"}), 500
+
+
+@app.route("/api/providers/active", methods=["GET", "PUT"])
+@require_auth
+def active_provider():
+    """Get or set the active provider and model.
+
+    GET returns the current active provider/model.
+    PUT sets the active provider/model from the JSON body {provider, model}.
+    """
+    if not _MULTI_PROVIDER_AVAILABLE or _provider_registry is None:
+        return jsonify({"error": "Multi-provider support is not available"}), 503
+
+    if request.method == "GET":
+        return jsonify({
+            "provider": _provider_registry.get_active_provider_name(),
+            "model": _provider_registry.get_active_model(),
+        })
+
+    # PUT - update the active provider/model
+    data = request.json or {}
+    provider = data.get("provider", "")
+    model = data.get("model")
+
+    if not provider:
+        return jsonify({"error": "provider is required"}), 400
+
+    success = _provider_registry.set_active(provider, model)
+    if not success:
+        return jsonify({"error": f"Provider '{provider}' is not registered"}), 404
+
+    # A manual provider change clears any active failover state so the badge stops
+    # showing the failover indicator and the restore prompt is dismissed (Req 9.6).
+    global _last_restore_notification
+    if _failover_controller is not None:
+        try:
+            _failover_controller.reset_failover()
+        except Exception:
+            pass
+    _last_restore_notification = None
+
+    return jsonify({
+        "success": True,
+        "provider": _provider_registry.get_active_provider_name(),
+        "model": _provider_registry.get_active_model(),
+    })
+
+
+@app.route("/api/providers/<provider>/validate", methods=["POST"])
+@require_auth
+def validate_provider_key(provider: str):
+    """Validate an API key for a provider and store it on the backend if valid.
+
+    The API key is accepted from the JSON body {api_key}, validated via a test
+    call, and stored on the backend only. The key is NEVER returned to the
+    frontend (Requirement 10.4).
+    """
+    if not _MULTI_PROVIDER_AVAILABLE or _key_store is None:
+        return jsonify({"error": "Multi-provider support is not available"}), 503
+
+    data = request.json or {}
+    api_key = data.get("api_key", "")
+
+    if not api_key:
+        return jsonify({"valid": False, "error": "api_key is required"}), 400
+
+    try:
+        is_valid, error_message = _key_store.validate_key(provider, api_key)
+    except Exception as e:
+        logger.error(f"Error validating key for {provider}: {e}")
+        return jsonify({"valid": False, "error": "Validation failed"}), 500
+
+    if not is_valid:
+        return jsonify({"valid": False, "error": error_message}), 400
+
+    # Store the validated key on the backend only - never returned to the client
+    _key_store.set_key(provider, api_key)
+
+    return jsonify({"valid": True})
+
+
+@app.route("/api/providers/<provider>/models", methods=["GET"])
+@require_auth
+def provider_models(provider: str):
+    """Return the list of available models for a provider."""
+    if not _MULTI_PROVIDER_AVAILABLE or _provider_registry is None:
+        return jsonify({"error": "Multi-provider support is not available"}), 503
+
+    adapter = _provider_registry.get_adapter(provider)
+    if adapter is None:
+        return jsonify({"error": f"Provider '{provider}' is not registered"}), 404
+
+    try:
+        models = adapter.get_available_models()
+    except Exception as e:
+        logger.error(f"Error getting models for {provider}: {e}")
+        return jsonify({"error": "Failed to get models"}), 500
+
+    return jsonify({"provider": provider, "models": models})
 
 
 # ===== Search / News / Image / Music / Memory =====

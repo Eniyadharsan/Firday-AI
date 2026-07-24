@@ -43,6 +43,8 @@
     { "src": "/profile/(.*)", "dest": "/app.py" },
     { "src": "/research", "dest": "/app.py" },
     { "src": "/models", "dest": "/app.py" },
+    { "src": "/api/providers", "dest": "/app.py" },
+    { "src": "/api/providers/(.*)", "dest": "/app.py" },
     { "src": "/login", "dest": "/app.py" },
     { "src": "/", "dest": "/public/index.html" },
     { "src": "/index.html", "dest": "/public/index.html" },

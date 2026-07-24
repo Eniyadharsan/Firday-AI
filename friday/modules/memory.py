@@ -2,6 +2,7 @@
 
 import time
 from loguru import logger
+from friday.config import ISO_TIMESTAMP_FORMAT
 from friday.db import execute, execute_insert
 
 
@@ -9,7 +10,7 @@ def save_message(user_id: str, session_id: str, role: str, content: str) -> None
     """Save a message to conversation history."""
     execute_insert(
         "INSERT INTO conversations (user_id, session_id, role, content, timestamp) VALUES (?, ?, ?, ?, ?)",
-        [user_id, session_id, role, content, time.strftime("%Y-%m-%dT%H:%M:%SZ")],
+        [user_id, session_id, role, content, time.strftime(ISO_TIMESTAMP_FORMAT)],
     )
 
 
@@ -66,7 +67,7 @@ def add_memory(user_id: str, content: str, category: str = "general") -> dict:
     """Store a personal memory."""
     execute_insert(
         "INSERT INTO memories (user_id, content, category, created_at) VALUES (?, ?, ?, ?)",
-        [user_id, content, category, time.strftime("%Y-%m-%dT%H:%M:%SZ")],
+        [user_id, content, category, time.strftime(ISO_TIMESTAMP_FORMAT)],
     )
     return {"success": True, "content": content, "category": category}
 

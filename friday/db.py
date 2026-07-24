@@ -269,6 +269,34 @@ def init_tables() -> None:
             progress INTEGER DEFAULT 0,
             created_at TEXT NOT NULL
         )""",
+        # --- Multi-Provider AI Integration tables ---
+        """CREATE TABLE IF NOT EXISTS provider_configs (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            provider_type TEXT NOT NULL UNIQUE,
+            enabled INTEGER DEFAULT 1,
+            default_model TEXT,
+            base_url TEXT,
+            extra_settings TEXT,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL
+        )""",
+        """CREATE TABLE IF NOT EXISTS provider_metrics (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            provider_type TEXT NOT NULL,
+            total_requests INTEGER DEFAULT 0,
+            successful_requests INTEGER DEFAULT 0,
+            failed_requests INTEGER DEFAULT 0,
+            total_latency_ms REAL DEFAULT 0,
+            recorded_at TEXT NOT NULL,
+            FOREIGN KEY (provider_type) REFERENCES provider_configs(provider_type)
+        )""",
+        """CREATE TABLE IF NOT EXISTS user_provider_prefs (
+            user_id TEXT PRIMARY KEY,
+            active_provider TEXT,
+            active_model TEXT,
+            backup_order TEXT,
+            updated_at TEXT NOT NULL
+        )""",
     ]
 
     for sql in tables:
@@ -277,7 +305,49 @@ def init_tables() -> None:
         except Exception as e:
             logger.error(f"Table init error: {e}")
 
+    # --- Idempotent column migrations for conversations table ---
+    # ALTER TABLE ... ADD COLUMN is not idempotent (fails if the column
+    # already exists), so we inspect existing columns first and only add
+    # the ones that are missing. Safe to run repeatedly on both Turso and
+    # local SQLite.
+    _add_conversation_provider_columns()
+
     logger.info(f"DB initialized ({'Turso' if USE_TURSO else 'local SQLite'})")
+
+
+def _add_conversation_provider_columns() -> None:
+    """Add `provider` and `model` columns to the conversations table if missing.
+
+    Uses PRAGMA table_info to detect existing columns so the migration is
+    idempotent and safe to re-run. Each ALTER is additionally wrapped in its
+    own try/except so a duplicate-column error on one column never blocks the
+    other or crashes initialization.
+    """
+    desired_columns = {
+        "provider": "ALTER TABLE conversations ADD COLUMN provider TEXT",
+        "model": "ALTER TABLE conversations ADD COLUMN model TEXT",
+    }
+
+    try:
+        existing_rows = execute("PRAGMA table_info(conversations)")
+        existing_columns = {row.get("name") for row in existing_rows}
+    except Exception as e:
+        logger.error(f"Could not inspect conversations columns: {e}")
+        existing_columns = set()
+
+    for column, alter_sql in desired_columns.items():
+        if column in existing_columns:
+            continue
+        try:
+            execute_insert(alter_sql)
+        except Exception as e:
+            # Tolerate "duplicate column" style errors from a concurrent or
+            # prior migration — anything else is logged for visibility.
+            msg = str(e).lower()
+            if "duplicate column" in msg or "already exists" in msg:
+                logger.info(f"Column '{column}' already exists on conversations")
+            else:
+                logger.error(f"Failed adding column '{column}' to conversations: {e}")
 
 
 # Initialize on import
