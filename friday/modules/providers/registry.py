@@ -220,18 +220,58 @@ class Provider_Registry:
         if provider_name not in self._metrics:
             self._metrics[provider_name] = ProviderMetrics()
         
-        # If this is the first adapter and no active provider is set, make it active
+        # Auto-select the active provider, PREFERRING a configured one.
+        #
+        # This matters for stateless/serverless deployments (e.g. Vercel): the
+        # active-provider selection lives in memory and does NOT persist across
+        # cold invocations, so every request must resolve to a provider that
+        # actually works by default. Defaulting to the first *registered*
+        # adapter (which may have no API key) caused every request to try an
+        # unconfigured provider, fail, and fall back to the legacy path —
+        # surfacing "AI temporarily unavailable". Preferring the first
+        # *configured* provider fixes that.
+        try:
+            newly_configured = adapter.is_configured()
+        except Exception:
+            newly_configured = False
+
         if self._active_provider is None:
+            # Nothing active yet — take this adapter as a baseline default.
             self._active_provider = provider_name
-            # Try to set a default model from the adapter's capabilities
-            try:
-                capabilities = adapter.capabilities
-                if capabilities.supported_models:
-                    self._active_model = capabilities.supported_models[0]
-            except (NotImplementedError, AttributeError):
-                pass
+            self._apply_default_model(provider_name)
+        elif newly_configured and not self._is_active_provider_configured():
+            # Upgrade away from an unconfigured default to a configured provider.
+            self._active_provider = provider_name
+            self._apply_default_model(provider_name)
         
         return None  # Success
+
+    def _apply_default_model(self, provider_name: str) -> None:
+        """Set _active_model to the given provider's first supported model."""
+        adapter = self._adapters.get(provider_name)
+        if adapter is None:
+            self._active_model = None
+            return
+        try:
+            capabilities = adapter.capabilities
+            if capabilities.supported_models:
+                self._active_model = capabilities.supported_models[0]
+            else:
+                self._active_model = None
+        except (NotImplementedError, AttributeError):
+            self._active_model = None
+
+    def _is_active_provider_configured(self) -> bool:
+        """Return True if the current active provider has valid configuration."""
+        if self._active_provider is None:
+            return False
+        adapter = self._adapters.get(self._active_provider)
+        if adapter is None:
+            return False
+        try:
+            return adapter.is_configured()
+        except Exception:
+            return False
 
     def unregister(self, provider_name: str) -> bool:
         """Unregister a provider adapter.
