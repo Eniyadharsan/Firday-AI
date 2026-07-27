@@ -199,6 +199,68 @@
     .chb{width:26px;height:26px;border-radius:7px;border:1px solid rgba(0,229,255,.14);background:rgba(0,229,255,.03);color:rgba(0,229,255,.7);font-size:12px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;font-family:inherit}
     .chb:hover{background:rgba(0,229,255,.12);color:#00e5ff}
     .chb.active{color:#ffd479;border-color:rgba(255,212,121,.4)}
+    /* Active Model Badge — current provider/model + color-coded status (Req 8.1-8.5) */
+    .model-badge{display:inline-flex;align-items:center;gap:6px;flex-shrink:0;max-width:148px;padding:5px 10px;border-radius:9px;border:1px solid rgba(0,229,255,.2);background:rgba(0,229,255,.05);color:rgba(0,229,255,.85);font-family:var(--font-mono);font-size:10.5px;letter-spacing:.6px;text-transform:uppercase;line-height:1;cursor:pointer;transition:all .18s;white-space:nowrap}
+    .model-badge:hover{background:rgba(0,229,255,.14);border-color:rgba(0,229,255,.45);color:#00e5ff;box-shadow:0 0 14px rgba(0,229,255,.2)}
+    .model-badge:active{transform:scale(.96)}
+    .model-badge-name{overflow:hidden;text-overflow:ellipsis;text-shadow:0 0 8px rgba(0,229,255,.3)}
+    .model-badge-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;background:#6b7a85;box-shadow:0 0 7px rgba(107,122,133,.6);transition:background .3s,box-shadow .3s}
+    .model-badge-dot.green{background:#00ff88;box-shadow:0 0 9px #00ff88}
+    .model-badge-dot.yellow{background:#ffd479;box-shadow:0 0 9px #ffd479}
+    .model-badge-dot.red{background:#ff5a5a;box-shadow:0 0 9px #ff5a5a}
+    .model-badge-dot.gray{background:#6b7a85;box-shadow:0 0 7px rgba(107,122,133,.6)}
+    /* Failover state (Req 9.3) — amber holographic accent + subtle pulse */
+    .model-badge.failover{border-color:rgba(255,180,60,.5);background:rgba(255,180,60,.08);color:#ffd479;animation:mbFailoverPulse 2.4s ease-in-out infinite}
+    .model-badge.failover:hover{background:rgba(255,180,60,.18);border-color:rgba(255,180,60,.7);color:#ffe6a8;box-shadow:0 0 14px rgba(255,180,60,.28)}
+    .model-badge.failover .model-badge-name{text-shadow:0 0 8px rgba(255,212,121,.4)}
+    .model-badge-fo{display:none;font-size:10px;line-height:1;color:#ffd479;text-shadow:0 0 8px rgba(255,212,121,.55)}
+    .model-badge.failover .model-badge-fo{display:inline}
+    @keyframes mbFailoverPulse{0%,100%{box-shadow:0 0 6px rgba(255,180,60,.14)}50%{box-shadow:0 0 15px rgba(255,180,60,.34)}}
+    @media (max-width:430px){.model-badge{max-width:110px;padding:5px 8px;font-size:10px}}
+    /* Model Manager panel (Req 7.1-7.8) — holographic modal */
+    .mm-overlay{position:fixed;inset:0;z-index:900;display:none;align-items:center;justify-content:center;background:rgba(2,6,18,.55);backdrop-filter:blur(4px)}
+    .mm-overlay.open{display:flex}
+    .mm-panel{position:relative;width:min(720px,calc(100% - 32px));max-height:calc(100% - 64px);display:flex;flex-direction:column;border-radius:16px;
+      background:linear-gradient(160deg,rgba(8,20,40,.72),rgba(4,10,26,.8));backdrop-filter:blur(24px);
+      border:1px solid rgba(0,229,255,.16);box-shadow:0 8px 40px rgba(0,0,0,.5);overflow:hidden;
+      transform:translateY(16px) scale(.98);opacity:0;transition:transform .35s cubic-bezier(.3,.7,.3,1),opacity .35s}
+    .mm-overlay.open .mm-panel{transform:none;opacity:1}
+    .mm-head{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid rgba(0,229,255,.1);font-size:11px;letter-spacing:2px;color:#7fe4ff}
+    .mm-close{background:none;border:none;color:rgba(0,229,255,.5);font-size:16px;cursor:pointer;line-height:1}
+    .mm-close:hover{color:#00e5ff}
+    .mm-body{flex:1;overflow-y:auto;padding:14px 18px}
+    .mm-body::-webkit-scrollbar{width:4px}.mm-body::-webkit-scrollbar-thumb{background:rgba(0,229,255,.2)}
+    .mm-session{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px}
+    .mm-stat{flex:1;min-width:120px;background:rgba(0,20,40,.5);border:1px solid rgba(0,229,255,.14);border-radius:10px;padding:9px 12px}
+    .mm-stat .lbl{font-size:8.5px;letter-spacing:1.5px;color:rgba(0,229,255,.4);margin-bottom:4px}
+    .mm-stat .val{font-size:15px;color:#bfe9ff;font-weight:bold;text-shadow:0 0 8px rgba(0,229,255,.3)}
+    .mm-provider{background:rgba(0,20,40,.4);border:1px solid rgba(0,229,255,.12);border-radius:12px;padding:12px 14px;margin-bottom:10px;transition:border-color .2s,box-shadow .2s}
+    .mm-provider.active{border-color:rgba(0,229,255,.45);box-shadow:0 0 16px rgba(0,229,255,.15)}
+    .mm-prov-head{display:flex;align-items:center;gap:9px}
+    .mm-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0;background:#6b7a85;box-shadow:0 0 7px rgba(107,122,133,.6)}
+    .mm-dot.green{background:#00ff88;box-shadow:0 0 9px #00ff88}
+    .mm-dot.yellow{background:#ffd479;box-shadow:0 0 9px #ffd479}
+    .mm-dot.red{background:#ff5a5a;box-shadow:0 0 9px #ff5a5a}
+    .mm-dot.gray{background:#6b7a85}
+    .mm-prov-name{flex:1;font-size:12.5px;color:#dff4ff;font-weight:bold;letter-spacing:.5px;text-transform:capitalize}
+    .mm-prov-meta{font-size:9.5px;color:rgba(0,229,255,.5);font-family:var(--font-mono)}
+    .mm-badge-active{font-size:8px;letter-spacing:1px;color:#00ff88;border:1px solid rgba(0,255,136,.4);border-radius:5px;padding:2px 6px;text-transform:uppercase}
+    .mm-prov-body{margin-top:10px;padding-top:10px;border-top:1px solid rgba(0,229,255,.08)}
+    .mm-label{font-size:8.5px;letter-spacing:1.5px;color:rgba(0,229,255,.4);margin:8px 0 5px}
+    .mm-model{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:6px 9px;border:1px solid rgba(0,229,255,.12);border-radius:8px;margin-bottom:5px;cursor:pointer;transition:all .15s}
+    .mm-model:hover{border-color:rgba(0,229,255,.35);background:rgba(0,229,255,.06)}
+    .mm-model.selected{border-color:rgba(0,229,255,.5);background:rgba(0,229,255,.1)}
+    .mm-model .nm{font-size:11px;color:#cfeeff}
+    .mm-model .cw{font-size:9px;color:rgba(0,229,255,.5);font-family:var(--font-mono);flex-shrink:0}
+    .mm-key{display:flex;gap:7px;margin-top:6px}
+    .mm-key input{flex:1;background:rgba(0,20,40,.6);border:1px solid rgba(0,229,255,.18);color:#dff4ff;border-radius:8px;font-family:var(--font-mono);font-size:11px;padding:7px 10px;outline:none}
+    .mm-key input:focus{border-color:rgba(0,229,255,.45)}
+    .mm-key button{background:rgba(0,229,255,.1);border:1px solid rgba(0,229,255,.3);color:#00e5ff;border-radius:8px;font-family:inherit;font-size:10px;letter-spacing:1px;text-transform:uppercase;padding:0 12px;cursor:pointer;transition:all .15s}
+    .mm-key button:hover{background:rgba(0,229,255,.2)}
+    .mm-key button:disabled{opacity:.5;cursor:default}
+    .mm-keymsg{font-size:9.5px;margin-top:5px;min-height:12px;color:rgba(0,229,255,.5)}
+    .mm-keymsg.ok{color:#00ff88}.mm-keymsg.err{color:#ff5a5a}
+    @media(max-width:500px){.mm-panel{width:calc(100% - 20px);max-height:calc(100% - 40px)}}
     .chat-searchbar{padding:6px 12px;border-bottom:1px solid rgba(0,229,255,.08);display:flex;gap:8px;align-items:center}
     .chat-searchbar input{flex:1;background:rgba(0,20,40,.5);border:1px solid rgba(0,229,255,.14);border-radius:14px;color:#dff4ff;font-family:inherit;font-size:11.5px;padding:6px 12px;outline:none}
     .chat-searchbar span{font-size:10px;color:rgba(0,229,255,.5)}
@@ -338,6 +400,15 @@
       border:1px solid rgba(0,229,255,.25);box-shadow:0 8px 32px rgba(0,0,0,.5),0 0 22px rgba(0,150,255,.12);animation:toastIn .4s cubic-bezier(.2,.7,.3,1) both;transition:opacity .5s ease,transform .5s ease}
     .fri-toast.err{border-color:rgba(255,90,90,.4);box-shadow:0 8px 32px rgba(0,0,0,.5),0 0 22px rgba(255,60,60,.16)}
     .fri-toast.hide{opacity:0;transform:translateX(-50%) translateY(12px) scale(.96)}
+    /* Failover / primary-restore prompt (Req 9.6) — persistent toast with actions */
+    .fri-toast.action{pointer-events:auto;display:flex;flex-direction:column;gap:8px;align-items:stretch;text-align:left;max-width:min(360px,86vw)}
+    .fri-toast.action.warn{border-color:rgba(255,180,60,.45);box-shadow:0 8px 32px rgba(0,0,0,.5),0 0 22px rgba(255,180,60,.16)}
+    .fri-toast.action .fri-toast-msg{font-size:12px;line-height:1.4}
+    .fri-toast.action .fri-toast-btns{display:flex;gap:8px;justify-content:flex-end}
+    .fri-toast-btn{font-family:var(--font-mono);font-size:10.5px;letter-spacing:.5px;text-transform:uppercase;padding:5px 12px;border-radius:8px;cursor:pointer;background:rgba(0,229,255,.1);border:1px solid rgba(0,229,255,.35);color:#00e5ff;transition:all .18s}
+    .fri-toast-btn:hover{background:rgba(0,229,255,.2);box-shadow:0 0 12px rgba(0,229,255,.25)}
+    .fri-toast-btn.ghost{background:transparent;border-color:rgba(180,200,220,.25);color:rgba(200,220,235,.7)}
+    .fri-toast-btn.ghost:hover{background:rgba(180,200,220,.08);box-shadow:none;color:#dff4ff}
 
     /* Right panel opens with a layered parallax motion (sections stagger in) */
     @keyframes ctxSecIn{from{opacity:0;transform:translateX(34px)}to{opacity:1;transform:none}}
@@ -885,6 +956,11 @@
         <input id="chatTitle" class="chat-title" value="FRIDAY Session" title="Rename conversation"/>
         <div class="chat-sub" id="chatSub">Initializing…</div>
       </div>
+      <button class="model-badge" id="modelBadge" title="AI provider status — click to manage models" onclick="openModelManager()" style="display:none">
+        <span class="model-badge-dot gray" id="modelBadgeDot"></span>
+        <span class="model-badge-name" id="modelBadgeName">—</span>
+        <span class="model-badge-fo" id="modelBadgeFo" title="Running on a backup provider (failover active)">⚠</span>
+      </button>
       <div class="chat-head-btns">
         <button class="chb" id="chFav" title="Favorite">☆</button>
         <button class="chb" id="chSearch" title="Search messages">⌕</button>
@@ -949,6 +1025,23 @@
       <div class="ctx-sec"><div class="ctx-label">CONTEXT USAGE</div><div class="cx-bar"><div id="cx-ctxfill" class="cx-bar-fill" style="width:2%"></div></div><div class="ctx-row"><span id="cx-ctxpct" class="cx-v">2%</span><span id="cx-ctxwin" class="cx-v-dim">/ 8K</span></div></div>
       <div class="ctx-sec"><div class="ctx-label">TOKENS (session)</div><div class="ctx-row"><span>Input</span><span id="cx-tin" class="cx-v">0</span></div><div class="ctx-row"><span>Output</span><span id="cx-tout" class="cx-v">0</span></div></div>
       <div class="ctx-sec"><div class="ctx-label">EXECUTION TIMELINE</div><div id="cx-timeline" class="cx-timeline"></div></div>
+    </div>
+  </div>
+
+  <!-- Model Manager (Req 7.1-7.8) -->
+  <div class="mm-overlay" id="mmOverlay" onclick="if(event.target===this)closeModelManager()">
+    <div class="mm-panel" role="dialog" aria-label="Model Manager">
+      <div class="mm-head"><span>◈ MODEL MANAGER</span><button class="mm-close" onclick="closeModelManager()" aria-label="Close">✕</button></div>
+      <div class="mm-body">
+        <div class="mm-label">SESSION TOKEN USAGE</div>
+        <div class="mm-session">
+          <div class="mm-stat"><div class="lbl">TOKENS IN</div><div class="val" id="mmTokIn">0</div></div>
+          <div class="mm-stat"><div class="lbl">TOKENS OUT</div><div class="val" id="mmTokOut">0</div></div>
+          <div class="mm-stat"><div class="lbl">TOTAL</div><div class="val" id="mmTokTot">0</div></div>
+        </div>
+        <div class="mm-label">PROVIDERS</div>
+        <div id="mmList"><div class="mm-label">Loading…</div></div>
+      </div>
     </div>
   </div>
 
@@ -2777,6 +2870,297 @@
     window.addEventListener('online',updateAIBadge); window.addEventListener('offline',updateAIBadge);
     fetch('/memory',{headers:{'Authorization':'Bearer '+(window.jt||'')}}).then(r=>r.ok?r.json():null)
       .then(d=>{if(d&&d.memories&&d.memories.length){_memActive=true;updateAIBadge();}}).catch(()=>{});
+
+    // ===== Active Model Badge — current provider/model + color-coded status (Req 8.1-8.5) =====
+    // Property 7: abbreviate to <=12 chars while preserving the model family identifier.
+    function abbreviateModelName(name){
+      if(name==null)return '—';
+      let s=String(name).trim();
+      if(!s)return '—';
+      // Drop org/route prefixes like "openai/gpt-4o" or "meta-llama/llama-3"
+      if(s.indexOf('/')>=0)s=s.split('/').pop();
+      const lower=s.toLowerCase();
+      // Known families → clean labels (each label is <=12 chars, family preserved)
+      const families=[
+        [/gpt-?4o/,'GPT-4o'],[/gpt-?4\.?1/,'GPT-4.1'],[/gpt-?4/,'GPT-4'],[/gpt-?3\.?5/,'GPT-3.5'],
+        [/\bo3\b/,'o3'],[/\bo1\b/,'o1'],
+        [/claude.*opus/,'Claude-Opus'],[/claude.*sonnet/,'Claude-Son'],[/claude.*haiku/,'Claude-Hku'],[/claude/,'Claude'],
+        [/gemini.*flash/,'Gemini-Fl'],[/gemini.*ultra/,'Gemini-Ul'],[/gemini.*pro/,'Gemini-Pro'],[/gemini/,'Gemini'],
+        [/deepseek.*r1/,'DeepSeek-R1'],[/deepseek/,'DeepSeek'],
+        [/grok/,'Grok'],[/llama/,'Llama'],[/mixtral|mistral/,'Mistral'],[/qwen/,'Qwen'],[/cerebras/,'Cerebras']
+      ];
+      for(let i=0;i<families.length;i++){if(families[i][0].test(lower))return families[i][1];}
+      // Fallback: keep the leading family token, hard-cap at 12 chars
+      return s.length<=12?s:s.slice(0,12);
+    }
+    // Property 8 (client mirror): map provider status → color name.
+    function providerStatusColor(status){
+      const map={operational:'green',degraded:'yellow',unavailable:'red',not_configured:'gray'};
+      return map[String(status||'').toLowerCase()]||'gray';
+    }
+    function setModelBadge(model,color,status,provider,failover){
+      const badge=document.getElementById('modelBadge');if(!badge)return;
+      const dot=document.getElementById('modelBadgeDot'),nameEl=document.getElementById('modelBadgeName');
+      badge.style.display='';
+      if(nameEl)nameEl.textContent=abbreviateModelName(model||provider||'');
+      if(dot)dot.className='model-badge-dot '+(color||'gray');
+      // Req 9.3: when the system is running on a backup provider, mark the badge
+      // with the amber failover indicator and note the fallen-over primary.
+      if(failover&&failover.in_failover){
+        badge.classList.add('failover');
+        const primary=failover.primary?abbreviateModelName(failover.primary):'primary';
+        badge.title=(provider?provider+' (backup)':'backup')+' — failover active · primary '+primary+' unavailable · click to manage models';
+      }else{
+        badge.classList.remove('failover');
+        badge.title=(provider?provider+' — ':'')+(status||'unknown')+' · click to manage models';
+      }
+    }
+    let _lastModelBadge='';
+    let _wasInFailover=false;      // tracks failover transitions so we toast only once
+    let _lastRestoreKey='';        // dedupes the primary-restore prompt per notification
+    async function refreshModelBadge(){
+      const badge=document.getElementById('modelBadge');
+      if(!badge||!window.jt)return;
+      try{
+        const r=await fetch('/api/providers',{headers:{'Authorization':'Bearer '+(window.jt||'')}});
+        if(!r.ok){if(r.status===503)badge.style.display='none';return;}
+        const d=await r.json();
+        const list=d.providers||[];
+        const active=list.find(p=>p&&p.is_active)||null;
+        const model=d.active_model||(active&&active.name)||d.active_provider||'';
+        const status=active?active.status:'not_configured';
+        const color=(active&&active.status_color)||providerStatusColor(status);
+        const fo=d.failover||null;
+        const inFailover=!!(fo&&fo.in_failover);
+        // Include failover flag in the render key so badge styling updates on change.
+        const key=model+'|'+status+'|'+color+'|'+(inFailover?'fo':'ok');
+        if(key!==_lastModelBadge){
+          _lastModelBadge=key;
+          setModelBadge(model,color,status,d.active_provider||(active&&active.name),fo);
+        }
+        // Req 9.3: announce a failover transition once, when it first happens.
+        if(inFailover&&!_wasInFailover&&window.friToast){
+          const cur=(fo.current||d.active_provider||'backup');
+          const primary=fo.primary||'primary';
+          friToast('⚠ Failover: '+primary+' unavailable — switched to '+cur,true);
+        }
+        _wasInFailover=inFailover;
+        // Req 9.6: when the primary recovers, notify the user and offer a manual
+        // switch back. We do NOT switch automatically.
+        if(inFailover&&fo.primary_restored){
+          const restoreKey=(fo.primary_restored.provider||'')+'|'+(fo.primary_restored.timestamp||'');
+          if(restoreKey!==_lastRestoreKey){
+            _lastRestoreKey=restoreKey;
+            showPrimaryRestorePrompt(fo.primary_restored);
+          }
+        }
+      }catch(e){/* transient network error — keep last known badge */}
+    }
+
+    // Req 9.6: persistent prompt letting the user switch back to the recovered
+    // primary provider on demand. Rendered as an actionable glass toast.
+    function showPrimaryRestorePrompt(info){
+      const provider=info&&info.provider;
+      if(!provider)return;
+      document.querySelectorAll('.fri-toast.action.restore').forEach(function(el){el.remove();});
+      const t=document.createElement('div');
+      t.className='fri-toast action warn restore';
+      const msg=document.createElement('div');
+      msg.className='fri-toast-msg';
+      msg.textContent=(info.message||('Primary provider "'+provider+'" is available again.'));
+      const btns=document.createElement('div');
+      btns.className='fri-toast-btns';
+      const dismiss=document.createElement('button');
+      dismiss.className='fri-toast-btn ghost';dismiss.textContent='Keep backup';
+      dismiss.onclick=function(){t.remove();};
+      const switchBtn=document.createElement('button');
+      switchBtn.className='fri-toast-btn';switchBtn.textContent='Switch back';
+      switchBtn.onclick=function(){switchBtn.disabled=true;switchBackToPrimary(provider,t);};
+      btns.appendChild(dismiss);btns.appendChild(switchBtn);
+      t.appendChild(msg);t.appendChild(btns);
+      document.body.appendChild(t);
+    }
+
+    // Req 9.6: manual switch back to the primary provider (never automatic).
+    async function switchBackToPrimary(provider,toastEl){
+      try{
+        const r=await fetch('/api/providers/active',{method:'PUT',headers:{'Authorization':'Bearer '+(window.jt||''),'Content-Type':'application/json'},body:JSON.stringify({provider:provider})});
+        if(r.ok){
+          if(toastEl)toastEl.remove();
+          _wasInFailover=false;_lastRestoreKey='';
+          if(window.friToast)friToast('Switched back to '+provider);
+          refreshModelBadge();
+        }else if(window.friToast){friToast('Could not switch back to '+provider,true);}
+      }catch(e){if(window.friToast)friToast('Could not switch back to '+provider,true);}
+    }
+    // Req 8.4: reflect provider status changes within 2 seconds.
+    setInterval(refreshModelBadge,2000); refreshModelBadge();
+
+    // ===== Model Manager panel (Req 7.1-7.8) =====
+    // Req 8.5: clicking the Active Model Badge opens this panel.
+    let _mmInterval=null;
+    let _mmActiveProvider=null,_mmActiveModel=null;
+
+    function _mmAuthHeaders(extra){
+      return Object.assign({'Authorization':'Bearer '+(window.jt||'')},extra||{});
+    }
+    // Req 7.5: human-readable connection latency.
+    function _mmFmtLatency(ms){
+      if(ms==null||isNaN(ms))return '—';
+      if(ms<1000)return Math.round(ms)+' ms';
+      return (ms/1000).toFixed(2)+' s';
+    }
+    // Req 7.7: human-readable context window size.
+    function _mmFmtContext(n){
+      if(n==null||isNaN(n)||n<=0)return '—';
+      if(n>=1000)return Math.round(n/1000)+'K ctx';
+      return n+' ctx';
+    }
+    function _mmEsc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
+    function _mmSel(v){try{return CSS.escape(v);}catch(e){return String(v).replace(/["\\]/g,'\\$&');}}
+
+    window.openModelManager=function(){
+      const ov=document.getElementById('mmOverlay');if(!ov)return;
+      ov.classList.add('open');
+      loadModelManager();
+      // Req 7.8: while open, refresh provider status every 30 seconds.
+      if(_mmInterval)clearInterval(_mmInterval);
+      _mmInterval=setInterval(loadModelManager,30000);
+    };
+    window.closeModelManager=function(){
+      const ov=document.getElementById('mmOverlay');if(ov)ov.classList.remove('open');
+      // Stop the 30s refresh loop when the panel closes.
+      if(_mmInterval){clearInterval(_mmInterval);_mmInterval=null;}
+    };
+
+    // Req 7.6: display session token usage (reuses existing session counters).
+    function _mmRenderSession(){
+      const inEl=document.getElementById('mmTokIn'),outEl=document.getElementById('mmTokOut'),totEl=document.getElementById('mmTokTot');
+      const ti=(typeof sessTokIn==='number')?sessTokIn:0, to=(typeof sessTokOut==='number')?sessTokOut:0;
+      if(inEl)inEl.textContent=ti.toLocaleString();
+      if(outEl)outEl.textContent=to.toLocaleString();
+      if(totEl)totEl.textContent=(ti+to).toLocaleString();
+    }
+
+    async function loadModelManager(){
+      _mmRenderSession();
+      const listEl=document.getElementById('mmList');if(!listEl)return;
+      if(!window.jt){listEl.innerHTML='<div class="mm-label">Sign in to manage providers.</div>';return;}
+      try{
+        const r=await fetch('/api/providers',{headers:_mmAuthHeaders()});
+        if(!r.ok){listEl.innerHTML='<div class="mm-label">Provider service unavailable.</div>';return;}
+        const d=await r.json();
+        _mmActiveProvider=d.active_provider||null;_mmActiveModel=d.active_model||null;
+        renderProviders(d.providers||[]);
+      }catch(e){
+        listEl.innerHTML='<div class="mm-label">Could not load providers.</div>';
+      }
+    }
+
+    function renderProviders(providers){
+      const listEl=document.getElementById('mmList');if(!listEl)return;
+      if(!providers.length){listEl.innerHTML='<div class="mm-label">No providers registered.</div>';return;}
+      let html='';
+      providers.forEach(function(p){
+        const status=p.status||(p.is_configured?'operational':'not_configured');
+        const color=p.status_color||providerStatusColor(status);   // Req 7.1: configuration/status indicator
+        const isActive=p.is_active||p.name===_mmActiveProvider;
+        const latency=p.is_configured?_mmFmtLatency(p.latency_ms):'not configured'; // Req 7.5
+        const models=p.models||[];
+        html+='<div class="mm-provider'+(isActive?' active':'')+'">';
+        html+='<div class="mm-prov-head">';
+        html+='<span class="mm-dot '+color+'"></span>';
+        html+='<span class="mm-prov-name">'+_mmEsc(p.name)+'</span>';
+        html+='<span class="mm-prov-meta">'+_mmEsc(latency)+'</span>';
+        if(isActive)html+='<span class="mm-badge-active">active</span>';
+        html+='</div>';
+        html+='<div class="mm-prov-body">';
+        // Req 7.2 (model selection) + Req 7.7 (context window size per model)
+        if(models.length){
+          html+='<div class="mm-label">MODELS</div>';
+          models.forEach(function(m){
+            const mid=m.id||m.name;
+            const sel=isActive&&(mid===_mmActiveModel||m.name===_mmActiveModel);
+            html+='<div class="mm-model'+(sel?' selected':'')+'" data-provider="'+_mmEsc(p.name)+'" data-model="'+_mmEsc(mid)+'">';
+            html+='<span class="nm">'+_mmEsc(m.name||mid)+'</span>';
+            html+='<span class="cw">'+_mmEsc(_mmFmtContext(m.context_window))+'</span>';
+            html+='</div>';
+          });
+        }
+        // Req 7.3: secure, write-only API key input (masked, never pre-filled with stored keys)
+        // When a key is already configured we DON'T nag for one — show a clear
+        // "configured" state and tuck the replace field behind a toggle so a
+        // configured provider never looks like it's demanding a key.
+        if(p.is_configured){
+          html+='<div class="mm-label">API KEY <span style="color:#00ff88">✓ CONFIGURED</span> · <span class="mm-key-replace" data-replace="'+_mmEsc(p.name)+'" style="color:rgba(0,229,255,.7);cursor:pointer;text-decoration:underline">Replace</span></div>';
+          html+='<div class="mm-key" data-keywrap="'+_mmEsc(p.name)+'" style="display:none">';
+          html+='<input type="password" autocomplete="off" spellcheck="false" placeholder="Enter new key to replace…" data-key-input="'+_mmEsc(p.name)+'"/>';
+          html+='<button data-validate="'+_mmEsc(p.name)+'">Save</button>';
+          html+='</div>';
+        }else{
+          html+='<div class="mm-label">API KEY <span style="color:rgba(255,180,60,.9)">NOT SET</span></div>';
+          html+='<div class="mm-key" data-keywrap="'+_mmEsc(p.name)+'">';
+          html+='<input type="password" autocomplete="off" spellcheck="false" placeholder="Enter API key…" data-key-input="'+_mmEsc(p.name)+'"/>';
+          html+='<button data-validate="'+_mmEsc(p.name)+'">Save</button>';
+          html+='</div>';
+        }
+        html+='<div class="mm-keymsg" data-keymsg="'+_mmEsc(p.name)+'"></div>';
+        html+='</div></div>';
+      });
+      listEl.innerHTML=html;
+      listEl.querySelectorAll('.mm-model').forEach(function(el){
+        el.addEventListener('click',function(){selectProviderModel(el.getAttribute('data-provider'),el.getAttribute('data-model'));});
+      });
+      listEl.querySelectorAll('[data-validate]').forEach(function(btn){
+        btn.addEventListener('click',function(){validateProviderKey(btn.getAttribute('data-validate'));});
+      });
+      // "Replace" toggle reveals the hidden key field for configured providers.
+      listEl.querySelectorAll('[data-replace]').forEach(function(link){
+        link.addEventListener('click',function(){
+          const wrap=listEl.querySelector('[data-keywrap="'+_mmSel(link.getAttribute('data-replace'))+'"]');
+          if(wrap){const shown=wrap.style.display!=='none';wrap.style.display=shown?'none':'flex';if(!shown){const inp=wrap.querySelector('input');if(inp)inp.focus();}}
+        });
+      });
+    }
+
+    // Req 7.2: select the active provider and model.
+    async function selectProviderModel(provider,model){
+      if(!provider||!model)return;
+      try{
+        const r=await fetch('/api/providers/active',{method:'PUT',headers:_mmAuthHeaders({'Content-Type':'application/json'}),body:JSON.stringify({provider:provider,model:model})});
+        if(r.ok){
+          _mmActiveProvider=provider;_mmActiveModel=model;
+          if(window.friToast)friToast(abbreviateModelName(model)+' activated');
+          loadModelManager();
+          if(typeof refreshModelBadge==='function')refreshModelBadge();
+        }else if(window.friToast){friToast('Could not switch model',true);}
+      }catch(e){if(window.friToast)friToast('Could not switch model',true);}
+    }
+
+    // Req 7.3 / 7.4: validate & store an API key. Keys are write-only — never displayed back.
+    async function validateProviderKey(provider){
+      const input=document.querySelector('[data-key-input="'+_mmSel(provider)+'"]');
+      const msgEl=document.querySelector('[data-keymsg="'+_mmSel(provider)+'"]');
+      const btn=document.querySelector('[data-validate="'+_mmSel(provider)+'"]');
+      if(!input)return;
+      const key=input.value;
+      if(!key){if(msgEl){msgEl.className='mm-keymsg err';msgEl.textContent='Enter a key first.';}return;}
+      if(msgEl){msgEl.className='mm-keymsg';msgEl.textContent='Validating…';}
+      if(btn)btn.disabled=true;
+      try{
+        const r=await fetch('/api/providers/'+encodeURIComponent(provider)+'/validate',{method:'POST',headers:_mmAuthHeaders({'Content-Type':'application/json'}),body:JSON.stringify({api_key:key})});
+        const d=await r.json().catch(function(){return {};});
+        input.value=''; // Security: clear the key from the field immediately after submit.
+        if(r.ok&&d.valid){
+          if(msgEl){msgEl.className='mm-keymsg ok';msgEl.textContent='Key validated & saved.';}
+          loadModelManager();
+          if(typeof refreshModelBadge==='function')refreshModelBadge();
+        }else if(msgEl){msgEl.className='mm-keymsg err';msgEl.textContent=(d.error||'Invalid key.');}
+      }catch(e){
+        input.value='';
+        if(msgEl){msgEl.className='mm-keymsg err';msgEl.textContent='Validation failed.';}
+      }finally{if(btn)btn.disabled=false;}
+    }
 
     // ===== Procedural frosted-glass grain (monochrome, resolution-independent) =====
     (function genNoise(){

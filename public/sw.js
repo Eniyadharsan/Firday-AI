@@ -29,6 +29,40 @@ self.addEventListener('fetch', (event) => {
 });
 
 // Allow the page to force activation of a waiting worker
+// Verify the message origin to prevent cross-origin attacks (SonarCloud S2819)
 self.addEventListener('message', (event) => {
-  if (event.data === 'skipWaiting') self.skipWaiting();
+  // SERVICE WORKER ORIGIN VERIFICATION (SonarCloud S2819 compliant)
+  // 
+  // In service workers, same-origin messages have:
+  //   - event.origin === '' (empty string) OR event.origin === self.location.origin
+  //   - event.source is a WindowClient or Client object
+  //
+  // Cross-origin messages (from iframes, other windows) have:
+  //   - event.origin set to the sender's actual origin (e.g., 'https://evil.com')
+  //
+  // We MUST explicitly verify the origin before processing ANY message.
+  
+  const trustedOrigin = self.location.origin;
+  const messageOrigin = event.origin;
+  
+  // Verify origin: allow empty string (same-origin) or exact match to our origin
+  // Reject any message with a different, non-empty origin
+  const isOriginTrusted = messageOrigin === '' || messageOrigin === trustedOrigin;
+  
+  if (!isOriginTrusted) {
+    console.warn('[SW] Rejected message from untrusted origin:', messageOrigin);
+    return;
+  }
+  
+  // Ensure the message comes from a valid client (WindowClient or Client)
+  // This guards against spoofed or synthetic message events
+  if (!event.source) {
+    console.warn('[SW] Rejected message with no source client');
+    return;
+  }
+  
+  // Process trusted same-origin messages
+  if (event.data === 'skipWaiting') {
+    self.skipWaiting();
+  }
 });

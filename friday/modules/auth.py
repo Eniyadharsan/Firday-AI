@@ -247,8 +247,8 @@ def signin(email: str, password: str) -> dict:
         user_name = email.split("@")[0]
         # Fix in DB too
         db.execute("UPDATE users SET name = ?, last_login = ? WHERE id = ?",
-                   [user_name, time.strftime(TIMESTAMP_FORMAT), row["id"]])
+                   [user_name, time.strftime(ISO_TIMESTAMP_FORMAT), row["id"]])
     else:
-        db.execute("UPDATE users SET last_login = ? WHERE id = ?", [time.strftime(TIMESTAMP_FORMAT), row["id"]])
+        db.execute("UPDATE users SET last_login = ? WHERE id = ?", [time.strftime(ISO_TIMESTAMP_FORMAT), row["id"]])
 
     return {"token": make_token(row["id"], row["email"], user_name), "user": {"id": row["id"], "email": row["email"], "name": user_name}}

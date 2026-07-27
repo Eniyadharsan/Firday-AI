@@ -12,11 +12,44 @@
     {
       "src": "app.py",
       "use": "@vercel/python"
+    },
+    {
+      "src": "public/**",
+      "use": "@vercel/static"
     }
   ],
   "routes": [
     { "src": "/api/test", "dest": "/api/test.py" },
     { "src": "/api/diagnose", "dest": "/api/diagnose.py" },
-    { "src": "/(.*)", "dest": "/app.py" }
+    { "src": "/health", "dest": "/app.py" },
+    { "src": "/debug", "dest": "/app.py" },
+    { "src": "/auth/(.*)", "dest": "/app.py" },
+    { "src": "/chat", "dest": "/app.py" },
+    { "src": "/chat/stream", "dest": "/app.py" },
+    { "src": "/search", "dest": "/app.py" },
+    { "src": "/news", "dest": "/app.py" },
+    { "src": "/image", "dest": "/app.py" },
+    { "src": "/music", "dest": "/app.py" },
+    { "src": "/music/(.*)", "dest": "/app.py" },
+    { "src": "/memory", "dest": "/app.py" },
+    { "src": "/rag/(.*)", "dest": "/app.py" },
+    { "src": "/mcp", "dest": "/app.py" },
+    { "src": "/mcp/(.*)", "dest": "/app.py" },
+    { "src": "/agents", "dest": "/app.py" },
+    { "src": "/plans", "dest": "/app.py" },
+    { "src": "/history", "dest": "/app.py" },
+    { "src": "/history/(.*)", "dest": "/app.py" },
+    { "src": "/profile", "dest": "/app.py" },
+    { "src": "/profile/(.*)", "dest": "/app.py" },
+    { "src": "/research", "dest": "/app.py" },
+    { "src": "/models", "dest": "/app.py" },
+    { "src": "/api/providers", "dest": "/app.py" },
+    { "src": "/api/providers/(.*)", "dest": "/app.py" },
+    { "src": "/login", "dest": "/app.py" },
+    { "src": "/", "dest": "/public/index.html" },
+    { "src": "/index.html", "dest": "/public/index.html" },
+    { "src": "/manifest.json", "dest": "/public/manifest.json" },
+    { "src": "/sw.js", "dest": "/public/sw.js" },
+    { "src": "/icons/(.*)", "dest": "/public/icons/$1" }
   ]
 }

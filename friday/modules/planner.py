@@ -8,7 +8,7 @@ import time
 import json
 from friday.db import get_db
 from loguru import logger
-from friday.config import DB_PATH
+from friday.config import DB_PATH, ISO_TIMESTAMP_FORMAT
 from friday.modules import llm
 
 
@@ -59,7 +59,7 @@ Keep it to 5-10 tasks max. Be specific and actionable."""},
     try:
         conn.execute(
             "INSERT INTO plans (user_id, title, tasks, progress, created_at) VALUES (?, ?, ?, ?, ?)",
-            (user_id, plan_data.get("title", message), json.dumps(plan_data.get("tasks", [])), 0, time.strftime("%Y-%m-%dT%H:%M:%SZ")),
+            (user_id, plan_data.get("title", message), json.dumps(plan_data.get("tasks", [])), 0, time.strftime(ISO_TIMESTAMP_FORMAT)),
         )
         conn.commit()
     except Exception as e:
