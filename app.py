@@ -692,7 +692,11 @@ def _engine_stream(history, user_id, session_id, model=None, temperature=None):
 def chat():
     data = request.json or {}
     message: str = data.get("message", "")
-    session_id: str = data.get("sessionId", f"s-{int(time.time()*1000)}")
+    # Use `or` (not dict default) so an explicit null/empty sessionId from the
+    # client generates a FRESH id instead of collapsing to None. Otherwise every
+    # null-session request shares one bucket and conversations leak into each
+    # other (new chats repeating prior chats).
+    session_id: str = data.get("sessionId") or f"s-{int(time.time()*1000)}"
     user_id: str = get_current_user_id()
     # Developer-mode overrides (validated inside llm.generate; invalid -> ignored)
     req_model = data.get("model")
@@ -790,7 +794,8 @@ def chat():
 def chat_stream():
     data = request.json or {}
     message: str = data.get("message", "")
-    session_id: str = data.get("sessionId", f"s-{int(time.time()*1000)}")
+    # Use `or` so a null/empty sessionId yields a fresh id (see /chat above).
+    session_id: str = data.get("sessionId") or f"s-{int(time.time()*1000)}"
 
     if not message:
         return jsonify({"error": "message required"}), 400
