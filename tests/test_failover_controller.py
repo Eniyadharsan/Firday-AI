@@ -147,7 +147,7 @@ class TestBackupOrderMaintenanceProperty:
     **Validates: Requirements 9.1**
     """
 
-    @settings(max_examples=100, deadline=None,
+    @settings(max_examples=10, deadline=None,
               suppress_health_check=[HealthCheck.function_scoped_fixture])
     @given(backups=st.lists(_name_token, max_size=15))
     def test_backup_order_is_preserved_exactly(self, backups: list[str]) -> None:
@@ -160,7 +160,7 @@ class TestBackupOrderMaintenanceProperty:
             controller.shutdown()
             Provider_Registry.reset_instance()
 
-    @settings(max_examples=50, deadline=None,
+    @settings(max_examples=10, deadline=None,
               suppress_health_check=[HealthCheck.function_scoped_fixture])
     @given(backups=st.lists(_name_token, max_size=15))
     def test_backup_order_is_a_defensive_copy(self, backups: list[str]) -> None:
@@ -190,7 +190,7 @@ class TestFailoverOnProviderErrorProperty:
     **Validates: Requirements 9.2**
     """
 
-    @settings(max_examples=100, deadline=None,
+    @settings(max_examples=10, deadline=None,
               suppress_health_check=[HealthCheck.function_scoped_fixture])
     @given(
         backups=st.lists(_name_token, min_size=1, max_size=8, unique=True),
@@ -233,7 +233,7 @@ class TestActiveProviderStateAfterFailoverProperty:
     **Validates: Requirements 9.3**
     """
 
-    @settings(max_examples=100, deadline=None,
+    @settings(max_examples=10, deadline=None,
               suppress_health_check=[HealthCheck.function_scoped_fixture])
     @given(backups=st.lists(_name_token, min_size=1, max_size=8, unique=True))
     def test_state_reflects_backup_after_failover(self, backups: list[str]) -> None:

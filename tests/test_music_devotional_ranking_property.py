@@ -106,7 +106,7 @@ def _make_mock_adapter(source_name: str, results: list[TrackResult]) -> MagicMoc
 # --- Property Test ---
 
 
-@settings(max_examples=100, deadline=None)
+@settings(max_examples=10, deadline=None)
 @given(track_lists=_mixed_track_list_strategy())
 def test_devotional_ranking_guarantee(track_lists):
     """

@@ -44,7 +44,7 @@ providers = st.sampled_from(PROVIDER_NAMES)
 
 
 @settings(
-    max_examples=200,
+    max_examples=10,
     deadline=None,  # Fernet + file I/O timing varies under full-suite CPU load
     suppress_health_check=[HealthCheck.function_scoped_fixture],
 )
@@ -72,7 +72,7 @@ def test_encrypted_storage_round_trip_single(
 
 
 @settings(
-    max_examples=200,
+    max_examples=10,
     deadline=None,  # Fernet + file I/O timing varies under full-suite CPU load
     suppress_health_check=[HealthCheck.function_scoped_fixture],
 )

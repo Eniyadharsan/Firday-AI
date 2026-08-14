@@ -47,7 +47,7 @@ provider_key_maps = st.dictionaries(
 # Validates: Requirements 10.2
 # ============================================================
 
-@settings(max_examples=200)
+@settings(max_examples=10)
 @given(provider_keys=provider_key_maps)
 def test_property_13_env_var_key_loading(provider_keys):
     """

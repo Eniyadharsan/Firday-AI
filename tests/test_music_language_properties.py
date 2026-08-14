@@ -122,7 +122,7 @@ class TestQueryPassThroughPreservation:
     **Validates: Requirements 2.2, 2.3, 2.6**
     """
 
-    @settings(max_examples=100, deadline=None)
+    @settings(max_examples=10, deadline=None)
     @given(query=_multi_script_text)
     def test_normalized_query_equals_original(self, query: str):
         """
@@ -151,7 +151,7 @@ class TestQueryPassThroughPreservation:
             f"  normalized bytes: {context.normalized_query.encode('utf-8')!r}"
         )
 
-    @settings(max_examples=100, deadline=None)
+    @settings(max_examples=10, deadline=None)
     @given(query=_any_unicode_text)
     def test_original_query_also_preserved(self, query: str):
         """

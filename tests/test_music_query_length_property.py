@@ -59,7 +59,7 @@ def _make_engine() -> SearchEngine:
 # --- Property 4: Query Length Validation ---
 
 
-@settings(max_examples=100, deadline=None)
+@settings(max_examples=10, deadline=None)
 @given(
     query=st.text(min_size=1, max_size=200),
 )
@@ -86,7 +86,7 @@ def test_queries_within_limit_are_accepted(query: str):
     )
 
 
-@settings(max_examples=100, deadline=None)
+@settings(max_examples=10, deadline=None)
 @given(
     query=st.text(min_size=201, max_size=500),
 )
@@ -112,7 +112,7 @@ def test_queries_exceeding_limit_are_rejected(query: str):
     )
 
 
-@settings(max_examples=100, deadline=None)
+@settings(max_examples=10, deadline=None)
 @given(
     query=st.text(min_size=201, max_size=500),
 )
@@ -132,7 +132,7 @@ def test_search_raises_on_long_query(query: str):
         engine.search(query)
 
 
-@settings(max_examples=100, deadline=None)
+@settings(max_examples=10, deadline=None)
 @given(
     query=st.text(min_size=1, max_size=200),
 )

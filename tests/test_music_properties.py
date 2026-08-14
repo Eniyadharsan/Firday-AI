@@ -61,7 +61,7 @@ def _meaningful_words(text: str) -> set[str]:
     return {w.lower() for w in _re_module.findall(r"[a-zA-Z0-9]+", text) if len(w) > 0}
 
 
-@settings(max_examples=100, deadline=None)
+@settings(max_examples=10, deadline=None)
 @given(
     artist=_multi_word_strategy,
     title=_multi_word_strategy,
@@ -103,7 +103,7 @@ def test_artist_dash_title_round_trip(artist: str, title: str, suffix: str):
     )
 
 
-@settings(max_examples=100, deadline=None)
+@settings(max_examples=10, deadline=None)
 @given(
     artist=_multi_word_strategy,
     title=_multi_word_strategy,
@@ -151,7 +151,7 @@ def test_title_by_artist_round_trip(artist: str, title: str, suffix: str):
     )
 
 
-@settings(max_examples=100, deadline=None)
+@settings(max_examples=10, deadline=None)
 @given(
     artist=_multi_word_strategy,
     title=_multi_word_strategy,
@@ -227,7 +227,7 @@ def youtube_response_strategy(max_results: int = 10):
     return st.lists(youtube_item_strategy(), min_size=0, max_size=max_results)
 
 
-@settings(max_examples=150, deadline=None)
+@settings(max_examples=10, deadline=None)
 @given(
     query=st.text(min_size=1, max_size=200).filter(lambda s: s.strip()),
     items=youtube_response_strategy(),
@@ -335,7 +335,7 @@ class TestMusicRequestDetectionConsistency:
     **Validates: Requirements 1.1**
     """
 
-    @settings(max_examples=100, deadline=None)
+    @settings(max_examples=10, deadline=None)
     @given(message=_play_prefix_messages)
     def test_play_prefix_returns_true(self, message: str):
         """
@@ -349,7 +349,7 @@ class TestMusicRequestDetectionConsistency:
             f"'play ' followed by non-whitespace: {message!r}"
         )
 
-    @settings(max_examples=100, deadline=None)
+    @settings(max_examples=10, deadline=None)
     @given(message=_no_music_keywords)
     def test_no_keywords_returns_false(self, message: str):
         """

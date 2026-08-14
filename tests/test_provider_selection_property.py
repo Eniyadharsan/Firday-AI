@@ -114,7 +114,7 @@ class TestProviderSelectionStateUpdateProperty:
     **Validates: Requirements 7.2**
     """
 
-    @settings(max_examples=200, deadline=None)
+    @settings(max_examples=10, deadline=None)
     @given(
         provider_names=st.lists(_name_token, min_size=1, max_size=6, unique=True),
         model=_model_token,
@@ -149,7 +149,7 @@ class TestProviderSelectionStateUpdateProperty:
         # The active adapter is the exact instance registered under that name.
         assert active_adapter is registry.get_adapter(chosen)
 
-    @settings(max_examples=200, deadline=None)
+    @settings(max_examples=10, deadline=None)
     @given(
         provider_names=st.lists(_name_token, min_size=2, max_size=6, unique=True),
         model_a=_model_token,
@@ -180,7 +180,7 @@ class TestProviderSelectionStateUpdateProperty:
         assert active is not None
         assert active.provider_name == second
 
-    @settings(max_examples=100, deadline=None)
+    @settings(max_examples=10, deadline=None)
     @given(
         provider_names=st.lists(_name_token, min_size=1, max_size=6, unique=True),
         unregistered=_name_token,

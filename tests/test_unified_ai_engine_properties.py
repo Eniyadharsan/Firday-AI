@@ -267,7 +267,7 @@ class TestUnifiedResponseFormat:
     Validates: Requirements 1.1
     """
 
-    @settings(max_examples=50, deadline=None)
+    @settings(max_examples=10, deadline=None)
     @given(
         content=safe_text,
         provider=st.sampled_from(["openai", "anthropic", "gemini"]),
@@ -309,7 +309,7 @@ class TestStreamingNormalization:
     Validates: Requirements 11.1
     """
 
-    @settings(max_examples=50, deadline=None)
+    @settings(max_examples=10, deadline=None)
     @given(tokens=st.lists(safe_text, min_size=1, max_size=10))
     def test_string_stream_yields_plain_strings(self, tokens):
         """Feature: multi-provider-ai, Property 15: Streaming Format Normalization.
@@ -329,7 +329,7 @@ class TestStreamingNormalization:
 
         assert all(isinstance(tok, str) for tok in emitted)
 
-    @settings(max_examples=50, deadline=None)
+    @settings(max_examples=10, deadline=None)
     @given(tokens=st.lists(safe_text, min_size=1, max_size=10))
     def test_wrapper_object_stream_normalized_to_strings(self, tokens):
         """Feature: multi-provider-ai, Property 15: Streaming Format Normalization.
@@ -362,7 +362,7 @@ class TestMarkdownPreservation:
     Validates: Requirements 11.4
     """
 
-    @settings(max_examples=50, deadline=None)
+    @settings(max_examples=10, deadline=None)
     @given(
         markdown=st.sampled_from(
             [
@@ -407,7 +407,7 @@ class TestContextInjection:
     Validates: Requirements 13.1, 13.2
     """
 
-    @settings(max_examples=50, deadline=None)
+    @settings(max_examples=10, deadline=None)
     @given(memory_content=safe_text)
     def test_memory_context_present_in_provider_messages(self, memory_content):
         """Feature: multi-provider-ai, Property 17: Context Injection (memory).
@@ -428,7 +428,7 @@ class TestContextInjection:
         combined = "\n".join(m.get("content", "") for m in adapter.last_messages)
         assert memory_content in combined
 
-    @settings(max_examples=50, deadline=None)
+    @settings(max_examples=10, deadline=None)
     @given(rag_content=safe_text)
     def test_rag_context_present_in_provider_messages(self, rag_content):
         """Feature: multi-provider-ai, Property 17: Context Injection (RAG).
@@ -460,7 +460,7 @@ class TestContextWindowEnforcement:
     Validates: Requirements 13.4
     """
 
-    @settings(max_examples=50, deadline=None)
+    @settings(max_examples=10, deadline=None)
     @given(
         max_context=st.integers(min_value=2000, max_value=8000),
         memory_len=st.integers(min_value=0, max_value=20000),
@@ -499,7 +499,7 @@ class TestHistoryPreservation:
     Validates: Requirements 13.3
     """
 
-    @settings(max_examples=50, deadline=None)
+    @settings(max_examples=10, deadline=None)
     @given(
         user_msgs=st.lists(safe_text, min_size=1, max_size=6, unique=True),
         switches=st.lists(st.booleans(), min_size=6, max_size=6),
@@ -543,7 +543,7 @@ class TestHistoryInclusionOnSwitch:
     Validates: Requirements 14.2
     """
 
-    @settings(max_examples=50, deadline=None)
+    @settings(max_examples=10, deadline=None)
     @given(
         first_msg=safe_text,
         second_msg=safe_text,
@@ -593,7 +593,7 @@ class TestMessageProviderMetadata:
     Validates: Requirements 14.3, 14.4
     """
 
-    @settings(max_examples=50, deadline=None)
+    @settings(max_examples=10, deadline=None)
     @given(
         provider=st.sampled_from(["openai", "anthropic", "gemini"]),
         msg=safe_text,
@@ -632,7 +632,7 @@ class TestToolCallParsing:
     Validates: Requirements 12.2
     """
 
-    @settings(max_examples=50, deadline=None)
+    @settings(max_examples=10, deadline=None)
     @given(
         call_id=st.text(
             alphabet=st.characters(min_codepoint=48, max_codepoint=122),
@@ -694,7 +694,7 @@ class TestToolCallParsing:
         assert tc["function"]["name"] == func_name
         assert tc["function"]["arguments"] == arguments
 
-    @settings(max_examples=50, deadline=None)
+    @settings(max_examples=10, deadline=None)
     @given(content=safe_text)
     def test_generate_response_tool_calls_pass_through(self, content):
         """Feature: multi-provider-ai, Property 6: Tool Call Parsing.

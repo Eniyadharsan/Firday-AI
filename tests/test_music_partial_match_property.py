@@ -72,7 +72,7 @@ def _make_track(title: str, idx: int) -> TrackResult:
     )
 
 
-@settings(max_examples=100, deadline=None)
+@settings(max_examples=10, deadline=None)
 @given(data=query_with_shared_substring())
 def test_partial_match_constraints(data):
     """

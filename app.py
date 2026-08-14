@@ -101,6 +101,26 @@ try:
 except Exception as e:
     _import_errors.append(f"friday.modules.tool_calling: {e}")
 
+# Try to import the Desktop Agent pipeline - optional and backward compatible.
+# The Desktop_Agent is a local Windows process; the backend only forwards
+# recognized desktop commands to it over the loopback Local_Channel. When the
+# agent is not configured (the default), /chat behaves exactly as before.
+_DESKTOP_AGENT_AVAILABLE = False
+DesktopCommandPipeline = IntentParser = LLMCandidateEngine = None
+DesktopAgentClient = CommandStatus = None
+try:
+    from friday.desktop_agent import (
+        CommandStatus,
+        DesktopAgentClient,
+        DesktopCommandPipeline,
+        IntentParser,
+        LLMCandidateEngine,
+    )
+    _DESKTOP_AGENT_AVAILABLE = True
+    logger.info("Desktop agent pipeline loaded successfully")
+except Exception as e:
+    _import_errors.append(f"friday.desktop_agent: {e}")
+
 
 # Try to import multi-provider AI module - make it optional for backward compatibility
 _MULTI_PROVIDER_AVAILABLE = False
@@ -433,6 +453,93 @@ def _get_intent_router():
     return _intent_router
 
 
+# ===== Desktop Agent pipeline (lazy singleton) =====
+# The Desktop_Agent runs as a separate local process on the user's Windows PC
+# and binds the Local_Channel to 127.0.0.1. The backend forwards recognized
+# desktop commands to it over that loopback channel using the client bridge.
+# This is opt-in: it is only active when the agent's loopback location and a
+# session token are provided via environment variables, so the default /chat
+# behavior for non-desktop messages is completely unchanged.
+_desktop_pipeline = None
+
+
+def _get_desktop_pipeline():
+    """Get or create the Desktop_Agent command pipeline singleton.
+
+    Wires the Intent_Parser (over the existing tool-selection LLM seam) to the
+    client bridge that forwards Structured_Commands to the local Desktop_Agent.
+    Returns ``None`` when the desktop agent module is unavailable or the agent
+    connection is not configured, in which case /chat falls back to its normal
+    behavior.
+    """
+    global _desktop_pipeline
+    if not _DESKTOP_AGENT_AVAILABLE:
+        return None
+
+    host = os.getenv("FRIDAY_DESKTOP_AGENT_HOST")
+    port = os.getenv("FRIDAY_DESKTOP_AGENT_PORT")
+    token = os.getenv("FRIDAY_DESKTOP_AGENT_TOKEN")
+    # The agent is local and loopback-only; without an explicit host/port/token
+    # there is nothing to forward to, so the feature stays inert.
+    if not (host and port and token):
+        return None
+
+    if _desktop_pipeline is None:
+        try:
+            engine = LLMCandidateEngine(llm.select_tools)
+            client = DesktopAgentClient(
+                host=host, port=int(port), session_token=token
+            )
+            _desktop_pipeline = DesktopCommandPipeline(IntentParser(engine), client)
+            logger.info("Desktop_Agent pipeline initialized")
+        except Exception as e:
+            logger.warning(f"Failed to initialize Desktop_Agent pipeline: {e}")
+            return None
+    return _desktop_pipeline
+
+
+def _format_desktop_response(result, session_id: str) -> dict:
+    """Map a Desktop_Agent ExecutionResult to a /chat JSON response.
+
+    Translates each relayed status (execution-result success/failure,
+    authorization-required, disabled, unsupported-command, validation-error,
+    ambiguous-command, confirmation-required) into a user-facing reply the
+    FRIDAY_UI can render (Req 4.8, 2.2, 8.5, 3.3, 3.6, 5.4).
+    """
+    status = result.status
+    detail = (result.detail or "").strip()
+
+    if status == CommandStatus.SUCCESS:
+        reply = detail or f"Done, Sir. ({result.command_id})"
+    elif status == CommandStatus.FAILURE:
+        reply = detail or "I couldn't complete that action on your PC, Sir."
+    elif status == CommandStatus.AUTHORIZATION_REQUIRED:
+        reply = "I need your authorization before I can act on your PC, Sir."
+    elif status == CommandStatus.DISABLED:
+        reply = "The desktop agent is currently disabled by the kill-switch, Sir."
+    elif status == CommandStatus.UNSUPPORTED:
+        reply = detail or "That command isn't in my allow-list, Sir."
+    elif status == CommandStatus.VALIDATION_ERROR:
+        reply = detail or "That command's parameters weren't valid, Sir."
+    elif status == CommandStatus.AMBIGUOUS:
+        reply = detail or "I found more than one matching command. Which did you mean, Sir?"
+    elif status == CommandStatus.CONFIRMATION_REQUIRED:
+        reply = detail or "That action is risky and needs your confirmation, Sir."
+    else:
+        reply = detail or "I processed your desktop command, Sir."
+
+    return {
+        "reply": reply,
+        "sessionId": session_id,
+        "timestamp": time.strftime(ISO_TIMESTAMP_FORMAT),
+        "desktopCommand": {
+            "status": status.value,
+            "commandId": result.command_id,
+            "detail": result.detail,
+        },
+    }
+
+
 # --- Music Search Engine (lazy singleton) ---
 _search_engine = None
 
@@ -729,6 +836,25 @@ def chat():
                 return jsonify(routing_result.response)
         except Exception as e:
             logger.warning(f"IntentRouter error, falling back to default chat: {e}")
+
+    # --- Desktop Agent command routing (if a local agent is configured) ---
+    # Attempt to map the message to an allow-listed desktop command and forward
+    # it to the local Desktop_Agent over the loopback Local_Channel. Only a
+    # recognized desktop command short-circuits here; anything the parser does
+    # not recognize falls through to the normal chat flow, so non-desktop
+    # messages are unaffected (Req 4.8, 5.1, 2.1).
+    desktop_pipeline = _get_desktop_pipeline()
+    if desktop_pipeline is not None:
+        try:
+            desktop_result = desktop_pipeline.handle_text(message)
+            if desktop_pipeline.is_desktop_command(desktop_result):
+                logger.debug(
+                    f"Desktop_Agent handled command: status={desktop_result.status.value} "
+                    f"command_id={desktop_result.command_id}"
+                )
+                return jsonify(_format_desktop_response(desktop_result, session_id))
+        except Exception as e:
+            logger.warning(f"Desktop_Agent pipeline error, falling back to default chat: {e}")
 
     # --- Default chat flow (when no tool was selected) ---
     # Context enrichment for general chat

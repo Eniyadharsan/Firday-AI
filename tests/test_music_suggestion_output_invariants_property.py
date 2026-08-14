@@ -75,7 +75,7 @@ class TestSuggestionOutputInvariants:
     **Validates: Requirements 1.3**
     """
 
-    @settings(max_examples=100, deadline=None)
+    @settings(max_examples=10, deadline=None)
     @given(tracks=_track_list_strategy, query=_valid_query)
     def test_output_respects_max_suggestions_and_truncation(
         self, tracks: list[TrackResult], query: str

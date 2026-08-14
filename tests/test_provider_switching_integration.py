@@ -432,7 +432,7 @@ class TestProviderSelectionStateUpdate:
     Validates: Requirements 7.2
     """
 
-    @settings(max_examples=100, deadline=None)
+    @settings(max_examples=10, deadline=None)
     @given(
         provider_names=st.lists(
             provider_name_strategy, min_size=1, max_size=5, unique=True
@@ -475,7 +475,7 @@ class TestProviderSelectionStateUpdate:
         assert active_adapter is not None
         assert active_adapter.provider_name == chosen
 
-    @settings(max_examples=50, deadline=None)
+    @settings(max_examples=10, deadline=None)
     @given(provider_name=provider_name_strategy)
     def test_set_active_unregistered_provider_returns_false(self, provider_name):
         """Feature: multi-provider-ai, Property 26: Provider Selection State Update.

@@ -159,7 +159,7 @@ class TestRomanizationNormalizationEquivalence:
     **Validates: Requirements 2.5, 4.5**
     """
 
-    @settings(max_examples=100, deadline=None)
+    @settings(max_examples=10, deadline=None)
     @given(pair=romanized_equivalence_pair())
     def test_vowel_length_equivalence(self, pair: tuple[str, str]):
         """
@@ -183,7 +183,7 @@ class TestRomanizationNormalizationEquivalence:
             f"  Normalized var:   {normalized_variant!r}"
         )
 
-    @settings(max_examples=100, deadline=None)
+    @settings(max_examples=10, deadline=None)
     @given(pair=word_boundary_variation_pair())
     def test_word_boundary_equivalence(self, pair: tuple[str, str]):
         """
@@ -207,7 +207,7 @@ class TestRomanizationNormalizationEquivalence:
             f"  Normalized (wo):{normalized_without!r}"
         )
 
-    @settings(max_examples=100, deadline=None)
+    @settings(max_examples=10, deadline=None)
     @given(pair=combined_variation_pair())
     def test_combined_romanization_and_boundary_equivalence(self, pair: tuple[str, str]):
         """

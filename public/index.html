@@ -874,7 +874,114 @@
       .mp-artist{font-size:10px}
       /* Ensure chat remains at the bottom and accessible */
       .chat{bottom:16px;z-index:300}
+      /* Desktop agent panels go full-bleed on phones */
+      .agent-panel{width:calc(100% - 24px) !important;right:-100% !important}
+      .agent-panel.open{right:12px !important}
+      .agent-indicator{top:auto;bottom:78px;left:12px}
     }
+
+    /* ═══════════════════════════════════════════════════════════════
+       FRIDAY Desktop Agent controls (Req 5.2/5.4, 6.1, 7.5, 8.1, 9.1-9.4)
+       Holographic HUD chrome consistent with the model-manager modal
+       and the right-side context panel.
+    ═══════════════════════════════════════════════════════════════ */
+    /* Active_Indicator — always-visible state pill (Req 9.1-9.4).
+       State is conveyed by colour AND icon glyph AND text so it never
+       relies on colour alone. */
+    .agent-indicator{position:fixed;top:48px;left:12px;z-index:360;display:flex;align-items:center;gap:8px;
+      padding:6px 10px 6px 8px;border-radius:20px;font-family:var(--font-mono);font-size:10px;letter-spacing:1.5px;
+      background:linear-gradient(160deg,rgba(8,20,40,.82),rgba(4,10,26,.88));backdrop-filter:blur(16px);
+      border:1px solid rgba(0,229,255,.16);box-shadow:0 4px 18px rgba(0,0,0,.45);cursor:pointer;user-select:none;
+      transition:border-color .3s,box-shadow .3s,opacity .3s}
+    .agent-indicator .ai-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0;transition:background .3s,box-shadow .3s}
+    .agent-indicator .ai-glyph{font-size:12px;line-height:1}
+    .agent-indicator .ai-text{white-space:nowrap;color:rgba(223,244,255,.85)}
+    /* enabled — steady cyan/green */
+    .agent-indicator[data-state="enabled"]{border-color:rgba(0,255,136,.4)}
+    .agent-indicator[data-state="enabled"] .ai-dot{background:var(--listening);box-shadow:0 0 8px var(--listening)}
+    /* observing — pulsing amber */
+    .agent-indicator[data-state="observing"]{border-color:rgba(255,190,60,.5)}
+    .agent-indicator[data-state="observing"] .ai-dot{background:#ffbe3c;box-shadow:0 0 10px #ffbe3c;animation:agentPulse 1.1s ease-in-out infinite}
+    /* disabled — dim red/grey */
+    .agent-indicator[data-state="disabled"]{border-color:rgba(255,90,90,.35);opacity:.85}
+    .agent-indicator[data-state="disabled"] .ai-dot{background:#ff5a5a;box-shadow:none}
+    .agent-indicator[data-state="disabled"] .ai-text{color:rgba(255,140,140,.75)}
+    @keyframes agentPulse{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(1.5);opacity:.55}}
+    /* Kill_Switch (Req 8.1) — red danger control */
+    .agent-kill{margin-left:2px;padding:3px 8px;border-radius:12px;font-family:var(--font-mono);font-size:9px;letter-spacing:1px;
+      border:1px solid rgba(255,90,90,.4);background:rgba(255,60,60,.08);color:#ff7a7a;cursor:pointer;transition:background .2s,opacity .2s}
+    .agent-kill:hover{background:rgba(255,60,60,.18)}
+    .agent-kill:disabled{opacity:.4;cursor:default}
+
+    /* Confirmation_Prompt dialog (Req 6.1) — reuses the modal look */
+    .cfp-overlay{position:fixed;inset:0;z-index:950;display:none;align-items:center;justify-content:center;background:rgba(2,6,18,.6);backdrop-filter:blur(4px)}
+    .cfp-overlay.open{display:flex}
+    .cfp-panel{position:relative;width:min(440px,calc(100% - 32px));border-radius:16px;overflow:hidden;
+      background:linear-gradient(160deg,rgba(30,14,14,.82),rgba(20,6,10,.88));backdrop-filter:blur(24px);
+      border:1px solid rgba(255,120,120,.3);box-shadow:0 8px 40px rgba(0,0,0,.55);
+      transform:translateY(16px) scale(.98);opacity:0;transition:transform .3s cubic-bezier(.3,.7,.3,1),opacity .3s}
+    .cfp-overlay.open .cfp-panel{transform:none;opacity:1}
+    .cfp-head{display:flex;align-items:center;gap:8px;padding:14px 18px;border-bottom:1px solid rgba(255,120,120,.18);
+      font-size:11px;letter-spacing:2px;color:#ffb0b0;font-family:var(--font-mono)}
+    .cfp-body{padding:16px 18px}
+    .cfp-cmd{font-size:14px;color:#fff2f2;margin-bottom:6px}
+    .cfp-params{font-family:var(--font-mono);font-size:11px;color:rgba(255,220,220,.65);white-space:pre-wrap;word-break:break-word;
+      background:rgba(255,90,90,.06);border:1px solid rgba(255,120,120,.14);border-radius:8px;padding:8px 10px;margin-top:6px}
+    .cfp-timer{font-family:var(--font-mono);font-size:10px;color:rgba(255,180,180,.7);margin-top:10px;letter-spacing:1px}
+    .cfp-actions{display:flex;gap:10px;padding:0 18px 18px}
+    .cfp-actions button{flex:1;padding:10px;border-radius:10px;font-family:var(--font-mono);font-size:11px;letter-spacing:1px;cursor:pointer;transition:background .2s}
+    .cfp-approve{border:1px solid rgba(255,120,120,.5);background:rgba(255,60,60,.14);color:#ff9a9a}
+    .cfp-approve:hover{background:rgba(255,60,60,.26)}
+    .cfp-decline{border:1px solid rgba(0,229,255,.2);background:rgba(0,20,40,.5);color:rgba(0,229,255,.75)}
+    .cfp-decline:hover{background:rgba(0,40,70,.6)}
+
+    /* Ambiguity / unrecognized prompt (Req 5.2, 5.4) */
+    .amb-overlay{position:fixed;inset:0;z-index:940;display:none;align-items:center;justify-content:center;background:rgba(2,6,18,.55);backdrop-filter:blur(4px)}
+    .amb-overlay.open{display:flex}
+    .amb-panel{position:relative;width:min(460px,calc(100% - 32px));border-radius:16px;overflow:hidden;
+      background:linear-gradient(160deg,rgba(8,20,40,.78),rgba(4,10,26,.86));backdrop-filter:blur(24px);
+      border:1px solid rgba(0,229,255,.18);box-shadow:0 8px 40px rgba(0,0,0,.5);
+      transform:translateY(16px) scale(.98);opacity:0;transition:transform .3s cubic-bezier(.3,.7,.3,1),opacity .3s}
+    .amb-overlay.open .amb-panel{transform:none;opacity:1}
+    .amb-head{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid rgba(0,229,255,.1);
+      font-size:11px;letter-spacing:2px;color:#7fe4ff;font-family:var(--font-mono)}
+    .amb-close{background:none;border:none;color:rgba(0,229,255,.5);font-size:16px;cursor:pointer;line-height:1}
+    .amb-close:hover{color:#00e5ff}
+    .amb-body{padding:14px 18px 18px}
+    .amb-msg{font-size:13px;color:#dff4ff;margin-bottom:12px;line-height:1.5}
+    .amb-choice{display:block;width:100%;text-align:left;margin-bottom:8px;padding:11px 12px;border-radius:10px;
+      border:1px solid rgba(0,229,255,.16);background:rgba(0,20,40,.5);color:#dff4ff;cursor:pointer;font-family:inherit;transition:background .2s,border-color .2s}
+    .amb-choice:hover{background:rgba(0,40,70,.6);border-color:rgba(0,229,255,.4)}
+    .amb-choice .amb-cid{font-family:var(--font-mono);font-size:10px;color:rgba(0,229,255,.6);letter-spacing:1px}
+    .amb-choice .amb-conf{float:right;font-family:var(--font-mono);font-size:10px;color:rgba(0,255,136,.7)}
+
+    /* Audit_Log history view (Req 7.5) — right-side sliding panel */
+    .audit-panel{position:fixed;top:50px;right:-380px;bottom:16px;width:340px;z-index:820;border-radius:16px;
+      background:linear-gradient(160deg,rgba(8,20,40,.72),rgba(4,10,26,.8));backdrop-filter:blur(24px);
+      border:1px solid rgba(0,229,255,.16);box-shadow:0 8px 40px rgba(0,0,0,.5);display:flex;flex-direction:column;
+      transition:right .4s cubic-bezier(.3,.7,.3,1);overflow:hidden}
+    .audit-panel.open{right:16px}
+    .audit-head{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid rgba(0,229,255,.1);
+      font-size:11px;letter-spacing:2px;color:#7fe4ff;font-family:var(--font-mono)}
+    .audit-close{background:none;border:none;color:rgba(0,229,255,.5);font-size:14px;cursor:pointer}
+    .audit-close:hover{color:#00e5ff}
+    .audit-body{flex:1;overflow-y:auto;padding:10px 14px}
+    .audit-body::-webkit-scrollbar{width:4px}.audit-body::-webkit-scrollbar-thumb{background:rgba(0,229,255,.2)}
+    .audit-entry{border:1px solid rgba(0,229,255,.1);border-left-width:3px;border-radius:8px;padding:8px 10px;margin-bottom:8px;background:rgba(0,20,40,.4)}
+    .audit-entry .ae-top{display:flex;align-items:center;justify-content:space-between;gap:8px}
+    .audit-entry .ae-type{font-family:var(--font-mono);font-size:10px;letter-spacing:1px;text-transform:uppercase}
+    .audit-entry .ae-time{font-family:var(--font-mono);font-size:9.5px;color:rgba(0,229,255,.4)}
+    .audit-entry .ae-cmd{font-size:12px;color:#dff4ff;margin-top:3px}
+    .audit-entry .ae-detail{font-family:var(--font-mono);font-size:10px;color:rgba(0,229,255,.5);margin-top:2px;word-break:break-word}
+    .audit-entry[data-outcome="execute"]{border-left-color:var(--listening)}
+    .audit-entry[data-outcome="execute"] .ae-type{color:var(--listening)}
+    .audit-entry[data-outcome="decline"]{border-left-color:#ff7a7a}
+    .audit-entry[data-outcome="decline"] .ae-type{color:#ff7a7a}
+    .audit-entry[data-outcome="kill_switch"]{border-left-color:#ff5a5a}
+    .audit-entry[data-outcome="kill_switch"] .ae-type{color:#ff5a5a}
+    .audit-entry[data-outcome="authorize"],.audit-entry[data-outcome="revoke"]{border-left-color:#7fe4ff}
+    .audit-entry[data-outcome="authorize"] .ae-type,.audit-entry[data-outcome="revoke"] .ae-type{color:#7fe4ff}
+    .audit-empty{font-family:var(--font-mono);font-size:11px;color:rgba(0,229,255,.4);text-align:center;padding:24px 0}
   </style>
 </head>
 <body>
@@ -908,6 +1015,20 @@
   </div>
 
   <div class="wake-indicator" id="wakeInd">● ALWAYS LISTENING</div>
+
+  <!-- Desktop Agent Active_Indicator (Req 9.1-9.4) + Kill_Switch (Req 8.1).
+       role="status" + aria-live announces state changes to assistive tech.
+       State is shown by colour, glyph, and text so it never relies on colour alone. -->
+  <div class="agent-indicator" id="agentIndicator" data-state="disabled"
+       role="status" aria-live="polite" aria-label="Desktop agent status: disabled"
+       title="Desktop agent status — click to view command history"
+       onclick="openAuditHistory()">
+    <span class="ai-dot" aria-hidden="true"></span>
+    <span class="ai-glyph" id="agentGlyph" aria-hidden="true">■</span>
+    <span class="ai-text" id="agentText">AGENT OFF</span>
+    <button class="agent-kill" id="agentKill" aria-label="Kill switch — immediately disable the desktop agent"
+            onclick="event.stopPropagation();agentKillSwitch()">KILL</button>
+  </div>
 
   <div class="center">
     <div id="reactor" onclick="handleOrb()">
@@ -4535,6 +4656,261 @@
       }
     })();
   </script>
+
+  <script>
+    /* ═══════════════════════════════════════════════════════════════
+       FRIDAY Desktop Agent — UI controls
+       Active_Indicator (Req 9.1-9.4), Kill_Switch (Req 8.1),
+       Confirmation_Prompt (Req 6.1), Audit history (Req 7.5),
+       ambiguity/unrecognized prompts (Req 5.2, 5.4).
+       Vanilla JS, matching the existing global-function conventions.
+       Network calls target the local agent bridge and fail closed/gracefully
+       so the UI works even before the backend bridge is wired.
+    ═══════════════════════════════════════════════════════════════ */
+    (function(){
+      // ── Active_Indicator state machine (Req 9.1-9.4) ──
+      // Each state maps to a distinct glyph + text + colour (via data-state CSS).
+      const AGENT_VIEW = {
+        enabled:   { glyph:'▶', text:'AGENT ACTIVE',    aria:'Desktop agent status: enabled' },
+        observing: { glyph:'◉', text:'OBSERVING SCREEN', aria:'Desktop agent status: observing screen' },
+        disabled:  { glyph:'■', text:'AGENT OFF',        aria:'Desktop agent status: disabled' }
+      };
+      let agentState = 'disabled';
+
+      function renderState(){
+        const ind = document.getElementById('agentIndicator');
+        if(!ind) return;
+        const v = AGENT_VIEW[agentState] || AGENT_VIEW.disabled;
+        ind.setAttribute('data-state', agentState);
+        ind.setAttribute('aria-label', v.aria);
+        const g = document.getElementById('agentGlyph'); if(g) g.textContent = v.glyph;
+        const t = document.getElementById('agentText');  if(t) t.textContent = v.text;
+        const kill = document.getElementById('agentKill');
+        // Kill switch is only actionable while the agent can still act.
+        if(kill) kill.disabled = (agentState === 'disabled');
+      }
+
+      // Public: set the visible agent state (called by state pushes from the agent).
+      window.setAgentState = function(state){
+        // Reject unknown states — use hasOwnProperty so inherited Object keys
+        // (e.g. "toString", "constructor") can't slip past the guard (fail closed).
+        if(!Object.prototype.hasOwnProperty.call(AGENT_VIEW, state)) return;
+        agentState = state;
+        renderState();
+      };
+      window.getAgentState = function(){ return agentState; };
+
+      // ── Kill_Switch (Req 8.1) ──
+      window.agentKillSwitch = async function(){
+        // Optimistically reflect the disabled state immediately (Req 9.4 update ≤1s).
+        window.setAgentState('disabled');
+        try{
+          await fetch('/agent/kill-switch', { method:'POST', headers:{'Content-Type':'application/json'}, body:'{}' });
+        }catch(e){ /* fail closed — UI already shows disabled */ }
+        if(window.friToast) friToast('Desktop agent disabled');
+        // Reflect the kill-switch activation in the history view.
+        window.agentRecordLocal({ event_type:'kill_switch', reason:'user_activated' });
+      };
+
+      // ── Confirmation_Prompt (Req 6.1) ──
+      let _cfp = null;        // { promptId, resolve }
+      let _cfpTimer = null;   // countdown interval
+      let _cfpDeadline = 0;
+
+      window.agentShowConfirmation = function(prompt){
+        // prompt: { promptId, commandId, parameters, timeoutSec }
+        _cfp = prompt || {};
+        const cmdEl = document.getElementById('cfpCmd');
+        if(cmdEl) cmdEl.textContent = prettyCommand(_cfp.commandId) || 'Unknown action';
+        const pEl = document.getElementById('cfpParams');
+        if(pEl){
+          const params = _cfp.parameters && Object.keys(_cfp.parameters).length ? _cfp.parameters : null;
+          if(params){ pEl.textContent = JSON.stringify(params, null, 2); pEl.style.display='block'; }
+          else { pEl.textContent=''; pEl.style.display='none'; }
+        }
+        const ov = document.getElementById('cfpOverlay');
+        if(ov) ov.classList.add('open');
+        // Countdown display (backend enforces the authoritative 30s timeout, Req 6.5).
+        const timeout = (typeof _cfp.timeoutSec === 'number') ? _cfp.timeoutSec : 30;
+        _cfpDeadline = Date.now() + timeout*1000;
+        const timerEl = document.getElementById('cfpTimer');
+        if(_cfpTimer) clearInterval(_cfpTimer);
+        const tick = function(){
+          const left = Math.max(0, Math.ceil((_cfpDeadline - Date.now())/1000));
+          if(timerEl) timerEl.textContent = 'Auto-cancels in ' + left + 's if no response';
+          if(left <= 0){ agentResolveConfirmation(false, 'timeout'); }
+        };
+        tick();
+        _cfpTimer = setInterval(tick, 250);
+        return new Promise(function(res){ _cfp.resolve = res; });
+      };
+
+      window.agentResolveConfirmation = async function(approved, reason){
+        const ov = document.getElementById('cfpOverlay');
+        if(ov) ov.classList.remove('open');
+        if(_cfpTimer){ clearInterval(_cfpTimer); _cfpTimer=null; }
+        const prompt = _cfp || {};
+        _cfp = null;
+        const decision = approved ? 'approve' : (reason === 'timeout' ? 'timeout' : 'decline');
+        try{
+          await fetch('/agent/confirm', {
+            method:'POST', headers:{'Content-Type':'application/json'},
+            body: JSON.stringify({ prompt_id: prompt.promptId, decision: decision })
+          });
+        }catch(e){ /* fail closed — the agent cancels on its own 30s timeout */ }
+        if(typeof prompt.resolve === 'function') prompt.resolve(decision);
+        if(!approved && window.friToast) friToast(decision === 'timeout' ? 'Risky action timed out — cancelled' : 'Risky action declined');
+      };
+
+      // ── Ambiguity / unrecognized prompts (Req 5.2, 5.4) ──
+      window.agentShowAmbiguity = function(candidates, onPick){
+        // candidates: [{ commandId, parameters, confidence }, ...]
+        const box = document.getElementById('ambChoices');
+        const msg = document.getElementById('ambMsg');
+        const title = document.getElementById('ambTitle');
+        if(title) title.textContent = '◈ CLARIFY COMMAND';
+        if(msg) msg.textContent = 'That could mean a few things — which did you want?';
+        if(box){
+          box.innerHTML = '';
+          (candidates || []).forEach(function(c, i){
+            const btn = document.createElement('button');
+            btn.className = 'amb-choice';
+            btn.type = 'button';
+            const conf = (typeof c.confidence === 'number') ? (Math.round(c.confidence*100)+'%') : '';
+            btn.innerHTML = '<span class="amb-conf">'+conf+'</span>' +
+              '<div>'+ escapeHtml(prettyCommand(c.commandId) || c.commandId || 'Option '+(i+1)) +'</div>' +
+              '<div class="amb-cid">'+ escapeHtml(c.commandId || '') +'</div>';
+            btn.onclick = function(){ closeAmbiguity(); if(typeof onPick==='function') onPick(c, i); };
+            box.appendChild(btn);
+          });
+        }
+        const ov = document.getElementById('ambOverlay');
+        if(ov) ov.classList.add('open');
+      };
+
+      // Req 5.2 — inform the user the command was not recognized.
+      window.agentShowUnrecognized = function(text){
+        const box = document.getElementById('ambChoices');
+        const msg = document.getElementById('ambMsg');
+        const title = document.getElementById('ambTitle');
+        if(title) title.textContent = '◈ COMMAND NOT RECOGNIZED';
+        if(msg) msg.textContent = text
+          ? ('I couldn\u2019t match \u201C'+ text +'\u201D to a desktop action. Try rephrasing.')
+          : 'I couldn\u2019t match that to a desktop action. Try rephrasing.';
+        if(box) box.innerHTML = '';
+        const ov = document.getElementById('ambOverlay');
+        if(ov) ov.classList.add('open');
+      };
+
+      window.closeAmbiguity = function(){
+        const ov = document.getElementById('ambOverlay');
+        if(ov) ov.classList.remove('open');
+      };
+
+      // ── Audit_Log history view (Req 7.5, reverse chronological) ──
+      let _localHistory = [];   // fallback store for locally-observed events
+
+      window.agentRecordLocal = function(entry){
+        if(!entry) return;
+        if(!entry.timestamp) entry.timestamp = new Date().toISOString();
+        _localHistory.push(entry);
+        if(document.getElementById('auditPanel').classList.contains('open')) renderHistory(_localHistory);
+      };
+
+      window.openAuditHistory = async function(){
+        const p = document.getElementById('auditPanel');
+        if(p) p.classList.add('open');
+        let entries = null;
+        try{
+          const r = await fetch('/agent/history');
+          if(r.ok){ const d = await r.json(); entries = Array.isArray(d) ? d : (d.entries || null); }
+        }catch(e){ /* fall back to locally-observed events */ }
+        renderHistory(entries || _localHistory);
+      };
+
+      window.closeAuditHistory = function(){
+        const p = document.getElementById('auditPanel');
+        if(p) p.classList.remove('open');
+      };
+
+      function renderHistory(entries){
+        const body = document.getElementById('auditBody');
+        if(!body) return;
+        const list = (entries || []).slice();
+        // Reverse chronological: newest first (Req 7.5).
+        list.sort(function(a,b){ return tsMs(b.timestamp) - tsMs(a.timestamp); });
+        if(!list.length){ body.innerHTML = '<div class="audit-empty">No activity recorded yet.</div>'; return; }
+        body.innerHTML = list.map(function(e){
+          const type = e.event_type || 'event';
+          const cmd = e.command_id ? prettyCommand(e.command_id) : '';
+          const detailBits = [];
+          if(e.outcome) detailBits.push('outcome: '+e.outcome);
+          if(e.reason) detailBits.push('reason: '+e.reason);
+          const detail = detailBits.join('  ·  ');
+          return '<div class="audit-entry" data-outcome="'+escapeHtml(type)+'">'+
+            '<div class="ae-top"><span class="ae-type">'+escapeHtml(type)+'</span>'+
+            '<span class="ae-time">'+escapeHtml(fmtTime(e.timestamp))+'</span></div>'+
+            (cmd ? '<div class="ae-cmd">'+escapeHtml(cmd)+'</div>' : '')+
+            (detail ? '<div class="ae-detail">'+escapeHtml(detail)+'</div>' : '')+
+          '</div>';
+        }).join('');
+      }
+
+      // ── helpers ──
+      function tsMs(ts){ const t = Date.parse(ts); return isNaN(t) ? 0 : t; }
+      function fmtTime(ts){ const t = Date.parse(ts); if(isNaN(t)) return String(ts||''); const d=new Date(t); return d.toLocaleString(); }
+      function escapeHtml(s){ return String(s==null?'':s).replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
+      function prettyCommand(id){
+        if(!id) return '';
+        const map = {
+          'launch_app':'Launch application','open_path':'Open file or folder','web_search':'Web search',
+          'media_control':'Media control','dictation':'Dictate text','window_management':'Window management','lock_pc':'Lock PC'
+        };
+        if(map[id]) return map[id];
+        return id.replace(/[_-]+/g,' ').replace(/\b\w/g, function(c){ return c.toUpperCase(); });
+      }
+
+      // Initialize the indicator on load.
+      if(document.readyState === 'loading'){
+        document.addEventListener('DOMContentLoaded', renderState);
+      } else { renderState(); }
+    })();
+  </script>
+
+  <!-- Desktop Agent — Confirmation_Prompt for risky actions (Req 6.1) -->
+  <div class="cfp-overlay" id="cfpOverlay">
+    <div class="cfp-panel" role="alertdialog" aria-modal="true" aria-labelledby="cfpTitle" aria-describedby="cfpCmd">
+      <div class="cfp-head" id="cfpTitle"><span aria-hidden="true">⚠</span> CONFIRM RISKY ACTION</div>
+      <div class="cfp-body">
+        <div class="cfp-cmd" id="cfpCmd">—</div>
+        <pre class="cfp-params" id="cfpParams" style="display:none"></pre>
+        <div class="cfp-timer" id="cfpTimer"></div>
+      </div>
+      <div class="cfp-actions">
+        <button class="cfp-decline" onclick="agentResolveConfirmation(false)">Decline</button>
+        <button class="cfp-approve" onclick="agentResolveConfirmation(true)">Approve &amp; run</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Desktop Agent — Ambiguity / unrecognized prompt (Req 5.2, 5.4) -->
+  <div class="amb-overlay" id="ambOverlay" onclick="if(event.target===this)closeAmbiguity()">
+    <div class="amb-panel" role="dialog" aria-modal="true" aria-labelledby="ambTitle">
+      <div class="amb-head"><span id="ambTitle">◈ CLARIFY COMMAND</span><button class="amb-close" onclick="closeAmbiguity()" aria-label="Close">✕</button></div>
+      <div class="amb-body">
+        <div class="amb-msg" id="ambMsg">Did you mean one of these?</div>
+        <div id="ambChoices"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Desktop Agent — Audit_Log history view, reverse chronological (Req 7.5) -->
+  <div class="audit-panel" id="auditPanel" role="dialog" aria-label="Desktop agent command history">
+    <div class="audit-head"><span>◈ AGENT HISTORY</span><button class="audit-close" onclick="closeAuditHistory()" aria-label="Close history">✕</button></div>
+    <div class="audit-body" id="auditBody" role="log" aria-live="polite" aria-label="Command history, newest first">
+      <div class="audit-empty">No activity recorded yet.</div>
+    </div>
+  </div>
 
   <!-- Hidden container for YouTube IFrame Player (uses the one inside the legacy panel) -->
 </body>

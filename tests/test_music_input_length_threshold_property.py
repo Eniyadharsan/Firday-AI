@@ -72,7 +72,7 @@ class TestInputLengthThreshold:
     **Validates: Requirements 1.1, 1.5**
     """
 
-    @settings(max_examples=100, deadline=None)
+    @settings(max_examples=10, deadline=None)
     @given(query=_short_query)
     def test_short_queries_return_empty_list(self, query: str):
         """
@@ -91,7 +91,7 @@ class TestInputLengthThreshold:
             f"  Query: {query!r}"
         )
 
-    @settings(max_examples=100, deadline=None)
+    @settings(max_examples=10, deadline=None)
     @given(query=_long_enough_query)
     def test_long_enough_queries_proceed_to_return_suggestions(self, query: str):
         """

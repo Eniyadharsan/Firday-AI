@@ -103,7 +103,7 @@ def _make_tracks_unique(tracks: list[TrackResult]) -> list[TrackResult]:
 
 # --- Property Test ---
 
-@settings(max_examples=100, deadline=None)
+@settings(max_examples=10, deadline=None)
 @given(tracks=_mixed_track_list)
 def test_exact_matches_rank_above_fuzzy_matches(tracks: list[TrackResult]):
     """

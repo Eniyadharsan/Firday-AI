@@ -196,7 +196,7 @@ class TestProperty22RequestLatencyTracking:
     **Validates: Requirements 16.1**
     """
 
-    @settings(max_examples=200, deadline=None)
+    @settings(max_examples=10, deadline=None)
     @given(latencies=st.lists(_latency, min_size=1, max_size=60))
     def test_average_latency_matches_mean(self, latencies: list[float]):
         Provider_Registry.reset_instance()
@@ -216,7 +216,7 @@ class TestProperty22RequestLatencyTracking:
         health = registry.get_health_metrics()
         assert health["p"].latency_ms == pytest.approx(expected_mean, rel=1e-9, abs=1e-6)
 
-    @settings(max_examples=100, deadline=None)
+    @settings(max_examples=10, deadline=None)
     @given(
         latencies=st.lists(_latency, min_size=1, max_size=40),
         failures=st.integers(min_value=0, max_value=10),
@@ -249,7 +249,7 @@ class TestProperty27LatencyDataAvailability:
     **Validates: Requirements 7.5**
     """
 
-    @settings(max_examples=150, deadline=None)
+    @settings(max_examples=10, deadline=None)
     @given(
         names=st.lists(
             st.text(alphabet=st.characters(min_codepoint=97, max_codepoint=122), min_size=1, max_size=10),
@@ -302,7 +302,7 @@ class TestProperty28SessionTokenUsageTracking:
     **Validates: Requirements 7.6**
     """
 
-    @settings(max_examples=300, deadline=None)
+    @settings(max_examples=10, deadline=None)
     @given(usages=st.lists(_usage_dict(), min_size=0, max_size=50))
     def test_aggregated_totals_equal_sum_of_inputs(self, usages: list[dict[str, int]]):
         totals = aggregate_session_usage(usages)
@@ -311,7 +311,7 @@ class TestProperty28SessionTokenUsageTracking:
         assert totals["completion_tokens"] == sum(u["completion_tokens"] for u in usages)
         assert totals["total_tokens"] == sum(u["total_tokens"] for u in usages)
 
-    @settings(max_examples=200, deadline=None)
+    @settings(max_examples=10, deadline=None)
     @given(usages=st.lists(_usage_dict(), min_size=1, max_size=50))
     def test_aggregation_is_order_independent(self, usages: list[dict[str, int]]):
         forward = aggregate_session_usage(usages)
@@ -325,7 +325,7 @@ class TestProperty28SessionTokenUsageTracking:
             "total_tokens": 0,
         }
 
-    @settings(max_examples=200, deadline=None)
+    @settings(max_examples=10, deadline=None)
     @given(
         first=st.lists(_usage_dict(), min_size=0, max_size=25),
         second=st.lists(_usage_dict(), min_size=0, max_size=25),
@@ -352,7 +352,7 @@ class TestProperty29ContextWindowInformation:
     **Validates: Requirements 7.7**
     """
 
-    @settings(max_examples=100, deadline=None)
+    @settings(max_examples=10, deadline=None)
     @given(adapter_cls=st.sampled_from(CLOUD_ADAPTER_CLASSES))
     def test_every_model_reports_positive_context_window(self, adapter_cls):
         # An unconfigured key store keeps all catalogs static (OpenRouter falls

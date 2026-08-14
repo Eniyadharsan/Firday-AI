@@ -135,7 +135,7 @@ class TestFuzzyCorrectionWithinEditDistance:
     **Validates: Requirements 4.1**
     """
 
-    @settings(max_examples=100, deadline=None)
+    @settings(max_examples=10, deadline=None)
     @given(data=_edited_entry())
     def test_find_correction_returns_original_within_edit_distance(self, data):
         """

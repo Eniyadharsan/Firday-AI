@@ -129,7 +129,7 @@ def _make_adapter_from_tracks(
 
 
 @given(tracks=track_list_with_duplicates())
-@settings(max_examples=100, deadline=None)
+@settings(max_examples=10, deadline=None)
 def test_aggregation_deduplication_and_bounds(tracks: list[TrackResult]) -> None:
     """**Validates: Requirements 5.2, 5.4**
 

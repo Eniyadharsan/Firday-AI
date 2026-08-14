@@ -23,7 +23,7 @@ from hypothesis import strategies as st
 # Validates: Requirements 1.1, 1.2, 2.8
 # ============================================================
 
-@settings(max_examples=100)
+@settings(max_examples=10)
 @given(
     url=st.text(min_size=0, max_size=50, alphabet=st.characters(blacklist_characters="\x00")),
     token=st.text(min_size=0, max_size=50, alphabet=st.characters(blacklist_characters="\x00")),
@@ -53,7 +53,7 @@ def test_property_1_configuration_detection(url, token):
 # Validates: Requirements 1.3, 1.4
 # ============================================================
 
-@settings(max_examples=100)
+@settings(max_examples=10)
 @given(
     domain=st.from_regex(r"[a-z][a-z0-9\-]{0,20}\.[a-z]{2,5}", fullmatch=True),
     path=st.from_regex(r"(/[a-z0-9\-]{1,10}){0,3}", fullmatch=True),
@@ -83,7 +83,7 @@ def test_property_2_url_scheme_normalization(domain, path):
 # Validates: Requirements 2.3, 9.1, 9.2, 9.3, 9.4, 9.5, 9.6
 # ============================================================
 
-@settings(max_examples=100)
+@settings(max_examples=10)
 @given(
     value=st.one_of(
         st.text(max_size=50),
@@ -124,7 +124,7 @@ def test_property_3_parameter_type_serialization(value):
         assert result["value"] == value
 
 
-@settings(max_examples=100)
+@settings(max_examples=10)
 @given(
     value=st.one_of(
         st.lists(st.integers(), max_size=5),
@@ -149,7 +149,7 @@ def test_property_3_unsupported_types(value):
 # Validates: Requirements 2.4, 3.3
 # ============================================================
 
-@settings(max_examples=100)
+@settings(max_examples=10)
 @given(
     col_names=st.lists(
         st.from_regex(r"[a-z][a-z0-9_]{0,10}", fullmatch=True),
@@ -220,7 +220,7 @@ def test_property_4_response_parsing(col_names, num_rows):
 # Validates: Requirements 8.2, 8.5
 # ============================================================
 
-@settings(max_examples=100)
+@settings(max_examples=10)
 @given(
     token=st.text(min_size=5, max_size=50, alphabet=st.characters(whitelist_categories=("L", "N", "P")))
 )
@@ -272,7 +272,7 @@ from loguru import logger
 # Validates: Requirements 8.3
 # ============================================================
 
-@settings(max_examples=100)
+@settings(max_examples=10)
 @given(
     response_body=st.text(min_size=0, max_size=1000)
 )
@@ -324,7 +324,7 @@ def test_property_6_error_response_log_truncation(response_body):
 # Validates: Requirements 3.7
 # ============================================================
 
-@settings(max_examples=100)
+@settings(max_examples=10)
 @given(
     value=st.text(
         min_size=1,

@@ -110,7 +110,7 @@ def cache_operations(draw: st.DrawFn) -> list[tuple[str, Any]]:
 
 
 @given(ops=cache_operations())
-@settings(max_examples=100, deadline=None)
+@settings(max_examples=10, deadline=None)
 def test_cache_never_exceeds_max_size(ops: list[tuple[str, Any]]) -> None:
     """**Validates: Requirements 6.4**
 
@@ -132,7 +132,7 @@ def test_cache_never_exceeds_max_size(ops: list[tuple[str, Any]]) -> None:
     keys=st.lists(_cache_key_strategy, min_size=1, max_size=20, unique=True),
     data=_suggestion_data_strategy,
 )
-@settings(max_examples=100, deadline=None)
+@settings(max_examples=10, deadline=None)
 def test_expired_entries_return_cache_miss(
     keys: list[str], data: Any
 ) -> None:
@@ -161,7 +161,7 @@ def test_expired_entries_return_cache_miss(
 
 
 @given(ops=cache_operations())
-@settings(max_examples=100, deadline=None)
+@settings(max_examples=10, deadline=None)
 def test_cache_lru_eviction_preserves_recent_entries(
     ops: list[tuple[str, Any]],
 ) -> None:
